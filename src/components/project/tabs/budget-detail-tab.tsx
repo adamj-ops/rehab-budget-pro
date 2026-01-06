@@ -11,6 +11,8 @@ import {
   IconFileText,
   IconTemplate,
   IconCurrencyDollar,
+  IconGripVertical,
+  IconAlertTriangle,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -18,6 +20,16 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { BudgetCategory, BudgetItem } from '@/types';
 import { BUDGET_CATEGORIES } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,6 +59,7 @@ interface CommandOption {
   label: string;
   icon: React.ReactNode;
   description?: string;
+  shortcut?: string;
   action: () => void;
   destructive?: boolean;
   disabled?: boolean;
@@ -105,7 +118,7 @@ function CommandPopup({
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        className="w-64 p-1"
+        className="w-72 p-1.5 shadow-lg"
         align="start"
         onKeyDown={handleKeyDown}
       >
@@ -122,20 +135,31 @@ function CommandPopup({
                 }
               }}
               className={cn(
-                'flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors',
+                'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-all duration-150',
                 'hover:bg-muted focus:bg-muted focus:outline-none',
                 index === selectedIndex && 'bg-muted',
                 option.destructive && 'text-destructive hover:bg-destructive/10',
                 option.disabled && 'opacity-50 cursor-not-allowed'
               )}
             >
-              <span className="flex-shrink-0">{option.icon}</span>
+              <span className={cn(
+                'flex-shrink-0 p-1 rounded',
+                !option.destructive && 'bg-muted-foreground/10',
+                option.destructive && 'bg-destructive/10'
+              )}>
+                {option.icon}
+              </span>
               <div className="flex-1 text-left">
                 <p className="font-medium">{option.label}</p>
                 {option.description && (
                   <p className="text-xs text-muted-foreground">{option.description}</p>
                 )}
               </div>
+              {option.shortcut && (
+                <kbd className="ml-auto text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  {option.shortcut}
+                </kbd>
+              )}
             </button>
           ))}
         </div>
@@ -223,11 +247,14 @@ function AddItemRow({
   };
 
   return (
-    <tr className="border-t bg-muted/30">
-      <td className="p-2">
-        <Checkbox disabled checked={false} />
+    <tr className="border-t bg-primary/5 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+      <td className="p-2 w-10">
+        <div className="w-4" />
       </td>
-      <td className="p-2" colSpan={2}>
+      <td className="p-2 w-8">
+        <div className="w-4" />
+      </td>
+      <td className="p-2">
         <Input
           ref={inputRef}
           value={item}
@@ -245,24 +272,23 @@ function AddItemRow({
           onChange={(e) => setUnderwriting(parseFloat(e.target.value) || 0)}
           onKeyDown={handleKeyDown}
           placeholder="0"
-          className="h-8 w-24 text-right tabular-nums"
+          className="h-8 w-28 text-right tabular-nums"
           disabled={isSaving}
         />
       </td>
-      <td className="p-2 text-muted-foreground text-sm">$0</td>
-      <td className="p-2 text-muted-foreground text-sm">$0</td>
-      <td className="p-2 text-muted-foreground text-sm">—</td>
-      <td className="p-2 text-muted-foreground text-sm">—</td>
+      <td className="p-2 text-muted-foreground text-sm text-right">$0</td>
+      <td className="p-2 text-muted-foreground text-sm text-right">$0</td>
+      <td className="p-2 text-muted-foreground text-sm text-right">—</td>
+      <td className="p-2 text-muted-foreground text-sm text-right">—</td>
       <td className="p-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <Button
             size="sm"
-            variant="ghost"
             onClick={handleSubmit}
             disabled={isSaving || !item.trim()}
-            className="h-7 px-2"
+            className="h-7 px-3"
           >
-            {isSaving ? <IconLoader2 className="size-4 animate-spin" /> : 'Save'}
+            {isSaving ? <IconLoader2 className="size-4 animate-spin" /> : 'Add'}
           </Button>
           <Button
             size="sm"
@@ -347,7 +373,7 @@ function EditableCurrencyCell({
 
   if (isSaving) {
     return (
-      <div className="flex items-center justify-end gap-1 text-muted-foreground">
+      <div className="flex items-center justify-end gap-1 text-muted-foreground h-7">
         <IconLoader2 className="size-3 animate-spin" />
       </div>
     );
@@ -363,7 +389,7 @@ function EditableCurrencyCell({
         onChange={(e) => setEditValue(parseFloat(e.target.value) || 0)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        className={cn('h-7 w-24 text-right tabular-nums px-2', className)}
+        className={cn('h-7 w-28 text-right tabular-nums px-2', className)}
       />
     );
   }
@@ -380,7 +406,8 @@ function EditableCurrencyCell({
       tabIndex={0}
       role="button"
       className={cn(
-        'cursor-pointer rounded px-2 py-1 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        'cursor-pointer rounded px-2 py-1 transition-colors duration-150',
+        'hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
         'min-h-[28px] flex items-center justify-end gap-2',
         className
       )}
@@ -445,7 +472,7 @@ function EditableStatusCell({ value, itemId, onSave }: EditableStatusCellProps) 
   return (
     <Select value={value} onValueChange={handleValueChange} open={isOpen} onOpenChange={setIsOpen}>
       <SelectTrigger className="h-auto w-auto border-0 bg-transparent p-0 shadow-none focus:ring-0">
-        <Badge variant={currentOption.variant} className="cursor-pointer hover:opacity-80">
+        <Badge variant={currentOption.variant} className="cursor-pointer hover:opacity-80 transition-opacity">
           {currentOption.label}
         </Badge>
       </SelectTrigger>
@@ -472,6 +499,7 @@ export function BudgetDetailTab({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [addingToCategory, setAddingToCategory] = useState<BudgetCategory | null>(null);
   const [commandPopupCategory, setCommandPopupCategory] = useState<BudgetCategory | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
@@ -585,6 +613,7 @@ export function BudgetDetailTab({
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success(`Deleted ${ids.length} item${ids.length > 1 ? 's' : ''}`);
       setSelectedItems(new Set());
+      setShowDeleteConfirm(false);
     },
     onError: (error) => {
       console.error('Error deleting budget items:', error);
@@ -604,6 +633,10 @@ export function BudgetDetailTab({
   // Delete selected items
   const handleDeleteSelected = () => {
     if (selectedCount === 0) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
     deleteMutation.mutate(Array.from(selectedItems));
   };
 
@@ -615,6 +648,7 @@ export function BudgetDetailTab({
         label: 'New blank item',
         icon: <IconFileText className="size-4" />,
         description: 'Add a new line item',
+        shortcut: '↵',
         action: () => {
           setAddingToCategory(category);
           setCommandPopupCategory(null);
@@ -625,7 +659,7 @@ export function BudgetDetailTab({
         label: 'From template...',
         icon: <IconTemplate className="size-4" />,
         description: 'Choose from common items',
-        disabled: true, // TODO: Implement template picker
+        disabled: true,
         action: () => {},
       },
       {
@@ -633,7 +667,7 @@ export function BudgetDetailTab({
         label: 'From cost reference',
         icon: <IconCurrencyDollar className="size-4" />,
         description: 'Use Minneapolis metro pricing',
-        disabled: true, // TODO: Implement cost reference picker
+        disabled: true,
         action: () => {},
       },
     ];
@@ -653,6 +687,35 @@ export function BudgetDetailTab({
 
   return (
     <div className="space-y-4">
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <IconAlertTriangle className="size-5 text-destructive" />
+              Delete {selectedCount} item{selectedCount > 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The selected budget items will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <IconLoader2 className="size-4 animate-spin mr-2" />
+              ) : (
+                <IconTrash className="size-4 mr-2" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Summary Bar - Three Columns */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted">
         <div>
@@ -709,7 +772,12 @@ export function BudgetDetailTab({
 
       {/* Selection Actions Bar */}
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+          <Checkbox
+            checked={true}
+            onCheckedChange={() => setSelectedItems(new Set())}
+            className="data-[state=checked]:bg-primary"
+          />
           <span className="text-sm font-medium">
             {selectedCount} item{selectedCount > 1 ? 's' : ''} selected
           </span>
@@ -719,20 +787,16 @@ export function BudgetDetailTab({
             onClick={handleDeleteSelected}
             disabled={deleteMutation.isPending}
           >
-            {deleteMutation.isPending ? (
-              <IconLoader2 className="size-4 animate-spin mr-1" />
-            ) : (
-              <IconTrash className="size-4 mr-1" />
-            )}
+            <IconTrash className="size-4 mr-1.5" />
             Delete
           </Button>
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setSelectedItems(new Set())}
-            className="ml-auto"
+            className="ml-auto text-muted-foreground"
           >
-            Clear selection
+            Clear
           </Button>
         </div>
       )}
@@ -742,7 +806,7 @@ export function BudgetDetailTab({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="table-header">
+              <tr className="table-header border-b">
                 <th className="text-left p-3 w-10 bg-muted">
                   <Checkbox
                     checked={
@@ -765,21 +829,21 @@ export function BudgetDetailTab({
                 </th>
                 <th className="text-left p-3 w-8 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] bg-muted">Item</th>
-                <th className="text-right p-3 w-32 bg-blue-50">
+                <th className="text-right p-3 w-32 bg-blue-50 dark:bg-blue-950/30">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
                 </th>
-                <th className="text-right p-3 w-32 bg-green-50">
+                <th className="text-right p-3 w-32 bg-green-50 dark:bg-green-950/30">
                   <div className="font-semibold">Forecast</div>
                   <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
                 </th>
-                <th className="text-right p-3 w-32 bg-purple-50">
+                <th className="text-right p-3 w-32 bg-purple-50 dark:bg-purple-950/30">
                   <div className="font-semibold">Actual</div>
                   <div className="text-xs font-normal text-muted-foreground">Real spend</div>
                 </th>
-                <th className="text-right p-3 w-28">Forecast Var</th>
-                <th className="text-right p-3 w-28">Actual Var</th>
-                <th className="text-center p-3 w-32">Status</th>
+                <th className="text-right p-3 w-28 bg-muted">Forecast Var</th>
+                <th className="text-right p-3 w-28 bg-muted">Actual Var</th>
+                <th className="text-center p-3 w-32 bg-muted">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -800,8 +864,8 @@ export function BudgetDetailTab({
                 return (
                   <Fragment key={category.value}>
                     {/* Category Header Row */}
-                    <tr className="category-header cursor-pointer hover:bg-primary/15">
-                      <td className="p-3 bg-muted" onClick={(e) => e.stopPropagation()}>
+                    <tr className="group category-header cursor-pointer bg-muted/50 hover:bg-muted transition-colors duration-150">
+                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={
                             allCategorySelected
@@ -815,31 +879,31 @@ export function BudgetDetailTab({
                         />
                       </td>
                       <td
-                        className="p-3 bg-muted"
+                        className="p-3"
                         onClick={() => toggleCategory(category.value)}
                       >
                         {isExpanded ? (
-                          <IconChevronDown className="h-4 w-4" />
+                          <IconChevronDown className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <IconChevronRight className="h-4 w-4" />
+                          <IconChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
                       </td>
                       <td
-                        className="p-3 font-medium bg-muted"
+                        className="p-3 font-medium"
                         onClick={() => toggleCategory(category.value)}
                       >
                         {category.label}
                         <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
-                          ({category.items.length} items)
+                          ({category.items.length})
                         </span>
                       </td>
-                      <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium bg-blue-50/50 dark:bg-blue-950/20 tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-green-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium bg-green-50/50 dark:bg-green-950/20 tabular-nums">
                         {formatCurrency(category.forecast)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-purple-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium bg-purple-50/50 dark:bg-purple-950/20 tabular-nums">
                         {formatCurrency(category.actual)}
                       </td>
                       <td
@@ -866,6 +930,7 @@ export function BudgetDetailTab({
                     {/* Item Rows */}
                     {isExpanded &&
                       category.items.map((item) => {
+                        const isSelected = selectedItems.has(item.id);
                         const itemForecastVar =
                           (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                         const itemActualVar =
@@ -873,15 +938,36 @@ export function BudgetDetailTab({
                           (item.forecast_amount || item.underwriting_amount || 0);
 
                         return (
-                          <tr key={item.id} className="border-t hover:bg-muted/50">
-                            <td className="p-3 bg-background">
-                              <Checkbox
-                                checked={selectedItems.has(item.id)}
-                                onCheckedChange={() => toggleItemSelection(item.id)}
-                              />
+                          <tr
+                            key={item.id}
+                            className={cn(
+                              'group/row border-t transition-all duration-150',
+                              isSelected
+                                ? 'bg-primary/5 hover:bg-primary/10'
+                                : 'hover:bg-muted/50',
+                              isSelected && 'border-l-2 border-l-primary'
+                            )}
+                          >
+                            <td className="p-3">
+                              <div className="flex items-center gap-1">
+                                <IconGripVertical
+                                  className={cn(
+                                    'size-4 text-muted-foreground/40 cursor-grab',
+                                    'opacity-0 group-hover/row:opacity-100 transition-opacity duration-150'
+                                  )}
+                                />
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleItemSelection(item.id)}
+                                  className={cn(
+                                    'transition-opacity duration-150',
+                                    !isSelected && 'opacity-0 group-hover/row:opacity-100'
+                                  )}
+                                />
+                              </div>
                             </td>
-                            <td className="p-3 bg-background"></td>
-                            <td className="p-3 bg-background">
+                            <td className="p-3"></td>
+                            <td className="p-3">
                               <div>
                                 <p className="font-medium">{item.item}</p>
                                 {item.description && (
@@ -968,8 +1054,8 @@ export function BudgetDetailTab({
 
                     {/* Add Item Button Row */}
                     {isExpanded && addingToCategory !== category.value && (
-                      <tr>
-                        <td colSpan={9} className="p-2">
+                      <tr className="group/add">
+                        <td colSpan={9} className="p-1.5">
                           <CommandPopup
                             open={commandPopupCategory === category.value}
                             onOpenChange={(open) =>
@@ -980,16 +1066,18 @@ export function BudgetDetailTab({
                               <button
                                 type="button"
                                 className={cn(
-                                  'flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground',
-                                  'rounded-md hover:bg-muted hover:text-foreground transition-colors',
-                                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+                                  'flex items-center gap-2 w-full px-3 py-2 text-sm',
+                                  'text-muted-foreground/60 hover:text-muted-foreground',
+                                  'rounded-md hover:bg-muted transition-all duration-150',
+                                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                                  'opacity-0 group-hover/add:opacity-100 focus:opacity-100'
                                 )}
                               >
                                 <IconPlus className="size-4" />
                                 <span>Add item...</span>
-                                <span className="ml-auto text-xs opacity-50">
-                                  or press /
-                                </span>
+                                <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded opacity-50">
+                                  /
+                                </kbd>
                               </button>
                             }
                           />
@@ -1002,9 +1090,9 @@ export function BudgetDetailTab({
 
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
-                <td className="p-3 bg-muted/50"></td>
-                <td className="p-3 bg-muted/50"></td>
-                <td className="p-3 font-medium bg-muted/50">
+                <td className="p-3"></td>
+                <td className="p-3"></td>
+                <td className="p-3 font-medium">
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td colSpan={2}></td>
@@ -1016,9 +1104,9 @@ export function BudgetDetailTab({
 
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
-                <td className="p-3 bg-primary/10"></td>
-                <td className="p-3 bg-primary/10"></td>
-                <td className="p-3 font-semibold text-primary bg-primary/10">GRAND TOTAL</td>
+                <td className="p-3"></td>
+                <td className="p-3"></td>
+                <td className="p-3 font-semibold text-primary">GRAND TOTAL</td>
                 <td className="p-3 text-right font-semibold tabular-nums">
                   {formatCurrency(underwritingTotal)}
                 </td>
@@ -1054,21 +1142,25 @@ export function BudgetDetailTab({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-blue-100"></div>
-          <span>Underwriting: Pre-deal estimate</span>
+          <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50"></div>
+          <span>Underwriting</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-green-100"></div>
-          <span>Forecast: Post-walkthrough/bid</span>
+          <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/50"></div>
+          <span>Forecast</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-purple-100"></div>
-          <span>Actual: Real spend</span>
+          <div className="w-3 h-3 rounded bg-purple-100 dark:bg-purple-900/50"></div>
+          <span>Actual</span>
         </div>
-        <div className="ml-auto text-muted-foreground/70">
-          Click any value to edit &bull; Press / to add items
+        <div className="flex items-center gap-4 ml-auto text-muted-foreground/60">
+          <span>Click to edit</span>
+          <span className="flex items-center gap-1">
+            <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">/</kbd>
+            <span>to add</span>
+          </span>
         </div>
       </div>
     </div>
