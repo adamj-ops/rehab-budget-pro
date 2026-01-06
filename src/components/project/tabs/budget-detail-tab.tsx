@@ -3,6 +3,25 @@
 import { Fragment, useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   IconChevronDown,
   IconChevronRight,
   IconLoader2,
@@ -79,7 +98,6 @@ function CommandPopup({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Reset selection when popup opens
   useEffect(() => {
     if (open) setSelectedIndex(0);
   }, [open]);
@@ -174,11 +192,13 @@ function AddItemRow({
   projectId,
   onSave,
   onCancel,
+  nextSortOrder,
 }: {
   category: BudgetCategory;
   projectId: string;
   onSave: () => void;
   onCancel: () => void;
+  nextSortOrder: number;
 }) {
   const [item, setItem] = useState('');
   const [underwriting, setUnderwriting] = useState<number>(0);
@@ -207,6 +227,7 @@ function AddItemRow({
           rate: underwriting,
           cost_type: 'materials',
           status: 'not_started',
+          sort_order: nextSortOrder,
         })
         .select()
         .single();
@@ -487,6 +508,180 @@ function EditableStatusCell({ value, itemId, onSave }: EditableStatusCellProps) 
   );
 }
 
+// Sortable row component
+interface SortableRowProps {
+  item: BudgetItem;
+  isSelected: boolean;
+  isDragging?: boolean;
+  onToggleSelection: (id: string) => void;
+  onCellSave: (itemId: string, field: keyof BudgetItem, value: number | string) => Promise<void>;
+}
+
+function SortableRow({
+  item,
+  isSelected,
+  isDragging,
+  onToggleSelection,
+  onCellSave,
+}: SortableRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
+  const itemActualVar =
+    (item.actual_amount || 0) - (item.forecast_amount || item.underwriting_amount || 0);
+
+  const isBeingDragged = isDragging || isSortableDragging;
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group/row border-t transition-all duration-150',
+        isSelected
+          ? 'bg-primary/5 hover:bg-primary/10'
+          : 'hover:bg-muted/50',
+        isSelected && 'border-l-2 border-l-primary',
+        isBeingDragged && 'opacity-50 bg-muted shadow-lg z-50'
+      )}
+    >
+      <td className="p-3">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className={cn(
+              'size-4 text-muted-foreground/40 cursor-grab active:cursor-grabbing',
+              'opacity-0 group-hover/row:opacity-100 transition-opacity duration-150',
+              'hover:text-muted-foreground focus:outline-none'
+            )}
+          >
+            <IconGripVertical className="size-4" />
+          </button>
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelection(item.id)}
+            className={cn(
+              'transition-opacity duration-150',
+              !isSelected && 'opacity-0 group-hover/row:opacity-100'
+            )}
+          />
+        </div>
+      </td>
+      <td className="p-3"></td>
+      <td className="p-3">
+        <div>
+          <p className="font-medium">{item.item}</p>
+          {item.description && (
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+          )}
+        </div>
+      </td>
+      <td className="p-2 text-right">
+        <EditableCurrencyCell
+          value={item.underwriting_amount}
+          itemId={item.id}
+          field="underwriting_amount"
+          onSave={onCellSave}
+        />
+      </td>
+      <td className="p-2 text-right">
+        <EditableCurrencyCell
+          value={item.forecast_amount}
+          itemId={item.id}
+          field="forecast_amount"
+          onSave={onCellSave}
+          compareValue={item.underwriting_amount}
+          showVariance
+        />
+      </td>
+      <td className="p-2 text-right">
+        <EditableCurrencyCell
+          value={item.actual_amount}
+          itemId={item.id}
+          field="actual_amount"
+          onSave={onCellSave}
+          compareValue={item.forecast_amount || item.underwriting_amount}
+          showVariance
+        />
+      </td>
+      <td
+        className={cn(
+          'p-3 text-right text-sm tabular-nums',
+          itemForecastVar > 0
+            ? 'text-red-600'
+            : itemForecastVar < 0
+              ? 'text-green-600'
+              : 'text-muted-foreground'
+        )}
+      >
+        {itemForecastVar >= 0 ? '+' : ''}
+        {formatCurrency(itemForecastVar)}
+      </td>
+      <td
+        className={cn(
+          'p-3 text-right text-sm tabular-nums',
+          itemActualVar > 0
+            ? 'text-red-600'
+            : itemActualVar < 0
+              ? 'text-green-600'
+              : 'text-muted-foreground'
+        )}
+      >
+        {itemActualVar >= 0 ? '+' : ''}
+        {formatCurrency(itemActualVar)}
+      </td>
+      <td className="p-2 text-center">
+        <EditableStatusCell
+          value={item.status}
+          itemId={item.id}
+          onSave={onCellSave}
+        />
+      </td>
+    </tr>
+  );
+}
+
+// Drag overlay row (ghost preview)
+function DragOverlayRow({ item }: { item: BudgetItem }) {
+  return (
+    <table className="w-full text-sm">
+      <tbody>
+        <tr className="bg-background border rounded-lg shadow-xl">
+          <td className="p-3 w-10">
+            <IconGripVertical className="size-4 text-muted-foreground" />
+          </td>
+          <td className="p-3 w-8"></td>
+          <td className="p-3 min-w-[200px]">
+            <p className="font-medium">{item.item}</p>
+          </td>
+          <td className="p-3 text-right tabular-nums">{formatCurrency(item.underwriting_amount)}</td>
+          <td className="p-3 text-right tabular-nums">{formatCurrency(item.forecast_amount)}</td>
+          <td className="p-3 text-right tabular-nums">{formatCurrency(item.actual_amount ?? 0)}</td>
+          <td className="p-3 w-28"></td>
+          <td className="p-3 w-28"></td>
+          <td className="p-3 w-32">
+            <Badge variant="secondary">{item.status}</Badge>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 export function BudgetDetailTab({
   projectId,
   budgetItems,
@@ -500,8 +695,21 @@ export function BudgetDetailTab({
   const [addingToCategory, setAddingToCategory] = useState<BudgetCategory | null>(null);
   const [commandPopupCategory, setCommandPopupCategory] = useState<BudgetCategory | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Group items by category
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Group items by category and sort by sort_order
   const itemsByCategory = useMemo(() => {
     const grouped: Record<string, BudgetItem[]> = {};
     for (const item of budgetItems) {
@@ -509,6 +717,10 @@ export function BudgetDetailTab({
         grouped[item.category] = [];
       }
       grouped[item.category].push(item);
+    }
+    // Sort each category's items by sort_order
+    for (const cat of Object.keys(grouped)) {
+      grouped[cat].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     }
     return BUDGET_CATEGORIES.map((cat) => {
       const items = grouped[cat.value] || [];
@@ -527,17 +739,17 @@ export function BudgetDetailTab({
   const forecastTotal = itemsByCategory.reduce((sum, cat) => sum + cat.forecast, 0);
   const actualTotal = itemsByCategory.reduce((sum, cat) => sum + cat.actual, 0);
 
-  // Use forecast as primary budget if set, otherwise underwriting
   const primaryBudget = forecastTotal > 0 ? forecastTotal : underwritingTotal;
   const contingencyAmount = primaryBudget * (contingencyPercent / 100);
 
-  // Variances
   const forecastVariance = forecastTotal - underwritingTotal;
   const actualVariance = actualTotal - (forecastTotal > 0 ? forecastTotal : underwritingTotal);
   const totalVariance = actualTotal - underwritingTotal;
 
-  // Count selected items
   const selectedCount = selectedItems.size;
+
+  // Get the active item for drag overlay
+  const activeItem = activeId ? budgetItems.find((i) => i.id === activeId) : null;
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => {
@@ -601,6 +813,29 @@ export function BudgetDetailTab({
     },
   });
 
+  // Mutation for reordering items
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      const supabase = getSupabaseClient();
+      // Update all items in parallel
+      const promises = updates.map(({ id, sort_order }) =>
+        supabase.from('budget_items').update({ sort_order }).eq('id', id)
+      );
+      const results = await Promise.all(promises);
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        throw new Error('Failed to update some items');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      console.error('Error reordering items:', error);
+      toast.error('Failed to reorder items');
+    },
+  });
+
   // Mutation for deleting budget items
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
@@ -621,7 +856,6 @@ export function BudgetDetailTab({
     },
   });
 
-  // Handler for cell saves
   const handleCellSave = async (
     itemId: string,
     field: keyof BudgetItem,
@@ -630,7 +864,6 @@ export function BudgetDetailTab({
     await updateMutation.mutateAsync({ id: itemId, data: { [field]: value } });
   };
 
-  // Delete selected items
   const handleDeleteSelected = () => {
     if (selectedCount === 0) return;
     setShowDeleteConfirm(true);
@@ -640,8 +873,55 @@ export function BudgetDetailTab({
     deleteMutation.mutate(Array.from(selectedItems));
   };
 
-  // Get command options for a category
+  // Drag handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    // Find the category containing these items
+    const activeItem = budgetItems.find((i) => i.id === active.id);
+    const overItem = budgetItems.find((i) => i.id === over.id);
+
+    if (!activeItem || !overItem) return;
+
+    // Only allow reordering within the same category
+    if (activeItem.category !== overItem.category) {
+      toast.error('Cannot move items between categories');
+      return;
+    }
+
+    // Get items in this category
+    const categoryItems = itemsByCategory.find((c) => c.value === activeItem.category)?.items || [];
+    const oldIndex = categoryItems.findIndex((i) => i.id === active.id);
+    const newIndex = categoryItems.findIndex((i) => i.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Reorder the items
+    const newItems = arrayMove(categoryItems, oldIndex, newIndex);
+
+    // Create update batch with new sort_order values
+    const updates = newItems.map((item, index) => ({
+      id: item.id,
+      sort_order: index,
+    }));
+
+    reorderMutation.mutate(updates);
+    toast.success('Reordered');
+  };
+
   const getCommandOptions = (category: BudgetCategory): CommandOption[] => {
+    const categoryItems = itemsByCategory.find((c) => c.value === category)?.items || [];
+    const nextSortOrder = categoryItems.length > 0
+      ? Math.max(...categoryItems.map((i) => i.sort_order || 0)) + 1
+      : 0;
+
     const options: CommandOption[] = [
       {
         id: 'new-item',
@@ -716,7 +996,7 @@ export function BudgetDetailTab({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Summary Bar - Three Columns */}
+      {/* Summary Bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted">
         <div>
           <p className="text-sm text-muted-foreground">Underwriting</p>
@@ -801,345 +1081,266 @@ export function BudgetDetailTab({
         </div>
       )}
 
-      {/* Budget Table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="table-header border-b">
-                <th className="text-left p-3 w-10 bg-muted">
-                  <Checkbox
-                    checked={
-                      budgetItems.length > 0 &&
-                      budgetItems.every((i) => selectedItems.has(i.id))
-                        ? true
-                        : budgetItems.some((i) => selectedItems.has(i.id))
-                          ? 'indeterminate'
-                          : false
-                    }
-                    onCheckedChange={() => {
-                      const allSelected = budgetItems.every((i) => selectedItems.has(i.id));
-                      if (allSelected) {
-                        setSelectedItems(new Set());
-                      } else {
-                        setSelectedItems(new Set(budgetItems.map((i) => i.id)));
+      {/* Budget Table with Drag and Drop */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="rounded-lg border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="table-header border-b">
+                  <th className="text-left p-3 w-10 bg-muted">
+                    <Checkbox
+                      checked={
+                        budgetItems.length > 0 &&
+                        budgetItems.every((i) => selectedItems.has(i.id))
+                          ? true
+                          : budgetItems.some((i) => selectedItems.has(i.id))
+                            ? 'indeterminate'
+                            : false
                       }
-                    }}
-                  />
-                </th>
-                <th className="text-left p-3 w-8 bg-muted"></th>
-                <th className="text-left p-3 min-w-[200px] bg-muted">Item</th>
-                <th className="text-right p-3 w-32 bg-blue-50 dark:bg-blue-950/30">
-                  <div className="font-semibold">Underwriting</div>
-                  <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
-                </th>
-                <th className="text-right p-3 w-32 bg-green-50 dark:bg-green-950/30">
-                  <div className="font-semibold">Forecast</div>
-                  <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
-                </th>
-                <th className="text-right p-3 w-32 bg-purple-50 dark:bg-purple-950/30">
-                  <div className="font-semibold">Actual</div>
-                  <div className="text-xs font-normal text-muted-foreground">Real spend</div>
-                </th>
-                <th className="text-right p-3 w-28 bg-muted">Forecast Var</th>
-                <th className="text-right p-3 w-28 bg-muted">Actual Var</th>
-                <th className="text-center p-3 w-32 bg-muted">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itemsByCategory.map((category) => {
-                const isExpanded = expandedCategories.has(category.value);
-                const catForecastVar = category.forecast - category.underwriting;
-                const catActualVar =
-                  category.actual -
-                  (category.forecast > 0 ? category.forecast : category.underwriting);
-                const categoryItemIds = category.items.map((i) => i.id);
-                const allCategorySelected =
-                  category.items.length > 0 &&
-                  categoryItemIds.every((id) => selectedItems.has(id));
-                const someCategorySelected =
-                  category.items.length > 0 &&
-                  categoryItemIds.some((id) => selectedItems.has(id));
+                      onCheckedChange={() => {
+                        const allSelected = budgetItems.every((i) => selectedItems.has(i.id));
+                        if (allSelected) {
+                          setSelectedItems(new Set());
+                        } else {
+                          setSelectedItems(new Set(budgetItems.map((i) => i.id)));
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="text-left p-3 w-8 bg-muted"></th>
+                  <th className="text-left p-3 min-w-[200px] bg-muted">Item</th>
+                  <th className="text-right p-3 w-32 bg-blue-50 dark:bg-blue-950/30">
+                    <div className="font-semibold">Underwriting</div>
+                    <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
+                  </th>
+                  <th className="text-right p-3 w-32 bg-green-50 dark:bg-green-950/30">
+                    <div className="font-semibold">Forecast</div>
+                    <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
+                  </th>
+                  <th className="text-right p-3 w-32 bg-purple-50 dark:bg-purple-950/30">
+                    <div className="font-semibold">Actual</div>
+                    <div className="text-xs font-normal text-muted-foreground">Real spend</div>
+                  </th>
+                  <th className="text-right p-3 w-28 bg-muted">Forecast Var</th>
+                  <th className="text-right p-3 w-28 bg-muted">Actual Var</th>
+                  <th className="text-center p-3 w-32 bg-muted">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {itemsByCategory.map((category) => {
+                  const isExpanded = expandedCategories.has(category.value);
+                  const catForecastVar = category.forecast - category.underwriting;
+                  const catActualVar =
+                    category.actual -
+                    (category.forecast > 0 ? category.forecast : category.underwriting);
+                  const categoryItemIds = category.items.map((i) => i.id);
+                  const allCategorySelected =
+                    category.items.length > 0 &&
+                    categoryItemIds.every((id) => selectedItems.has(id));
+                  const someCategorySelected =
+                    category.items.length > 0 &&
+                    categoryItemIds.some((id) => selectedItems.has(id));
 
-                return (
-                  <Fragment key={category.value}>
-                    {/* Category Header Row */}
-                    <tr className="group category-header cursor-pointer bg-muted/50 hover:bg-muted transition-colors duration-150">
-                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={
-                            allCategorySelected
-                              ? true
-                              : someCategorySelected
-                                ? 'indeterminate'
-                                : false
-                          }
-                          onCheckedChange={() => toggleAllInCategory(category.items)}
-                          disabled={category.items.length === 0}
-                        />
-                      </td>
-                      <td
-                        className="p-3"
-                        onClick={() => toggleCategory(category.value)}
-                      >
-                        {isExpanded ? (
-                          <IconChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <IconChevronRight className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </td>
-                      <td
-                        className="p-3 font-medium"
-                        onClick={() => toggleCategory(category.value)}
-                      >
-                        {category.label}
-                        <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
-                          ({category.items.length})
-                        </span>
-                      </td>
-                      <td className="p-3 text-right font-medium bg-blue-50/50 dark:bg-blue-950/20 tabular-nums">
-                        {formatCurrency(category.underwriting)}
-                      </td>
-                      <td className="p-3 text-right font-medium bg-green-50/50 dark:bg-green-950/20 tabular-nums">
-                        {formatCurrency(category.forecast)}
-                      </td>
-                      <td className="p-3 text-right font-medium bg-purple-50/50 dark:bg-purple-950/20 tabular-nums">
-                        {formatCurrency(category.actual)}
-                      </td>
-                      <td
-                        className={cn(
-                          'p-3 text-right font-medium tabular-nums',
-                          catForecastVar >= 0 ? 'text-red-600' : 'text-green-600'
-                        )}
-                      >
-                        {catForecastVar >= 0 ? '+' : ''}
-                        {formatCurrency(catForecastVar)}
-                      </td>
-                      <td
-                        className={cn(
-                          'p-3 text-right font-medium tabular-nums',
-                          catActualVar >= 0 ? 'text-red-600' : 'text-green-600'
-                        )}
-                      >
-                        {catActualVar >= 0 ? '+' : ''}
-                        {formatCurrency(catActualVar)}
-                      </td>
-                      <td></td>
-                    </tr>
+                  const nextSortOrder = category.items.length > 0
+                    ? Math.max(...category.items.map((i) => i.sort_order || 0)) + 1
+                    : 0;
 
-                    {/* Item Rows */}
-                    {isExpanded &&
-                      category.items.map((item) => {
-                        const isSelected = selectedItems.has(item.id);
-                        const itemForecastVar =
-                          (item.forecast_amount || 0) - (item.underwriting_amount || 0);
-                        const itemActualVar =
-                          (item.actual_amount || 0) -
-                          (item.forecast_amount || item.underwriting_amount || 0);
-
-                        return (
-                          <tr
-                            key={item.id}
-                            className={cn(
-                              'group/row border-t transition-all duration-150',
-                              isSelected
-                                ? 'bg-primary/5 hover:bg-primary/10'
-                                : 'hover:bg-muted/50',
-                              isSelected && 'border-l-2 border-l-primary'
-                            )}
-                          >
-                            <td className="p-3">
-                              <div className="flex items-center gap-1">
-                                <IconGripVertical
-                                  className={cn(
-                                    'size-4 text-muted-foreground/40 cursor-grab',
-                                    'opacity-0 group-hover/row:opacity-100 transition-opacity duration-150'
-                                  )}
-                                />
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleItemSelection(item.id)}
-                                  className={cn(
-                                    'transition-opacity duration-150',
-                                    !isSelected && 'opacity-0 group-hover/row:opacity-100'
-                                  )}
-                                />
-                              </div>
-                            </td>
-                            <td className="p-3"></td>
-                            <td className="p-3">
-                              <div>
-                                <p className="font-medium">{item.item}</p>
-                                {item.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.description}
-                                  </p>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-2 text-right">
-                              <EditableCurrencyCell
-                                value={item.underwriting_amount}
-                                itemId={item.id}
-                                field="underwriting_amount"
-                                onSave={handleCellSave}
-                              />
-                            </td>
-                            <td className="p-2 text-right">
-                              <EditableCurrencyCell
-                                value={item.forecast_amount}
-                                itemId={item.id}
-                                field="forecast_amount"
-                                onSave={handleCellSave}
-                                compareValue={item.underwriting_amount}
-                                showVariance
-                              />
-                            </td>
-                            <td className="p-2 text-right">
-                              <EditableCurrencyCell
-                                value={item.actual_amount}
-                                itemId={item.id}
-                                field="actual_amount"
-                                onSave={handleCellSave}
-                                compareValue={item.forecast_amount || item.underwriting_amount}
-                                showVariance
-                              />
-                            </td>
-                            <td
-                              className={cn(
-                                'p-3 text-right text-sm tabular-nums',
-                                itemForecastVar > 0
-                                  ? 'text-red-600'
-                                  : itemForecastVar < 0
-                                    ? 'text-green-600'
-                                    : 'text-muted-foreground'
-                              )}
-                            >
-                              {itemForecastVar >= 0 ? '+' : ''}
-                              {formatCurrency(itemForecastVar)}
-                            </td>
-                            <td
-                              className={cn(
-                                'p-3 text-right text-sm tabular-nums',
-                                itemActualVar > 0
-                                  ? 'text-red-600'
-                                  : itemActualVar < 0
-                                    ? 'text-green-600'
-                                    : 'text-muted-foreground'
-                              )}
-                            >
-                              {itemActualVar >= 0 ? '+' : ''}
-                              {formatCurrency(itemActualVar)}
-                            </td>
-                            <td className="p-2 text-center">
-                              <EditableStatusCell
-                                value={item.status}
-                                itemId={item.id}
-                                onSave={handleCellSave}
-                              />
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                    {/* Add Item Row (when adding) */}
-                    {isExpanded && addingToCategory === category.value && (
-                      <AddItemRow
-                        category={category.value}
-                        projectId={projectId}
-                        onSave={() => setAddingToCategory(null)}
-                        onCancel={() => setAddingToCategory(null)}
-                      />
-                    )}
-
-                    {/* Add Item Button Row */}
-                    {isExpanded && addingToCategory !== category.value && (
-                      <tr className="group/add">
-                        <td colSpan={9} className="p-1.5">
-                          <CommandPopup
-                            open={commandPopupCategory === category.value}
-                            onOpenChange={(open) =>
-                              setCommandPopupCategory(open ? category.value : null)
+                  return (
+                    <Fragment key={category.value}>
+                      {/* Category Header Row */}
+                      <tr className="group category-header cursor-pointer bg-muted/50 hover:bg-muted transition-colors duration-150">
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={
+                              allCategorySelected
+                                ? true
+                                : someCategorySelected
+                                  ? 'indeterminate'
+                                  : false
                             }
-                            options={getCommandOptions(category.value)}
-                            trigger={
-                              <button
-                                type="button"
-                                className={cn(
-                                  'flex items-center gap-2 w-full px-3 py-2 text-sm',
-                                  'text-muted-foreground/60 hover:text-muted-foreground',
-                                  'rounded-md hover:bg-muted transition-all duration-150',
-                                  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-                                  'opacity-0 group-hover/add:opacity-100 focus:opacity-100'
-                                )}
-                              >
-                                <IconPlus className="size-4" />
-                                <span>Add item...</span>
-                                <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded opacity-50">
-                                  /
-                                </kbd>
-                              </button>
-                            }
+                            onCheckedChange={() => toggleAllInCategory(category.items)}
+                            disabled={category.items.length === 0}
                           />
                         </td>
+                        <td
+                          className="p-3"
+                          onClick={() => toggleCategory(category.value)}
+                        >
+                          {isExpanded ? (
+                            <IconChevronDown className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <IconChevronRight className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </td>
+                        <td
+                          className="p-3 font-medium"
+                          onClick={() => toggleCategory(category.value)}
+                        >
+                          {category.label}
+                          <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
+                            ({category.items.length})
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-medium bg-blue-50/50 dark:bg-blue-950/20 tabular-nums">
+                          {formatCurrency(category.underwriting)}
+                        </td>
+                        <td className="p-3 text-right font-medium bg-green-50/50 dark:bg-green-950/20 tabular-nums">
+                          {formatCurrency(category.forecast)}
+                        </td>
+                        <td className="p-3 text-right font-medium bg-purple-50/50 dark:bg-purple-950/20 tabular-nums">
+                          {formatCurrency(category.actual)}
+                        </td>
+                        <td
+                          className={cn(
+                            'p-3 text-right font-medium tabular-nums',
+                            catForecastVar >= 0 ? 'text-red-600' : 'text-green-600'
+                          )}
+                        >
+                          {catForecastVar >= 0 ? '+' : ''}
+                          {formatCurrency(catForecastVar)}
+                        </td>
+                        <td
+                          className={cn(
+                            'p-3 text-right font-medium tabular-nums',
+                            catActualVar >= 0 ? 'text-red-600' : 'text-green-600'
+                          )}
+                        >
+                          {catActualVar >= 0 ? '+' : ''}
+                          {formatCurrency(catActualVar)}
+                        </td>
+                        <td></td>
                       </tr>
+
+                      {/* Sortable Item Rows */}
+                      {isExpanded && category.items.length > 0 && (
+                        <SortableContext
+                          items={category.items.map((i) => i.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {category.items.map((item) => (
+                            <SortableRow
+                              key={item.id}
+                              item={item}
+                              isSelected={selectedItems.has(item.id)}
+                              isDragging={activeId === item.id}
+                              onToggleSelection={toggleItemSelection}
+                              onCellSave={handleCellSave}
+                            />
+                          ))}
+                        </SortableContext>
+                      )}
+
+                      {/* Add Item Row (when adding) */}
+                      {isExpanded && addingToCategory === category.value && (
+                        <AddItemRow
+                          category={category.value}
+                          projectId={projectId}
+                          onSave={() => setAddingToCategory(null)}
+                          onCancel={() => setAddingToCategory(null)}
+                          nextSortOrder={nextSortOrder}
+                        />
+                      )}
+
+                      {/* Add Item Button Row */}
+                      {isExpanded && addingToCategory !== category.value && (
+                        <tr className="group/add">
+                          <td colSpan={9} className="p-1.5">
+                            <CommandPopup
+                              open={commandPopupCategory === category.value}
+                              onOpenChange={(open) =>
+                                setCommandPopupCategory(open ? category.value : null)
+                              }
+                              options={getCommandOptions(category.value)}
+                              trigger={
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    'flex items-center gap-2 w-full px-3 py-2 text-sm',
+                                    'text-muted-foreground/60 hover:text-muted-foreground',
+                                    'rounded-md hover:bg-muted transition-all duration-150',
+                                    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+                                    'opacity-0 group-hover/add:opacity-100 focus:opacity-100'
+                                  )}
+                                >
+                                  <IconPlus className="size-4" />
+                                  <span>Add item...</span>
+                                  <kbd className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded opacity-50">
+                                    /
+                                  </kbd>
+                                </button>
+                              }
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+
+                {/* Contingency Row */}
+                <tr className="border-t-2 bg-muted/50">
+                  <td className="p-3"></td>
+                  <td className="p-3"></td>
+                  <td className="p-3 font-medium">
+                    Contingency ({contingencyPercent}%)
+                  </td>
+                  <td colSpan={2}></td>
+                  <td className="p-3 text-right font-medium tabular-nums">
+                    {formatCurrency(contingencyAmount)}
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+
+                {/* Grand Total Row */}
+                <tr className="border-t-2 bg-primary/10">
+                  <td className="p-3"></td>
+                  <td className="p-3"></td>
+                  <td className="p-3 font-semibold text-primary">GRAND TOTAL</td>
+                  <td className="p-3 text-right font-semibold tabular-nums">
+                    {formatCurrency(underwritingTotal)}
+                  </td>
+                  <td className="p-3 text-right font-semibold tabular-nums">
+                    {formatCurrency(forecastTotal)}
+                  </td>
+                  <td className="p-3 text-right font-semibold tabular-nums">
+                    {formatCurrency(actualTotal)}
+                  </td>
+                  <td
+                    className={cn(
+                      'p-3 text-right font-semibold tabular-nums',
+                      forecastVariance >= 0 ? 'text-red-600' : 'text-green-600'
                     )}
-                  </Fragment>
-                );
-              })}
-
-              {/* Contingency Row */}
-              <tr className="border-t-2 bg-muted/50">
-                <td className="p-3"></td>
-                <td className="p-3"></td>
-                <td className="p-3 font-medium">
-                  Contingency ({contingencyPercent}%)
-                </td>
-                <td colSpan={2}></td>
-                <td className="p-3 text-right font-medium tabular-nums">
-                  {formatCurrency(contingencyAmount)}
-                </td>
-                <td colSpan={3}></td>
-              </tr>
-
-              {/* Grand Total Row */}
-              <tr className="border-t-2 bg-primary/10">
-                <td className="p-3"></td>
-                <td className="p-3"></td>
-                <td className="p-3 font-semibold text-primary">GRAND TOTAL</td>
-                <td className="p-3 text-right font-semibold tabular-nums">
-                  {formatCurrency(underwritingTotal)}
-                </td>
-                <td className="p-3 text-right font-semibold tabular-nums">
-                  {formatCurrency(forecastTotal)}
-                </td>
-                <td className="p-3 text-right font-semibold tabular-nums">
-                  {formatCurrency(actualTotal)}
-                </td>
-                <td
-                  className={cn(
-                    'p-3 text-right font-semibold tabular-nums',
-                    forecastVariance >= 0 ? 'text-red-600' : 'text-green-600'
-                  )}
-                >
-                  {forecastVariance >= 0 ? '+' : ''}
-                  {formatCurrency(forecastVariance)}
-                </td>
-                <td
-                  className={cn(
-                    'p-3 text-right font-semibold tabular-nums',
-                    actualVariance >= 0 ? 'text-red-600' : 'text-green-600'
-                  )}
-                >
-                  {actualVariance >= 0 ? '+' : ''}
-                  {formatCurrency(actualVariance)}
-                </td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
+                  >
+                    {forecastVariance >= 0 ? '+' : ''}
+                    {formatCurrency(forecastVariance)}
+                  </td>
+                  <td
+                    className={cn(
+                      'p-3 text-right font-semibold tabular-nums',
+                      actualVariance >= 0 ? 'text-red-600' : 'text-green-600'
+                    )}
+                  >
+                    {actualVariance >= 0 ? '+' : ''}
+                    {formatCurrency(actualVariance)}
+                  </td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeItem ? <DragOverlayRow item={activeItem} /> : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
@@ -1156,6 +1357,7 @@ export function BudgetDetailTab({
           <span>Actual</span>
         </div>
         <div className="flex items-center gap-4 ml-auto text-muted-foreground/60">
+          <span>Drag to reorder</span>
           <span>Click to edit</span>
           <span className="flex items-center gap-1">
             <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px]">/</kbd>
