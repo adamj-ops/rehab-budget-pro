@@ -45,7 +45,13 @@ import {
   IconTrash,
   IconSearch,
   IconSortAscending,
+  IconSquare,
+  IconSquareCheck,
+  IconDownload,
+  IconUpload,
+  IconTag,
 } from '@tabler/icons-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface VendorsTabProps {
   projectId: string
@@ -105,6 +111,10 @@ export function VendorsTab({
     email: string
   }>({ phone: '', email: '' })
 
+  // State for bulk selection
+  const [selectedVendors, setSelectedVendors] = React.useState<Set<string>>(new Set())
+  const [isSelectionMode, setIsSelectionMode] = React.useState(false)
+
   // State for search/filter/sort
   const [searchQuery, setSearchQuery] = React.useState('')
   const [tradeFilter, setTradeFilter] = React.useState<VendorTrade | 'all'>(
@@ -112,7 +122,7 @@ export function VendorsTab({
   )
   const [sortBy, setSortBy] = React.useState<SortOption>('name_asc')
 
-  const { deleteVendor, updateVendor } = useVendorMutations()
+  const { deleteVendor, updateVendor, createVendor } = useVendorMutations()
 
   // Get vendors used in this project
   const projectVendorIds = new Set(
@@ -220,21 +230,271 @@ export function VendorsTab({
     }
   }
 
+  // Bulk selection handlers
+  const toggleVendorSelection = (vendorId: string) => {
+    setSelectedVendors((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(vendorId)) {
+        newSet.delete(vendorId)
+      } else {
+        newSet.add(vendorId)
+      }
+      return newSet
+    })
+  }
+
+  const selectAllVendors = () => {
+    setSelectedVendors(new Set(filteredVendors.map((v) => v.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedVendors(new Set())
+    setIsSelectionMode(false)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedVendors.size === 0) return
+    if (!confirm(`Delete ${selectedVendors.size} vendor(s)? This cannot be undone.`)) return
+
+    try {
+      for (const vendorId of selectedVendors) {
+        await deleteVendor.mutateAsync(vendorId)
+      }
+      clearSelection()
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
+  // CSV Export
+  const exportToCSV = (vendorsToExport: Vendor[]) => {
+    const headers = [
+      'name',
+      'trade',
+      'contact_name',
+      'phone',
+      'email',
+      'website',
+      'address',
+      'licensed',
+      'insured',
+      'w9_on_file',
+      'rating',
+      'reliability',
+      'price_level',
+      'status',
+      'notes',
+    ]
+
+    const csvRows = [
+      headers.join(','),
+      ...vendorsToExport.map((vendor) =>
+        headers
+          .map((header) => {
+            const value = vendor[header as keyof Vendor]
+            if (value === null || value === undefined) return ''
+            if (typeof value === 'boolean') return value ? 'true' : 'false'
+            // Escape quotes and wrap in quotes if contains comma or quote
+            const strValue = String(value)
+            if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
+              return `"${strValue.replace(/"/g, '""')}"`
+            }
+            return strValue
+          })
+          .join(',')
+      ),
+    ]
+
+    const csvContent = csvRows.join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `vendors-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
+  const handleExportSelected = () => {
+    const vendorsToExport = vendors.filter((v) => selectedVendors.has(v.id))
+    exportToCSV(vendorsToExport)
+  }
+
+  const handleExportAll = () => {
+    exportToCSV(vendors)
+  }
+
+  // CSV Import
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const text = event.target?.result as string
+      const lines = text.split('\n').filter((line) => line.trim())
+
+      if (lines.length < 2) {
+        alert('CSV file is empty or has no data rows')
+        return
+      }
+
+      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
+      const nameIndex = headers.indexOf('name')
+      const tradeIndex = headers.indexOf('trade')
+
+      if (nameIndex === -1 || tradeIndex === -1) {
+        alert('CSV must have "name" and "trade" columns')
+        return
+      }
+
+      const validTrades = new Set(ALL_TRADES)
+      let imported = 0
+      let errors = 0
+
+      for (let i = 1; i < lines.length; i++) {
+        // Parse CSV row (handling quoted values)
+        const row = parseCSVRow(lines[i])
+        if (row.length < Math.max(nameIndex, tradeIndex) + 1) continue
+
+        const name = row[nameIndex]?.trim()
+        const trade = row[tradeIndex]?.trim().toLowerCase() as VendorTrade
+
+        if (!name || !validTrades.has(trade)) {
+          errors++
+          continue
+        }
+
+        try {
+          const vendorData: Record<string, unknown> = {
+            name,
+            trade,
+            status: 'active',
+          }
+
+          // Map other fields
+          const fieldMappings: Record<string, string> = {
+            contact_name: 'contact_name',
+            phone: 'phone',
+            email: 'email',
+            website: 'website',
+            address: 'address',
+            notes: 'notes',
+          }
+
+          headers.forEach((header, idx) => {
+            if (fieldMappings[header] && row[idx]) {
+              vendorData[fieldMappings[header]] = row[idx].trim()
+            }
+          })
+
+          // Boolean fields
+          const boolIndex = headers.indexOf('licensed')
+          if (boolIndex !== -1) vendorData.licensed = row[boolIndex]?.toLowerCase() === 'true'
+          const insuredIndex = headers.indexOf('insured')
+          if (insuredIndex !== -1) vendorData.insured = row[insuredIndex]?.toLowerCase() === 'true'
+          const w9Index = headers.indexOf('w9_on_file')
+          if (w9Index !== -1) vendorData.w9_on_file = row[w9Index]?.toLowerCase() === 'true'
+
+          // Rating
+          const ratingIndex = headers.indexOf('rating')
+          if (ratingIndex !== -1 && row[ratingIndex]) {
+            const rating = parseInt(row[ratingIndex])
+            if (rating >= 1 && rating <= 5) vendorData.rating = rating
+          }
+
+          // Reliability
+          const reliabilityIndex = headers.indexOf('reliability')
+          if (reliabilityIndex !== -1 && row[reliabilityIndex]) {
+            const reliability = row[reliabilityIndex].toLowerCase()
+            if (['excellent', 'good', 'fair', 'poor'].includes(reliability)) {
+              vendorData.reliability = reliability
+            }
+          }
+
+          // Price level
+          const priceIndex = headers.indexOf('price_level')
+          if (priceIndex !== -1 && row[priceIndex]) {
+            const price = row[priceIndex]
+            if (['$', '$$', '$$$'].includes(price)) vendorData.price_level = price
+          }
+
+          await createVendor.mutateAsync(vendorData as Parameters<typeof createVendor.mutateAsync>[0])
+          imported++
+        } catch {
+          errors++
+        }
+      }
+
+      alert(`Imported ${imported} vendor(s)${errors > 0 ? `. ${errors} row(s) had errors.` : '.'}`)
+    }
+
+    reader.readAsText(file)
+    // Reset the input so the same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  // Helper function to parse CSV row (handles quoted values)
+  const parseCSVRow = (row: string): string[] => {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i]
+
+      if (char === '"') {
+        if (inQuotes && row[i + 1] === '"') {
+          current += '"'
+          i++
+        } else {
+          inQuotes = !inQuotes
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current)
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    result.push(current)
+    return result
+  }
+
   const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
     const totals = vendorTotals.get(vendor.id)
+    const isSelected = selectedVendors.has(vendor.id)
 
     return (
       <div
         key={vendor.id}
         className={cn(
           'rounded-lg border bg-card p-4 transition-shadow hover:shadow-md',
-          isProjectVendor && 'border-primary/30'
+          isProjectVendor && 'border-primary/30',
+          isSelected && 'ring-2 ring-primary border-primary'
         )}
       >
         <div className="flex items-start justify-between mb-3">
+          {isSelectionMode && (
+            <div className="mr-3 mt-0.5">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => toggleVendorSelection(vendor.id)}
+              />
+            </div>
+          )}
           <div
             className="flex-1 cursor-pointer"
-            onClick={() => setViewingVendor(vendor)}
+            onClick={() =>
+              isSelectionMode
+                ? toggleVendorSelection(vendor.id)
+                : setViewingVendor(vendor)
+            }
           >
             <h4 className="font-medium">{vendor.name}</h4>
             <p className="text-sm text-muted-foreground">
@@ -420,6 +680,15 @@ export function VendorsTab({
 
   return (
     <div className="space-y-6">
+      {/* Hidden file input for CSV import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -429,11 +698,101 @@ export function VendorsTab({
             assigned to this project
           </p>
         </div>
-        <Button onClick={() => setIsAddOpen(true)}>
-          <IconPlus className="h-4 w-4 mr-2" />
-          Add Vendor
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Import/Export dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <IconDownload className="h-4 w-4 mr-2" />
+                Import/Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleImportClick}>
+                <IconUpload className="h-4 w-4 mr-2" />
+                Import from CSV
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportAll}>
+                <IconDownload className="h-4 w-4 mr-2" />
+                Export All Vendors
+              </DropdownMenuItem>
+              {selectedVendors.size > 0 && (
+                <DropdownMenuItem onClick={handleExportSelected}>
+                  <IconDownload className="h-4 w-4 mr-2" />
+                  Export Selected ({selectedVendors.size})
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Select mode toggle */}
+          <Button
+            variant={isSelectionMode ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setIsSelectionMode(!isSelectionMode)
+              if (isSelectionMode) clearSelection()
+            }}
+          >
+            {isSelectionMode ? (
+              <IconSquareCheck className="h-4 w-4 mr-2" />
+            ) : (
+              <IconSquare className="h-4 w-4 mr-2" />
+            )}
+            Select
+          </Button>
+
+          <Button onClick={() => setIsAddOpen(true)}>
+            <IconPlus className="h-4 w-4 mr-2" />
+            Add Vendor
+          </Button>
+        </div>
       </div>
+
+      {/* Bulk Actions Toolbar */}
+      {isSelectionMode && (
+        <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={
+                selectedVendors.size === filteredVendors.length &&
+                filteredVendors.length > 0
+              }
+              onCheckedChange={(checked) => {
+                if (checked) selectAllVendors()
+                else clearSelection()
+              }}
+            />
+            <span className="text-sm">
+              {selectedVendors.size > 0
+                ? `${selectedVendors.size} selected`
+                : 'Select all'}
+            </span>
+          </div>
+          {selectedVendors.size > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportSelected}
+              >
+                <IconDownload className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={deleteVendor.isPending}
+              >
+                <IconTrash className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search, Filter, and Sort */}
       <div className="flex flex-col sm:flex-row gap-3">
