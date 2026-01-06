@@ -6,6 +6,7 @@ import { VENDOR_TRADE_LABELS } from '@/types'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useVendorMutations } from '@/hooks/use-vendor-mutations'
 import { VendorFormSheet } from '@/components/project/vendor-form-sheet'
+import { VendorDetailSheet } from '@/components/project/vendor-detail-sheet'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -93,10 +94,16 @@ export function VendorsTab({
 }: VendorsTabProps) {
   // State for CRUD operations
   const [isAddOpen, setIsAddOpen] = React.useState(false)
+  const [viewingVendor, setViewingVendor] = React.useState<Vendor | null>(null)
   const [editingVendor, setEditingVendor] = React.useState<Vendor | null>(null)
   const [deletingVendor, setDeletingVendor] = React.useState<Vendor | null>(
     null
   )
+  const [quickEditId, setQuickEditId] = React.useState<string | null>(null)
+  const [quickEditData, setQuickEditData] = React.useState<{
+    phone: string
+    email: string
+  }>({ phone: '', email: '' })
 
   // State for search/filter/sort
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -105,7 +112,7 @@ export function VendorsTab({
   )
   const [sortBy, setSortBy] = React.useState<SortOption>('name_asc')
 
-  const { deleteVendor } = useVendorMutations()
+  const { deleteVendor, updateVendor } = useVendorMutations()
 
   // Get vendors used in this project
   const projectVendorIds = new Set(
@@ -187,6 +194,32 @@ export function VendorsTab({
     }
   }
 
+  const startQuickEdit = (vendor: Vendor) => {
+    setQuickEditId(vendor.id)
+    setQuickEditData({
+      phone: vendor.phone || '',
+      email: vendor.email || '',
+    })
+  }
+
+  const cancelQuickEdit = () => {
+    setQuickEditId(null)
+    setQuickEditData({ phone: '', email: '' })
+  }
+
+  const saveQuickEdit = async (vendorId: string) => {
+    try {
+      await updateVendor.mutateAsync({
+        id: vendorId,
+        phone: quickEditData.phone.trim() || null,
+        email: quickEditData.email.trim() || null,
+      })
+      setQuickEditId(null)
+    } catch {
+      // Error handled by mutation
+    }
+  }
+
   const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
     const totals = vendorTotals.get(vendor.id)
 
@@ -201,7 +234,7 @@ export function VendorsTab({
         <div className="flex items-start justify-between mb-3">
           <div
             className="flex-1 cursor-pointer"
-            onClick={() => setEditingVendor(vendor)}
+            onClick={() => setViewingVendor(vendor)}
           >
             <h4 className="font-medium">{vendor.name}</h4>
             <p className="text-sm text-muted-foreground">
@@ -219,9 +252,13 @@ export function VendorsTab({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => startQuickEdit(vendor)}>
+                  <IconPhone className="h-4 w-4 mr-2" />
+                  Quick Edit Contact
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEditingVendor(vendor)}>
                   <IconPencil className="h-4 w-4 mr-2" />
-                  Edit
+                  Edit All Details
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -237,27 +274,75 @@ export function VendorsTab({
         </div>
 
         {/* Contact Info */}
-        <div className="space-y-1 text-sm mb-3">
-          {vendor.contact_name && (
-            <p className="text-muted-foreground">{vendor.contact_name}</p>
-          )}
-          {vendor.phone && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <IconPhone className="h-3 w-3" />
-              <a href={`tel:${vendor.phone}`} className="hover:text-primary">
-                {vendor.phone}
-              </a>
+        {quickEditId === vendor.id ? (
+          <div className="space-y-2 mb-3 p-2 bg-muted/50 rounded-md">
+            {vendor.contact_name && (
+              <p className="text-sm text-muted-foreground">{vendor.contact_name}</p>
+            )}
+            <div className="flex items-center gap-2">
+              <IconPhone className="h-3 w-3 text-muted-foreground" />
+              <Input
+                value={quickEditData.phone}
+                onChange={(e) =>
+                  setQuickEditData((prev) => ({ ...prev, phone: e.target.value }))
+                }
+                placeholder="Phone number"
+                className="h-7 text-sm"
+              />
             </div>
-          )}
-          {vendor.email && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <IconMail className="h-3 w-3" />
-              <a href={`mailto:${vendor.email}`} className="hover:text-primary">
-                {vendor.email}
-              </a>
+            <div className="flex items-center gap-2">
+              <IconMail className="h-3 w-3 text-muted-foreground" />
+              <Input
+                value={quickEditData.email}
+                onChange={(e) =>
+                  setQuickEditData((prev) => ({ ...prev, email: e.target.value }))
+                }
+                placeholder="Email address"
+                className="h-7 text-sm"
+              />
             </div>
-          )}
-        </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancelQuickEdit}
+                className="h-7 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => saveQuickEdit(vendor.id)}
+                disabled={updateVendor.isPending}
+                className="h-7 text-xs"
+              >
+                {updateVendor.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1 text-sm mb-3">
+            {vendor.contact_name && (
+              <p className="text-muted-foreground">{vendor.contact_name}</p>
+            )}
+            {vendor.phone && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <IconPhone className="h-3 w-3" />
+                <a href={`tel:${vendor.phone}`} className="hover:text-primary">
+                  {vendor.phone}
+                </a>
+              </div>
+            )}
+            {vendor.email && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <IconMail className="h-3 w-3" />
+                <a href={`mailto:${vendor.email}`} className="hover:text-primary">
+                  {vendor.email}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Qualifications */}
         <div className="flex items-center gap-4 text-xs mb-3">
@@ -449,6 +534,18 @@ export function VendorsTab({
         </div>
       )}
 
+      {/* Vendor Detail Sheet */}
+      <VendorDetailSheet
+        open={!!viewingVendor}
+        onOpenChange={(open) => !open && setViewingVendor(null)}
+        vendor={viewingVendor}
+        budgetItems={budgetItems}
+        onEdit={() => {
+          setEditingVendor(viewingVendor)
+          setViewingVendor(null)
+        }}
+      />
+
       {/* Add/Edit Vendor Sheet */}
       <VendorFormSheet
         open={isAddOpen || !!editingVendor}
@@ -459,6 +556,7 @@ export function VendorsTab({
           }
         }}
         vendor={editingVendor || undefined}
+        existingVendors={vendors}
       />
 
       {/* Delete Confirmation Dialog */}

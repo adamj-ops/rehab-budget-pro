@@ -24,12 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { IconLoader2 } from '@tabler/icons-react'
+import { IconLoader2, IconAlertTriangle } from '@tabler/icons-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 interface VendorFormSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   vendor?: Vendor // If provided, edit mode; otherwise add mode
+  existingVendors?: Vendor[] // For duplicate detection
   onSuccess?: () => void
 }
 
@@ -112,16 +114,88 @@ const defaultFormData: FormData = {
   notes: '',
 }
 
+// Normalize string for comparison (lowercase, remove extra spaces)
+function normalizeString(str: string): string {
+  return str.toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+// Check if two strings are similar (fuzzy match)
+function isSimilarName(name1: string, name2: string): boolean {
+  const n1 = normalizeString(name1)
+  const n2 = normalizeString(name2)
+
+  // Exact match
+  if (n1 === n2) return true
+
+  // One contains the other
+  if (n1.includes(n2) || n2.includes(n1)) return true
+
+  // Check if first few words match (e.g., "ABC Plumbing" vs "ABC Plumbing LLC")
+  const words1 = n1.split(' ')
+  const words2 = n2.split(' ')
+  const minWords = Math.min(words1.length, words2.length, 2)
+
+  if (minWords > 0) {
+    const firstWords1 = words1.slice(0, minWords).join(' ')
+    const firstWords2 = words2.slice(0, minWords).join(' ')
+    if (firstWords1 === firstWords2) return true
+  }
+
+  return false
+}
+
+// Normalize phone for comparison
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, '')
+}
+
 export function VendorFormSheet({
   open,
   onOpenChange,
   vendor,
+  existingVendors = [],
   onSuccess,
 }: VendorFormSheetProps) {
   const isEditing = !!vendor
   const { createVendor, updateVendor } = useVendorMutations()
 
   const [formData, setFormData] = React.useState<FormData>(defaultFormData)
+
+  // Detect potential duplicates (only when adding new vendor)
+  const potentialDuplicates = React.useMemo(() => {
+    if (isEditing) return [] // Skip when editing existing vendor
+
+    const duplicates: { vendor: Vendor; reason: string }[] = []
+    const nameToCheck = formData.name.trim()
+    const phoneToCheck = formData.phone.trim()
+
+    if (nameToCheck.length < 3 && !phoneToCheck) return []
+
+    existingVendors.forEach((existing) => {
+      // Check name similarity
+      if (nameToCheck.length >= 3 && isSimilarName(nameToCheck, existing.name)) {
+        duplicates.push({
+          vendor: existing,
+          reason: `Similar name: "${existing.name}"`,
+        })
+        return
+      }
+
+      // Check phone match
+      if (phoneToCheck && existing.phone) {
+        const normalizedNew = normalizePhone(phoneToCheck)
+        const normalizedExisting = normalizePhone(existing.phone)
+        if (normalizedNew.length >= 7 && normalizedNew === normalizedExisting) {
+          duplicates.push({
+            vendor: existing,
+            reason: `Same phone: ${existing.phone}`,
+          })
+        }
+      }
+    })
+
+    return duplicates
+  }, [formData.name, formData.phone, existingVendors, isEditing])
 
   // Reset form when opening/closing or when vendor changes
   React.useEffect(() => {
@@ -256,6 +330,24 @@ export function VendorFormSheet({
                 placeholder="John Smith"
               />
             </div>
+
+            {/* Duplicate Warning */}
+            {potentialDuplicates.length > 0 && (
+              <Alert variant="warning">
+                <IconAlertTriangle className="h-4 w-4" />
+                <AlertTitle>Potential duplicate detected</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside mt-1">
+                    {potentialDuplicates.map((dup, idx) => (
+                      <li key={idx}>{dup.reason}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs">
+                    You can still add this vendor if it&apos;s not a duplicate.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           {/* Contact Details Section */}
@@ -370,6 +462,7 @@ export function VendorFormSheet({
                 value={formData.rating}
                 onChange={(value) => updateField('rating', value)}
                 size="lg"
+                showClear
               />
             </div>
 

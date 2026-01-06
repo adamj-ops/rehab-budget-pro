@@ -1,14 +1,15 @@
 'use client'
 
 import * as React from 'react'
-import { IconStar, IconStarFilled } from '@tabler/icons-react'
+import { IconStar, IconStarFilled, IconX } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
 interface StarRatingProps {
   value: number | null
-  onChange?: (value: number) => void
+  onChange?: (value: number | null) => void
   readonly?: boolean
   size?: 'sm' | 'md' | 'lg'
+  showClear?: boolean
   className?: string
 }
 
@@ -23,6 +24,7 @@ export function StarRating({
   onChange,
   readonly = false,
   size = 'md',
+  showClear = false,
   className,
 }: StarRatingProps) {
   const [hoverValue, setHoverValue] = React.useState<number | null>(null)
@@ -31,7 +33,18 @@ export function StarRating({
 
   const handleClick = (starValue: number) => {
     if (!readonly && onChange) {
-      onChange(starValue)
+      // Click same value to toggle off
+      if (value === starValue) {
+        onChange(null)
+      } else {
+        onChange(starValue)
+      }
+    }
+  }
+
+  const handleClear = () => {
+    if (!readonly && onChange) {
+      onChange(null)
     }
   }
 
@@ -49,30 +62,42 @@ export function StarRating({
 
   return (
     <div
-      className={cn('flex items-center gap-0.5', className)}
+      className={cn('flex items-center gap-1', className)}
       onMouseLeave={handleMouseLeave}
     >
-      {[1, 2, 3, 4, 5].map((starValue) => {
-        const isFilled = starValue <= displayValue
-        const StarIcon = isFilled ? IconStarFilled : IconStar
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((starValue) => {
+          const isFilled = starValue <= displayValue
+          const StarIcon = isFilled ? IconStarFilled : IconStar
 
-        return (
-          <button
-            key={starValue}
-            type="button"
-            onClick={() => handleClick(starValue)}
-            onMouseEnter={() => handleMouseEnter(starValue)}
-            disabled={readonly}
-            className={cn(
-              'transition-colors',
-              readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110',
-              isFilled ? 'text-yellow-500' : 'text-zinc-300'
-            )}
-          >
-            <StarIcon className={sizeClasses[size]} />
-          </button>
-        )
-      })}
+          return (
+            <button
+              key={starValue}
+              type="button"
+              onClick={() => handleClick(starValue)}
+              onMouseEnter={() => handleMouseEnter(starValue)}
+              disabled={readonly}
+              className={cn(
+                'transition-colors',
+                readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110',
+                isFilled ? 'text-yellow-500' : 'text-zinc-300'
+              )}
+            >
+              <StarIcon className={sizeClasses[size]} />
+            </button>
+          )
+        })}
+      </div>
+      {showClear && !readonly && value !== null && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="text-zinc-400 hover:text-zinc-600 transition-colors ml-1"
+          title="Clear rating"
+        >
+          <IconX className={sizeClasses[size]} />
+        </button>
+      )}
     </div>
   )
 }
