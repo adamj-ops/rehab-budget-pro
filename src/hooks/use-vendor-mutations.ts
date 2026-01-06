@@ -9,7 +9,7 @@ export function useVendorMutations() {
   const queryClient = useQueryClient()
   const supabase = getSupabaseClient()
 
-  // CREATE vendor
+  // CREATE vendor with optimistic update
   const createVendor = useMutation({
     mutationFn: async (vendor: VendorInput) => {
       const { data, error } = await supabase
@@ -21,16 +21,45 @@ export function useVendorMutations() {
       if (error) throw error
       return data as Vendor
     },
+    onMutate: async (newVendor) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['vendors'] })
+
+      // Snapshot previous value
+      const previousVendors = queryClient.getQueryData<Vendor[]>(['vendors'])
+
+      // Optimistically add to cache with temp ID
+      const optimisticVendor: Vendor = {
+        ...newVendor,
+        id: `temp-${Date.now()}`,
+        user_id: '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      queryClient.setQueryData<Vendor[]>(['vendors'], (old) =>
+        old ? [...old, optimisticVendor] : [optimisticVendor]
+      )
+
+      return { previousVendors }
+    },
+    onError: (error: Error, _newVendor, context) => {
+      // Rollback on error
+      if (context?.previousVendors) {
+        queryClient.setQueryData(['vendors'], context.previousVendors)
+      }
+      toast.error(`Failed to create vendor: ${error.message}`)
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors'] })
       toast.success('Vendor created successfully')
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to create vendor: ${error.message}`)
+    onSettled: () => {
+      // Refetch to sync with server
+      queryClient.invalidateQueries({ queryKey: ['vendors'] })
     },
   })
 
-  // UPDATE vendor
+  // UPDATE vendor with optimistic update
   const updateVendor = useMutation({
     mutationFn: async ({
       id,
@@ -46,16 +75,37 @@ export function useVendorMutations() {
       if (error) throw error
       return data as Vendor
     },
+    onMutate: async (updatedVendor) => {
+      await queryClient.cancelQueries({ queryKey: ['vendors'] })
+
+      const previousVendors = queryClient.getQueryData<Vendor[]>(['vendors'])
+
+      // Optimistically update in cache
+      queryClient.setQueryData<Vendor[]>(['vendors'], (old) =>
+        old?.map((vendor) =>
+          vendor.id === updatedVendor.id
+            ? { ...vendor, ...updatedVendor, updated_at: new Date().toISOString() }
+            : vendor
+        )
+      )
+
+      return { previousVendors }
+    },
+    onError: (error: Error, _updatedVendor, context) => {
+      if (context?.previousVendors) {
+        queryClient.setQueryData(['vendors'], context.previousVendors)
+      }
+      toast.error(`Failed to update vendor: ${error.message}`)
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors'] })
       toast.success('Vendor updated successfully')
     },
-    onError: (error: Error) => {
-      toast.error(`Failed to update vendor: ${error.message}`)
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] })
     },
   })
 
-  // DELETE vendor (with dependency check)
+  // DELETE vendor with optimistic update (includes dependency check)
   const deleteVendor = useMutation({
     mutationFn: async (id: string) => {
       // Check for budget item dependencies
@@ -86,13 +136,32 @@ export function useVendorMutations() {
       const { error } = await supabase.from('vendors').delete().eq('id', id)
 
       if (error) throw error
+      return id
+    },
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['vendors'] })
+
+      const previousVendors = queryClient.getQueryData<Vendor[]>(['vendors'])
+
+      // Optimistically remove from cache
+      queryClient.setQueryData<Vendor[]>(['vendors'], (old) =>
+        old?.filter((vendor) => vendor.id !== deletedId)
+      )
+
+      return { previousVendors }
+    },
+    onError: (error: Error, _deletedId, context) => {
+      // Rollback - restore the deleted vendor
+      if (context?.previousVendors) {
+        queryClient.setQueryData(['vendors'], context.previousVendors)
+      }
+      toast.error(error.message)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendors'] })
       toast.success('Vendor deleted successfully')
     },
-    onError: (error: Error) => {
-      toast.error(error.message)
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] })
     },
   })
 

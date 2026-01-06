@@ -2,23 +2,32 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconX } from '@tabler/icons-react';
+import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconX, IconUser } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
-import type { BudgetItem } from '@/types';
-import { BUDGET_CATEGORIES, STATUS_LABELS } from '@/types';
+import type { BudgetItem, Vendor } from '@/types';
+import { BUDGET_CATEGORIES, STATUS_LABELS, VENDOR_TRADE_LABELS } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
+  vendors: Vendor[];
   contingencyPercent: number;
 }
 
 export function BudgetDetailTab({
   projectId,
   budgetItems,
+  vendors,
   contingencyPercent,
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
@@ -27,6 +36,13 @@ export function BudgetDetailTab({
   );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<BudgetItem>>({});
+
+  // Create a map for quick vendor lookup
+  const vendorMap = useMemo(() => {
+    const map = new Map<string, Vendor>();
+    vendors.forEach((v) => map.set(v.id, v));
+    return map;
+  }, [vendors]);
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
@@ -95,6 +111,30 @@ export function BudgetDetailTab({
     },
   });
 
+  // Quick vendor assignment (without entering full edit mode)
+  const assignVendorMutation = useMutation({
+    mutationFn: async ({ itemId, vendorId }: { itemId: string; vendorId: string | null }) => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('budget_items')
+        .update({ vendor_id: vendorId })
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Vendor assigned');
+    },
+    onError: (error) => {
+      console.error('Error assigning vendor:', error);
+      toast.error('Failed to assign vendor');
+    },
+  });
+
   const handleEdit = (item: BudgetItem) => {
     setEditingItemId(item.id);
     setEditValues({
@@ -102,6 +142,7 @@ export function BudgetDetailTab({
       forecast_amount: item.forecast_amount,
       actual_amount: item.actual_amount,
       status: item.status,
+      vendor_id: item.vendor_id,
     });
   };
 
@@ -114,8 +155,12 @@ export function BudgetDetailTab({
     setEditValues({});
   };
 
-  const handleInputChange = (field: keyof BudgetItem, value: number | string) => {
+  const handleInputChange = (field: keyof BudgetItem, value: number | string | null) => {
     setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleQuickVendorAssign = (itemId: string, vendorId: string | null) => {
+    assignVendorMutation.mutate({ itemId, vendorId });
   };
 
   return (
@@ -167,6 +212,7 @@ export function BudgetDetailTab({
               <tr className="table-header">
                 <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
+                <th className="text-left p-3 w-36">Vendor</th>
                 <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
@@ -211,6 +257,7 @@ export function BudgetDetailTab({
                           ({category.items.length} items)
                         </span>
                       </td>
+                      <td className="p-3 bg-muted"></td>
                       <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
@@ -240,6 +287,7 @@ export function BudgetDetailTab({
                       const isEditing = editingItemId === item.id;
                       const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
+                      const vendor = item.vendor_id ? vendorMap.get(item.vendor_id) : null;
 
                       return (
                         <tr key={item.id} className="border-t hover:bg-muted/50">
@@ -251,6 +299,71 @@ export function BudgetDetailTab({
                                 <p className="text-xs text-muted-foreground">{item.description}</p>
                               )}
                             </div>
+                          </td>
+                          <td className="p-3">
+                            {isEditing ? (
+                              <Select
+                                value={editValues.vendor_id || '_none'}
+                                onValueChange={(value) =>
+                                  handleInputChange('vendor_id', value === '_none' ? null : value)
+                                }
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="_none">
+                                    <span className="text-muted-foreground">No vendor</span>
+                                  </SelectItem>
+                                  {vendors.map((v) => (
+                                    <SelectItem key={v.id} value={v.id}>
+                                      <div className="flex flex-col">
+                                        <span>{v.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {VENDOR_TRADE_LABELS[v.trade]}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Select
+                                value={item.vendor_id || '_none'}
+                                onValueChange={(value) =>
+                                  handleQuickVendorAssign(item.id, value === '_none' ? null : value)
+                                }
+                                disabled={assignVendorMutation.isPending}
+                              >
+                                <SelectTrigger className="h-8 text-xs border-dashed">
+                                  <SelectValue>
+                                    {vendor ? (
+                                      <div className="flex items-center gap-1">
+                                        <IconUser className="h-3 w-3" />
+                                        <span className="truncate max-w-20">{vendor.name}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground">Assign...</span>
+                                    )}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="_none">
+                                    <span className="text-muted-foreground">No vendor</span>
+                                  </SelectItem>
+                                  {vendors.map((v) => (
+                                    <SelectItem key={v.id} value={v.id}>
+                                      <div className="flex flex-col">
+                                        <span>{v.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {VENDOR_TRADE_LABELS[v.trade]}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           </td>
                           <td className="p-3 text-right">
                             {isEditing ? (
@@ -367,7 +480,7 @@ export function BudgetDetailTab({
                     {/* Empty State */}
                     {isExpanded && category.items.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="p-4 text-center text-sm text-muted-foreground">
+                        <td colSpan={10} className="p-4 text-center text-sm text-muted-foreground">
                           No items in this category.{' '}
                           <button type="button" className="text-primary hover:underline">Add one</button>
                         </td>
@@ -380,7 +493,7 @@ export function BudgetDetailTab({
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
                 <td className="p-3 sticky left-0 bg-muted/50"></td>
-                <td className="p-3 font-medium sticky left-8 bg-muted/50">
+                <td className="p-3 font-medium sticky left-8 bg-muted/50" colSpan={2}>
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td colSpan={2}></td>
@@ -393,7 +506,7 @@ export function BudgetDetailTab({
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
                 <td className="p-3 sticky left-0 bg-primary/10"></td>
-                <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10">
+                <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10" colSpan={2}>
                   GRAND TOTAL
                 </td>
                 <td className="p-3 text-right font-semibold">

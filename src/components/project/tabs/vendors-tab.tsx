@@ -43,6 +43,7 @@ import {
   IconPencil,
   IconTrash,
   IconSearch,
+  IconSortAscending,
 } from '@tabler/icons-react'
 
 interface VendorsTabProps {
@@ -50,6 +51,16 @@ interface VendorsTabProps {
   vendors: Vendor[]
   budgetItems: BudgetItem[]
 }
+
+type SortOption = 'name_asc' | 'name_desc' | 'rating_desc' | 'recent' | 'most_used'
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'name_asc', label: 'Name (A-Z)' },
+  { value: 'name_desc', label: 'Name (Z-A)' },
+  { value: 'rating_desc', label: 'Highest Rated' },
+  { value: 'recent', label: 'Recently Added' },
+  { value: 'most_used', label: 'Most Used' },
+]
 
 const ALL_TRADES: VendorTrade[] = [
   'general_contractor',
@@ -87,11 +98,12 @@ export function VendorsTab({
     null
   )
 
-  // State for search/filter
+  // State for search/filter/sort
   const [searchQuery, setSearchQuery] = React.useState('')
   const [tradeFilter, setTradeFilter] = React.useState<VendorTrade | 'all'>(
     'all'
   )
+  const [sortBy, setSortBy] = React.useState<SortOption>('name_asc')
 
   const { deleteVendor } = useVendorMutations()
 
@@ -134,11 +146,36 @@ export function VendorsTab({
     return matchesSearch && matchesTrade
   })
 
-  // Split into project vendors and others
-  const projectVendors = filteredVendors.filter((v) =>
-    projectVendorIds.has(v.id)
+  // Sort vendors
+  const sortVendors = (vendorsToSort: Vendor[]) => {
+    return [...vendorsToSort].sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name)
+        case 'name_desc':
+          return b.name.localeCompare(a.name)
+        case 'rating_desc':
+          return (b.rating || 0) - (a.rating || 0)
+        case 'recent':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case 'most_used': {
+          const aItems = vendorTotals.get(a.id)?.items || 0
+          const bItems = vendorTotals.get(b.id)?.items || 0
+          return bItems - aItems
+        }
+        default:
+          return 0
+      }
+    })
+  }
+
+  // Split into project vendors and others, then sort
+  const projectVendors = sortVendors(
+    filteredVendors.filter((v) => projectVendorIds.has(v.id))
   )
-  const otherVendors = filteredVendors.filter((v) => !projectVendorIds.has(v.id))
+  const otherVendors = sortVendors(
+    filteredVendors.filter((v) => !projectVendorIds.has(v.id))
+  )
 
   const handleDelete = async () => {
     if (!deletingVendor) return
@@ -313,7 +350,7 @@ export function VendorsTab({
         </Button>
       </div>
 
-      {/* Search and Filter */}
+      {/* Search, Filter, and Sort */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -342,6 +379,22 @@ export function VendorsTab({
             ))}
           </SelectContent>
         </Select>
+        <Select
+          value={sortBy}
+          onValueChange={(value) => setSortBy(value as SortOption)}
+        >
+          <SelectTrigger className="w-full sm:w-44">
+            <IconSortAscending className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Project Vendors */}
@@ -357,6 +410,7 @@ export function VendorsTab({
             onClick={() => {
               setSearchQuery('')
               setTradeFilter('all')
+              setSortBy('name_asc')
             }}
           >
             Clear filters
