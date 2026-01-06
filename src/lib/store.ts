@@ -79,26 +79,29 @@ export const useProjectStore = create<ProjectState>()(
       getBudgetByCategory: () => {
         const items = get().budgetItems;
         const categoryMap = new Map<string, { budget: number; actual: number; items: BudgetItem[] }>();
-        
+
         items.forEach((item) => {
           const existing = categoryMap.get(item.category) || { budget: 0, actual: 0, items: [] };
-          const budget = item.qty * item.rate;
+          const budget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
           categoryMap.set(item.category, {
             budget: existing.budget + budget,
-            actual: existing.actual + (item.actual || 0),
+            actual: existing.actual + (item.actual_amount || 0),
             items: [...existing.items, item],
           });
         });
-        
+
         return categoryMap;
       },
-      
+
       getTotalBudget: () => {
-        return get().budgetItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+        return get().budgetItems.reduce((sum, item) => {
+          const budget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
+          return sum + budget;
+        }, 0);
       },
       
       getTotalActual: () => {
-        return get().budgetItems.reduce((sum, item) => sum + (item.actual || 0), 0);
+        return get().budgetItems.reduce((sum, item) => sum + (item.actual_amount || 0), 0);
       },
     }),
     { name: 'project-store' }

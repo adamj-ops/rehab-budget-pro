@@ -44,7 +44,9 @@ export type BudgetCategory =
   | 'finishing'
   | 'contingency';
 
-export type UnitType = 'sf' | 'lf' | 'ea' | 'ls' | 'sq' | 'hr' | 'day' | 'week' | 'month';
+export type UnitType = 'sf' | 'lf' | 'ea' | 'ls' | 'sq' | 'hr' | 'day' | 'week' | 'month' | 'load' | 'ton' | 'set' | 'opening';
+
+export type PhotoType = 'receipt' | 'progress' | 'before' | 'after' | 'other';
 
 export type CostType = 'labor' | 'materials' | 'both';
 
@@ -173,33 +175,36 @@ export interface BudgetItem {
   id: string;
   project_id: string;
   vendor_id: string | null;
-  
+
   // Item Details
   category: BudgetCategory;
   item: string;
   description: string | null;
   room_area: string | null;
-  
-  // Quantities & Costs
+
+  // Quantities & Costs (Three-Column Budget Model)
   qty: number;
   unit: UnitType;
   rate: number;
-  actual: number | null;
-  
+  underwriting_amount: number;  // Pre-deal estimate
+  forecast_amount: number;       // Post-walkthrough/bid estimate
+  actual_amount: number | null;  // Real spend
+
+  // Computed Variances (generated columns)
+  forecast_variance: number | null;  // Forecast - Underwriting
+  actual_variance: number | null;    // Actual - Forecast
+  total_variance: number | null;     // Actual - Underwriting
+
   // Classification
   cost_type: CostType;
   status: ItemStatus;
   priority: 'high' | 'medium' | 'low';
-  
+
   // Meta
   sort_order: number;
   notes: string | null;
   created_at: string;
   updated_at: string;
-  
-  // Computed (client-side)
-  budget?: number;
-  variance?: number;
 }
 
 export interface Draw {
@@ -243,24 +248,57 @@ export interface CostReference {
   updated_at: string;
 }
 
+export interface LineItemPhoto {
+  id: string;
+  line_item_id: string;
+  project_id: string;
+
+  // File Storage
+  storage_path: string;
+  file_name: string | null;
+  file_size: number | null;
+
+  // Photo Classification
+  photo_type: PhotoType;
+  caption: string | null;
+  taken_at: string | null;
+
+  created_at: string;
+}
+
+export interface BudgetCategoryTemplate {
+  id: string;
+  name: string;
+  category: BudgetCategory;
+  default_line_items: string[] | null; // JSON array of line item names
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 // ============================================================================
 // VIEW TYPES (Computed/Aggregated)
 // ============================================================================
 
 export interface ProjectSummary extends Project {
-  // Budget Rollups
+  // Three-Column Budget Rollups
+  underwriting_total: number;
+  forecast_total: number;
+  actual_total: number;
+
+  // Primary Budget (uses forecast if set, otherwise underwriting)
   rehab_budget: number;
   rehab_actual: number;
   contingency_amount: number;
   rehab_budget_with_contingency: number;
-  
+
   // Calculated Costs
   selling_costs: number;
   holding_costs_total: number;
   total_investment: number;
   gross_profit: number;
   mao: number;
-  
+
   // Progress
   total_items: number;
   completed_items: number;
@@ -271,10 +309,21 @@ export interface BudgetByCategory {
   project_id: string;
   category: BudgetCategory;
   item_count: number;
-  budget_total: number;
+
+  // Three-Column Totals
+  underwriting_total: number;
+  forecast_total: number;
   actual_total: number;
-  variance: number;
+
+  // Variances
+  forecast_variance_total: number;
+  actual_variance_total: number;
+  total_variance_total: number;
+
+  // Progress
   completed_count: number;
+  in_progress_count: number;
+  not_started_count: number;
 }
 
 export interface VendorPaymentSummary extends Vendor {
@@ -289,8 +338,9 @@ export interface VendorPaymentSummary extends Vendor {
 
 export type ProjectInput = Omit<Project, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 export type VendorInput = Omit<Vendor, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
-export type BudgetItemInput = Omit<BudgetItem, 'id' | 'created_at' | 'updated_at' | 'budget' | 'variance'>;
+export type BudgetItemInput = Omit<BudgetItem, 'id' | 'created_at' | 'updated_at' | 'forecast_variance' | 'actual_variance' | 'total_variance'>;
 export type DrawInput = Omit<Draw, 'id' | 'created_at' | 'updated_at'>;
+export type LineItemPhotoInput = Omit<LineItemPhoto, 'id' | 'created_at'>;
 
 // ============================================================================
 // UTILITY TYPES
@@ -334,6 +384,10 @@ export const UNIT_LABELS: Record<UnitType, string> = {
   day: 'Day',
   week: 'Week',
   month: 'Month',
+  load: 'Load',
+  ton: 'Ton',
+  set: 'Set',
+  opening: 'Opening',
 };
 
 export const STATUS_LABELS: Record<ItemStatus, string> = {

@@ -20,14 +20,15 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
   const projectVendors = vendors.filter((v) => projectVendorIds.has(v.id));
   const otherVendors = vendors.filter((v) => !projectVendorIds.has(v.id));
 
-  // Calculate totals per vendor
+  // Calculate totals per vendor (using forecast if available, otherwise underwriting)
   const vendorTotals = new Map<string, { budget: number; actual: number; items: number }>();
   budgetItems.forEach((item) => {
     if (item.vendor_id) {
       const existing = vendorTotals.get(item.vendor_id) || { budget: 0, actual: 0, items: 0 };
+      const itemBudget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
       vendorTotals.set(item.vendor_id, {
-        budget: existing.budget + item.qty * item.rate,
-        actual: existing.actual + (item.actual || 0),
+        budget: existing.budget + itemBudget,
+        actual: existing.actual + (item.actual_amount || 0),
         items: existing.items + 1,
       });
     }

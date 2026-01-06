@@ -43,9 +43,11 @@ export function ProjectTabs({
 }: ProjectTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>('summary');
 
-  // Calculate budget totals
-  const totalBudget = budgetItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
-  const totalActual = budgetItems.reduce((sum, item) => sum + (item.actual || 0), 0);
+  // Calculate budget totals (using forecast if available, otherwise underwriting)
+  const totalUnderwriting = budgetItems.reduce((sum, item) => sum + (item.underwriting_amount || 0), 0);
+  const totalForecast = budgetItems.reduce((sum, item) => sum + (item.forecast_amount || 0), 0);
+  const totalActual = budgetItems.reduce((sum, item) => sum + (item.actual_amount || 0), 0);
+  const totalBudget = totalForecast > 0 ? totalForecast : totalUnderwriting;
   const contingencyAmount = totalBudget * (project.contingency_percent / 100);
   const totalBudgetWithContingency = totalBudget + contingencyAmount;
 

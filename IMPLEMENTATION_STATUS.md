@@ -1,0 +1,237 @@
+# Rehab Budget Pro - Implementation Status
+
+## ✅ Completed (Phase 1 - Core Foundation)
+
+### Database Schema Updates
+- ✅ **Three-Column Budget Model** implemented in [supabase/migrations/20260106040000_add_three_column_budget_model.sql](supabase/migrations/20260106040000_add_three_column_budget_model.sql)
+  - `underwriting_amount`: Pre-deal estimate (used during acquisition analysis)
+  - `forecast_amount`: Post-walkthrough/contractor bid estimate
+  - `actual_amount`: Real spend during/after construction
+  - Computed variance columns: `forecast_variance`, `actual_variance`, `total_variance`
+
+- ✅ **Budget Category Templates** table created
+  - Pre-seeded with 18 common rehab categories
+  - Each template includes default line items (e.g., Kitchen → Cabinets, Countertops, etc.)
+  - Used to auto-populate new projects with budget structure
+
+- ✅ **Line Item Photos** table created
+  - Support for receipts, progress photos, before/after shots
+  - Path: `project-photos/{project_id}/{line_item_id}/{uuid}.{ext}`
+  - Photo types: receipt, progress, before, after, other
+  - Linked to both `budget_items` and `projects` for easy querying
+
+- ✅ **Updated Views** for three-column support
+  - `project_summary`: Now includes `underwriting_total`, `forecast_total`, `actual_total`
+  - `budget_by_category`: Aggregates all three columns + variances per category
+
+### TypeScript Types
+- ✅ Updated [src/types/index.ts](src/types/index.ts) to reflect new schema
+  - `BudgetItem` interface with three-column fields
+  - `LineItemPhoto` and `BudgetCategoryTemplate` interfaces
+  - `ProjectSummary` and `BudgetByCategory` views updated
+  - New `PhotoType` enum
+  - Extended `UnitType` to include: load, ton, set, opening
+
+### Project Creation Flow
+- ✅ Built [src/app/projects/new/page.tsx](src/app/projects/new/page.tsx) page
+  - **Streamlined form using street address as project name** (no redundancy)
+  - **Google Places Autocomplete** for address input with auto-fill (city, state, ZIP)
+  - Comprehensive property info and deal financials inputs
+  - **Auto-seeds budget categories** from templates on project creation
+  - Creates all 18 categories with default line items automatically
+  - Defaults: 10% contingency, 8% selling costs, 4-month hold
+  - Form validation prevents empty address submission
+
+### Budget Detail Tab (Hero Feature)
+- ✅ Completely rebuilt [src/components/project/tabs/budget-detail-tab.tsx](src/components/project/tabs/budget-detail-tab.tsx)
+  - **Three-column layout**: Underwriting | Forecast | Actual
+  - Variance calculations at item, category, and total levels
+  - Inline editing with optimistic updates (React Query)
+  - Collapsible categories with item counts
+  - Color-coded variances (red = over budget, green = under)
+  - Summary cards showing all three budgets + total variance
+  - Legend explaining the three-column model
+
+### Storage Setup
+- ✅ Documentation for Supabase Storage bucket setup in [supabase/storage-setup.md](supabase/storage-setup.md)
+  - Bucket name: `project-photos`
+  - RLS policies for secure access
+  - File constraints: 10MB max, jpg/png/webp/pdf accepted
+
+## 📋 Migration Applied
+
+Run this to verify:
+```bash
+supabase db push
+```
+
+The migration `20260106040000_add_three_column_budget_model.sql` has been applied, which:
+1. Adds three-column budget fields to `budget_items`
+2. Creates `line_item_photos` table
+3. Creates `budget_category_templates` table with seed data
+4. Updates database views for three-column support
+
+## 🎯 What Works Now
+
+1. **Create a new project** → Go to [http://localhost:3000](http://localhost:3000) → Click "New Project"
+   - Fill in street address (required - this becomes the project name)
+   - Fill in property details and financials
+   - On save, project is created with **18 pre-seeded budget categories**
+
+2. **View project budget** → Click on a project → Budget Detail tab
+   - See all categories and line items
+   - Click edit icon (pencil) on any line item
+   - Update underwriting, forecast, or actual amounts
+   - Change item status (Not Started → In Progress → Complete)
+   - Click checkmark to save, X to cancel
+
+3. **Three-column workflow**:
+   - **Underwriting**: Fill in during deal analysis (pre-contract)
+   - **Forecast**: Update after walkthrough and getting contractor bids
+   - **Actual**: Track real spend as invoices come in
+
+## 🚧 Next Steps (Phase 2 - Enhanced UX)
+
+### High Priority
+
+1. **Drag & Drop Reordering** (@dnd-kit already installed)
+   - Reorder categories within project
+   - Reorder line items within category
+   - Update `sort_order` field on drop
+
+2. **Add/Delete Line Items**
+   - "Add Item" button per category
+   - Inline add form or modal
+   - Delete confirmation dialog
+
+3. **Photo Upload**
+   - Upload button per line item
+   - Photo gallery modal
+   - Photo type selector (receipt/progress/before/after)
+   - Integration with Supabase Storage
+
+4. **Deal Summary Tab** - Update for three-column model
+   - Show underwriting vs forecast vs actual budgets
+   - Profit calculations based on actual spend
+   - MAO calculation using underwriting
+
+### Medium Priority
+
+5. **Vendor Management**
+   - Link vendors to line items
+   - Track vendor performance
+   - Payment history
+
+6. **Draw Management**
+   - Create draw requests
+   - Select line items to include
+   - Track submission → approval → funded
+
+7. **Cost Reference Integration**
+   - Quick lookup of Minneapolis metro pricing
+   - "Apply to budget" button to copy reference costs
+
+### Low Priority (Phase 3)
+
+8. **PDF Exports** (@react-pdf/renderer already installed)
+   - Underwriting Summary PDF (for lender/investor)
+   - Full Investor Packet PDF (comprehensive report)
+
+9. **Advanced Features**
+   - Budget version history
+   - Budget templates (save and reuse category structures)
+   - Bulk edit operations
+   - Export to Excel
+
+## 🔧 Development Commands
+
+```bash
+# Run dev server
+npm run dev
+
+# Apply migrations
+supabase db push
+
+# Reset database (CAUTION: deletes all data)
+psql $SUPABASE_CONNECTION_STRING < supabase/reset.sql
+
+# Seed cost reference data
+psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
+```
+
+## 📁 Key Files Modified/Created
+
+### Database
+- `supabase/migrations/20260106040000_add_three_column_budget_model.sql` (NEW)
+- `supabase/storage-setup.md` (NEW)
+
+### Types
+- `src/types/index.ts` (UPDATED)
+
+### Pages
+- `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
+
+### Components & Hooks
+- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN)
+- `src/components/ui/label.tsx` (NEW)
+- `src/components/ui/select.tsx` (NEW)
+- `src/hooks/use-places-autocomplete.ts` (NEW - Google Places integration)
+
+### Updated for Three-Column Model
+- `src/components/project/project-tabs.tsx` (UPDATED)
+- `src/components/project/tabs/vendors-tab.tsx` (UPDATED)
+- `src/lib/store.ts` (UPDATED)
+- `src/app/page.tsx` (UPDATED)
+
+## 🎨 Three-Column Budget Model Explained
+
+| Column | Usage | Example |
+|--------|-------|---------|
+| **Underwriting** | Initial deal analysis before going under contract | Kitchen: $15,000 based on rough estimates |
+| **Forecast** | Updated after walkthrough and getting contractor bids | Kitchen: $18,500 after getting cabinet quote |
+| **Actual** | Real spend as invoices come in | Kitchen: $19,200 after final payment |
+
+**Variances**:
+- **Forecast Variance**: $18,500 - $15,000 = +$3,500 (scope creep)
+- **Actual Variance**: $19,200 - $18,500 = +$700 (execution variance)
+- **Total Variance**: $19,200 - $15,000 = +$4,200 (total overrun from original estimate)
+
+This helps investors understand:
+- Did we miss costs during underwriting?
+- Did we stick to our post-walkthrough budget?
+- How accurate are we at estimating deals?
+
+## 🐛 Known Issues / Tech Debt
+
+1. **Authentication not implemented** - `user_id` is currently null in all inserts
+2. **No RLS enforcement yet** - Need to implement auth first
+3. **No real-time updates** - Budget changes require manual refresh
+4. **Mobile responsive** - Budget table needs horizontal scroll optimization
+5. **Error boundaries** - Add error handling for failed mutations
+
+## 📝 Notes
+
+- All dependencies already installed (dnd-kit, react-pdf, react-dropzone, etc.)
+- Database schema supports all planned features
+- Three-column model is fully functional and ready to use
+- Category seeding works automatically on project creation
+- Form simplified: Street address is used as project name (no redundant field)
+
+## ✅ Recent Changes
+
+### Google Places API Integration (Latest)
+- Added Google Places Autocomplete to address input field
+- **Removed city, state, and ZIP input fields** - they're auto-filled from address selection
+- Auto-filled location shown as green checkmark below address field
+- Custom React hook (`use-places-autocomplete`) handles API integration
+- Updated `.env` to use `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY`
+- Loads Google Maps API directly (no npm dependencies needed)
+- Added TypeScript type definitions for Google Maps API
+- Added comprehensive documentation in [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md)
+
+### Form Simplification
+- Removed separate "Project Name" field from new project form
+- Street address is now the required field and becomes the project name
+- Added validation to prevent empty/whitespace-only addresses
+- Updated placeholder and help text to clarify this behavior
+- Form submission uses `formData.address.trim()` as the project name

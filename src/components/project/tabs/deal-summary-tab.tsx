@@ -45,17 +45,17 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
             </div>
             <div>
               <p className="text-muted-foreground">Beds / Baths</p>
-              <p className="font-medium">
+              <p className="font-medium tabular-nums">
                 {project.beds || '-'} / {project.baths || '-'}
               </p>
             </div>
             <div>
               <p className="text-muted-foreground">Sq Ft</p>
-              <p className="font-medium">{project.sqft?.toLocaleString() || '-'}</p>
+              <p className="font-medium tabular-nums">{project.sqft?.toLocaleString() || '-'}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Year Built</p>
-              <p className="font-medium">{project.year_built || '-'}</p>
+              <p className="font-medium tabular-nums">{project.year_built || '-'}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Status</p>
@@ -107,15 +107,15 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
             </h4>
             <div>
               <p className="text-sm text-muted-foreground">ARV</p>
-              <p className="text-xl font-semibold text-primary">{formatCurrency(arv)}</p>
+              <p className="text-xl font-semibold text-primary tabular-nums">{formatCurrency(arv)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Purchase Price</p>
-              <p className="text-lg font-medium">{formatCurrency(purchasePrice)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(purchasePrice)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Closing Costs</p>
-              <p className="text-lg font-medium">{formatCurrency(closingCosts)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(closingCosts)}</p>
             </div>
           </div>
 
@@ -126,15 +126,15 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
             </h4>
             <div>
               <p className="text-sm text-muted-foreground">Rehab Budget</p>
-              <p className="text-xl font-semibold">{formatCurrency(totalBudget)}</p>
+              <p className="text-xl font-semibold tabular-nums">{formatCurrency(totalBudget)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Actual Spent</p>
-              <p className="text-lg font-medium">{formatCurrency(totalActual)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(totalActual)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Remaining</p>
-              <p className={`text-lg font-medium ${totalBudget - totalActual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-lg font-medium tabular-nums ${totalBudget - totalActual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(totalBudget - totalActual)}
               </p>
             </div>
@@ -146,20 +146,20 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
               Carrying Costs
             </h4>
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground tabular-nums">
                 Holding ({holdMonths} mo × {formatCurrency(holdingCostsMonthly)})
               </p>
-              <p className="text-lg font-medium">{formatCurrency(holdingCostsTotal)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(holdingCostsTotal)}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground tabular-nums">
                 Selling Costs ({sellingCostPercent}%)
               </p>
-              <p className="text-lg font-medium">{formatCurrency(sellingCosts)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(sellingCosts)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Investment</p>
-              <p className="text-lg font-medium">{formatCurrency(totalInvestment)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(totalInvestment)}</p>
             </div>
           </div>
 
@@ -170,19 +170,19 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
             </h4>
             <div>
               <p className="text-sm text-muted-foreground">Gross Profit</p>
-              <p className={`text-xl font-semibold ${grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-xl font-semibold tabular-nums ${grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(grossProfit)}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">ROI</p>
-              <p className={`text-xl font-semibold ${roi >= 15 ? 'text-green-600' : roi >= 10 ? 'text-yellow-600' : 'text-red-600'}`}>
+              <p className={`text-xl font-semibold tabular-nums ${roi >= 15 ? 'text-green-600' : roi >= 10 ? 'text-yellow-600' : 'text-red-600'}`}>
                 {roi.toFixed(1)}%
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">MAO (70% Rule)</p>
-              <p className="text-lg font-medium">{formatCurrency(mao)}</p>
+              <p className="text-lg font-medium tabular-nums">{formatCurrency(mao)}</p>
             </div>
           </div>
         </div>
@@ -191,19 +191,19 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold text-primary">{formatCurrency(grossProfit)}</p>
+          <p className="text-3xl font-bold text-primary tabular-nums">{formatCurrency(grossProfit)}</p>
           <p className="text-sm text-muted-foreground">Gross Profit</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold">{roi.toFixed(1)}%</p>
+          <p className="text-3xl font-bold tabular-nums">{roi.toFixed(1)}%</p>
           <p className="text-sm text-muted-foreground">ROI</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold">{formatCurrency(totalBudget)}</p>
+          <p className="text-3xl font-bold tabular-nums">{formatCurrency(totalBudget)}</p>
           <p className="text-sm text-muted-foreground">Rehab Budget</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold">{formatCurrency(mao)}</p>
+          <p className="text-3xl font-bold tabular-nums">{formatCurrency(mao)}</p>
           <p className="text-sm text-muted-foreground">MAO</p>
         </div>
       </div>

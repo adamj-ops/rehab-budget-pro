@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import type { ProjectStatus } from '@/types';
 import { PROJECT_STATUS_LABELS } from '@/types';
 import { IconPlus, IconHome, IconChartBar } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default async function HomePage() {
   const supabase = await createClient();
-  
+
   const { data: projects, error } = await supabase
     .from('projects')
     .select('*')
@@ -20,7 +21,7 @@ export default async function HomePage() {
     console.error('Error fetching projects:', error);
   }
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: ProjectStatus) => {
     switch (status) {
       case 'in_rehab': return 'active';
       case 'under_contract': return 'pending';
@@ -68,7 +69,7 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{projects?.length || 0}</p>
+              <p className="text-2xl font-bold tabular-nums">{projects?.length || 0}</p>
             </CardContent>
           </Card>
           <Card className="card-hover">
@@ -78,7 +79,7 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-accent">
+              <p className="text-2xl font-bold text-accent tabular-nums">
                 {projects?.filter((p) => p.status === 'in_rehab').length || 0}
               </p>
             </CardContent>
@@ -90,7 +91,7 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">
+              <p className="text-2xl font-bold tabular-nums">
                 {projects?.filter((p) => p.status === 'under_contract').length || 0}
               </p>
             </CardContent>
@@ -102,7 +103,7 @@ export default async function HomePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-success">
+              <p className="text-2xl font-bold text-success tabular-nums">
                 {projects?.filter((p) => p.status === 'sold').length || 0}
               </p>
             </CardContent>
@@ -148,19 +149,19 @@ export default async function HomePage() {
                           {project.city && `, ${project.city}`}
                         </p>
                       </div>
-                      <Badge variant={getStatusVariant(project.status)}>
-                        {PROJECT_STATUS_LABELS[project.status]}
+                      <Badge variant={getStatusVariant(project.status as ProjectStatus)}>
+                        {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">ARV</p>
-                        <p className="font-medium">{formatCurrency(project.arv)}</p>
+                        <p className="font-medium tabular-nums">{formatCurrency(project.arv)}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Purchase</p>
-                        <p className="font-medium">{formatCurrency(project.purchase_price)}</p>
+                        <p className="font-medium tabular-nums">{formatCurrency(project.purchase_price)}</p>
                       </div>
                     </div>
 
