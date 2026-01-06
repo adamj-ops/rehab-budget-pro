@@ -1,8 +1,10 @@
 'use client'
 
-import type { Vendor, BudgetItem } from '@/types'
+import * as React from 'react'
+import type { Vendor, BudgetItem, VendorTag, Project } from '@/types'
 import { VENDOR_TRADE_LABELS } from '@/types'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useVendorTags } from '@/hooks/use-vendor-tags'
 import {
   Sheet,
   SheetContent,
@@ -11,6 +13,8 @@ import {
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { StarRating } from '@/components/ui/star-rating'
+import { VendorTagSelector } from '@/components/project/vendor-tag-selector'
+import { VendorContactHistory } from '@/components/project/vendor-contact-history'
 import {
   IconPhone,
   IconMail,
@@ -27,6 +31,7 @@ interface VendorDetailSheetProps {
   onOpenChange: (open: boolean) => void
   vendor: Vendor | null
   budgetItems?: BudgetItem[]
+  projects?: Project[]
   onEdit?: () => void
 }
 
@@ -35,8 +40,13 @@ export function VendorDetailSheet({
   onOpenChange,
   vendor,
   budgetItems = [],
+  projects = [],
   onEdit,
 }: VendorDetailSheetProps) {
+  const { useVendorTagAssignments, assignTag, unassignTag } = useVendorTags()
+  const tagsQuery = vendor ? useVendorTagAssignments(vendor.id) : null
+  const assignedTags: VendorTag[] = (tagsQuery?.data as VendorTag[] | undefined) ?? []
+
   if (!vendor) return null
 
   // Calculate vendor totals from budget items
@@ -49,6 +59,14 @@ export function VendorDetailSheet({
     }),
     { budget: 0, actual: 0, items: 0 }
   )
+
+  const handleAssignTag = (tagId: string) => {
+    assignTag.mutate({ vendorId: vendor.id, tagId })
+  }
+
+  const handleUnassignTag = (tagId: string) => {
+    unassignTag.mutate({ vendorId: vendor.id, tagId })
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -75,6 +93,17 @@ export function VendorDetailSheet({
         </SheetHeader>
 
         <div className="space-y-6 mt-6">
+          {/* Tags Section */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground">Tags</h4>
+            <VendorTagSelector
+              vendorId={vendor.id}
+              assignedTags={assignedTags}
+              onAssign={handleAssignTag}
+              onUnassign={handleUnassignTag}
+            />
+          </div>
+
           {/* Ratings Section */}
           {(vendor.rating || vendor.reliability || vendor.price_level) && (
             <div className="space-y-3">
@@ -278,6 +307,14 @@ export function VendorDetailSheet({
               <p className="text-sm whitespace-pre-wrap">{vendor.notes}</p>
             </div>
           )}
+
+          {/* Contact History Section */}
+          <div className="pt-4 border-t">
+            <VendorContactHistory
+              vendorId={vendor.id}
+              projects={projects}
+            />
+          </div>
 
           {/* Metadata */}
           <div className="pt-4 border-t text-xs text-muted-foreground">
