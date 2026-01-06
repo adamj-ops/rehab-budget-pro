@@ -1,6 +1,7 @@
 // Re-export all UI components for easy importing
 export { Button, buttonVariants } from './button';
 export { Badge, badgeVariants } from './badge';
+export { Checkbox } from './checkbox';
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card';
 export { Input } from './input';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
