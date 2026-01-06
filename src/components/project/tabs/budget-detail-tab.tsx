@@ -1,19 +1,209 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconChevronRight, IconLoader2, IconPlus } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { cn, formatCurrency, groupBy } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import type { BudgetItem } from '@/types';
 import { BUDGET_CATEGORIES, STATUS_LABELS } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
   contingencyPercent: number;
+}
+
+// Inline editable currency cell
+interface EditableCurrencyCellProps {
+  value: number | null;
+  itemId: string;
+  field: keyof BudgetItem;
+  onSave: (itemId: string, field: keyof BudgetItem, value: number) => Promise<void>;
+  compareValue?: number | null;
+  showVariance?: boolean;
+  className?: string;
+}
+
+function EditableCurrencyCell({
+  value,
+  itemId,
+  field,
+  onSave,
+  compareValue,
+  showVariance = false,
+  className,
+}: EditableCurrencyCellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editValue, setEditValue] = useState(value ?? 0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditValue(value ?? 0);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = async () => {
+    setIsEditing(false);
+    if (editValue !== (value ?? 0)) {
+      setIsSaving(true);
+      try {
+        await onSave(itemId, field, editValue);
+      } catch {
+        setEditValue(value ?? 0);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    }
+    if (e.key === 'Escape') {
+      setEditValue(value ?? 0);
+      setIsEditing(false);
+    }
+  };
+
+  const variance = showVariance && compareValue !== undefined && compareValue !== null
+    ? (value ?? 0) - compareValue
+    : null;
+
+  if (isSaving) {
+    return (
+      <div className="flex items-center justify-end gap-1 text-muted-foreground">
+        <IconLoader2 className="size-3 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <Input
+        ref={inputRef}
+        type="number"
+        step="0.01"
+        value={editValue}
+        onChange={(e) => setEditValue(parseFloat(e.target.value) || 0)}
+        onBlur={handleSave}
+        onKeyDown={handleKeyDown}
+        className={cn('h-7 w-24 text-right tabular-nums px-2', className)}
+      />
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setIsEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setIsEditing(true);
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      className={cn(
+        'cursor-pointer rounded px-2 py-1 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
+        'min-h-[28px] flex items-center justify-end gap-2',
+        className
+      )}
+    >
+      <span className="font-medium tabular-nums">{formatCurrency(value ?? 0)}</span>
+      {variance !== null && variance !== 0 && (
+        <span className={cn(
+          'text-xs tabular-nums',
+          variance > 0 ? 'text-red-600' : 'text-green-600'
+        )}>
+          {variance > 0 ? '+' : ''}{Math.round((variance / (compareValue || 1)) * 100)}%
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Inline editable badge cell for status
+interface EditableStatusCellProps {
+  value: string;
+  itemId: string;
+  onSave: (itemId: string, field: keyof BudgetItem, value: string) => Promise<void>;
+}
+
+const STATUS_OPTIONS = [
+  { value: 'not_started', label: 'Not Started', variant: 'secondary' as const },
+  { value: 'in_progress', label: 'In Progress', variant: 'default' as const },
+  { value: 'complete', label: 'Complete', variant: 'success' as const },
+  { value: 'on_hold', label: 'On Hold', variant: 'outline' as const },
+  { value: 'cancelled', label: 'Cancelled', variant: 'destructive' as const },
+];
+
+function EditableStatusCell({ value, itemId, onSave }: EditableStatusCellProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const currentOption = STATUS_OPTIONS.find((o) => o.value === value) || STATUS_OPTIONS[0];
+
+  const handleValueChange = async (newValue: string) => {
+    setIsOpen(false);
+    if (newValue !== value) {
+      setIsSaving(true);
+      try {
+        await onSave(itemId, 'status', newValue);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  if (isSaving) {
+    return (
+      <Badge variant="outline" className="gap-1">
+        <IconLoader2 className="size-3 animate-spin" />
+      </Badge>
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={handleValueChange} open={isOpen} onOpenChange={setIsOpen}>
+      <SelectTrigger className="h-auto w-auto border-0 bg-transparent p-0 shadow-none focus:ring-0">
+        <Badge
+          variant={currentOption.variant}
+          className="cursor-pointer hover:opacity-80"
+        >
+          {currentOption.label}
+        </Badge>
+      </SelectTrigger>
+      <SelectContent>
+        {STATUS_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            <Badge variant={option.variant}>{option.label}</Badge>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function BudgetDetailTab({
@@ -25,12 +215,16 @@ export function BudgetDetailTab({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(BUDGET_CATEGORIES.map((c) => c.value))
   );
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Partial<BudgetItem>>({});
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
-    const grouped = groupBy(budgetItems, 'category');
+    const grouped: Record<string, BudgetItem[]> = {};
+    for (const item of budgetItems) {
+      if (!grouped[item.category]) {
+        grouped[item.category] = [];
+      }
+      grouped[item.category].push(item);
+    }
     return BUDGET_CATEGORIES.map((cat) => {
       const items = grouped[cat.value] || [];
       return {
@@ -85,37 +279,17 @@ export function BudgetDetailTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Budget item updated');
-      setEditingItemId(null);
-      setEditValues({});
+      toast.success('Updated');
     },
     onError: (error) => {
       console.error('Error updating budget item:', error);
-      toast.error('Failed to update budget item');
+      toast.error('Failed to update');
     },
   });
 
-  const handleEdit = (item: BudgetItem) => {
-    setEditingItemId(item.id);
-    setEditValues({
-      underwriting_amount: item.underwriting_amount,
-      forecast_amount: item.forecast_amount,
-      actual_amount: item.actual_amount,
-      status: item.status,
-    });
-  };
-
-  const handleSave = (itemId: string) => {
-    updateMutation.mutate({ id: itemId, data: editValues });
-  };
-
-  const handleCancel = () => {
-    setEditingItemId(null);
-    setEditValues({});
-  };
-
-  const handleInputChange = (field: keyof BudgetItem, value: number | string) => {
-    setEditValues((prev) => ({ ...prev, [field]: value }));
+  // Handler for cell saves
+  const handleCellSave = async (itemId: string, field: keyof BudgetItem, value: number | string) => {
+    await updateMutation.mutateAsync({ id: itemId, data: { [field]: value } });
   };
 
   return (
@@ -167,22 +341,21 @@ export function BudgetDetailTab({
               <tr className="table-header">
                 <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
-                <th className="text-right p-3 w-28 bg-blue-50">
+                <th className="text-right p-3 w-32 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-green-50">
+                <th className="text-right p-3 w-32 bg-green-50">
                   <div className="font-semibold">Forecast</div>
                   <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-purple-50">
+                <th className="text-right p-3 w-32 bg-purple-50">
                   <div className="font-semibold">Actual</div>
                   <div className="text-xs font-normal text-muted-foreground">Real spend</div>
                 </th>
                 <th className="text-right p-3 w-28">Forecast Var</th>
                 <th className="text-right p-3 w-28">Actual Var</th>
-                <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-20"></th>
+                <th className="text-center p-3 w-32">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -232,12 +405,11 @@ export function BudgetDetailTab({
                       )}>
                         {catActualVar >= 0 ? '+' : ''}{formatCurrency(catActualVar)}
                       </td>
-                      <td colSpan={2}></td>
+                      <td></td>
                     </tr>
 
                     {/* Item Rows */}
                     {isExpanded && category.items.map((item) => {
-                      const isEditing = editingItemId === item.id;
                       const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
 
@@ -252,45 +424,33 @@ export function BudgetDetailTab({
                               )}
                             </div>
                           </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.underwriting_amount ?? ''}
-                                onChange={(e) => handleInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
-                            )}
+                          <td className="p-2 text-right">
+                            <EditableCurrencyCell
+                              value={item.underwriting_amount}
+                              itemId={item.id}
+                              field="underwriting_amount"
+                              onSave={handleCellSave}
+                            />
                           </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.forecast_amount ?? ''}
-                                onChange={(e) => handleInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
-                            )}
+                          <td className="p-2 text-right">
+                            <EditableCurrencyCell
+                              value={item.forecast_amount}
+                              itemId={item.id}
+                              field="forecast_amount"
+                              onSave={handleCellSave}
+                              compareValue={item.underwriting_amount}
+                              showVariance
+                            />
                           </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.actual_amount ?? ''}
-                                onChange={(e) => handleInputChange('actual_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                                placeholder="0"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
-                            )}
+                          <td className="p-2 text-right">
+                            <EditableCurrencyCell
+                              value={item.actual_amount}
+                              itemId={item.id}
+                              field="actual_amount"
+                              onSave={handleCellSave}
+                              compareValue={item.forecast_amount || item.underwriting_amount}
+                              showVariance
+                            />
                           </td>
                           <td className={cn(
                             'p-3 text-right text-sm tabular-nums',
@@ -304,72 +464,26 @@ export function BudgetDetailTab({
                           )}>
                             {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
                           </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <select
-                                value={editValues.status || item.status}
-                                onChange={(e) => handleInputChange('status', e.target.value)}
-                                className="text-xs p-1 rounded border"
-                              >
-                                <option value="not_started">Not Started</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="complete">Complete</option>
-                                <option value="on_hold">On Hold</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            ) : (
-                              <span className={cn(
-                                'inline-block px-2 py-1 rounded-full text-xs font-medium',
-                                item.status === 'complete' && 'bg-green-100 text-green-700',
-                                item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
-                                item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
-                                item.status === 'on_hold' && 'bg-yellow-100 text-yellow-700',
-                                item.status === 'cancelled' && 'bg-red-100 text-red-700'
-                              )}>
-                                {STATUS_LABELS[item.status]}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSave(item.id)}
-                                  className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconCheck className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleCancel}
-                                  className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconX className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(item)}
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <IconEdit className="h-4 w-4" />
-                              </button>
-                            )}
+                          <td className="p-2 text-center">
+                            <EditableStatusCell
+                              value={item.status}
+                              itemId={item.id}
+                              onSave={handleCellSave}
+                            />
                           </td>
                         </tr>
                       );
                     })}
 
-                    {/* Empty State */}
+                    {/* Empty State with Add Button */}
                     {isExpanded && category.items.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="p-4 text-center text-sm text-muted-foreground">
+                        <td colSpan={8} className="p-4 text-center text-sm text-muted-foreground">
                           No items in this category.{' '}
-                          <button type="button" className="text-primary hover:underline">Add one</button>
+                          <Button variant="link" size="sm" className="h-auto p-0 text-primary">
+                            <IconPlus className="size-3 mr-1" />
+                            Add item
+                          </Button>
                         </td>
                       </tr>
                     )}
@@ -384,10 +498,10 @@ export function BudgetDetailTab({
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td colSpan={2}></td>
-                <td className="p-3 text-right font-medium">
+                <td className="p-3 text-right font-medium tabular-nums">
                   {formatCurrency(contingencyAmount)}
                 </td>
-                <td colSpan={4}></td>
+                <td colSpan={3}></td>
               </tr>
 
               {/* Grand Total Row */}
@@ -396,28 +510,28 @@ export function BudgetDetailTab({
                 <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10">
                   GRAND TOTAL
                 </td>
-                <td className="p-3 text-right font-semibold">
+                <td className="p-3 text-right font-semibold tabular-nums">
                   {formatCurrency(underwritingTotal)}
                 </td>
-                <td className="p-3 text-right font-semibold">
+                <td className="p-3 text-right font-semibold tabular-nums">
                   {formatCurrency(forecastTotal)}
                 </td>
-                <td className="p-3 text-right font-semibold">
+                <td className="p-3 text-right font-semibold tabular-nums">
                   {formatCurrency(actualTotal)}
                 </td>
                 <td className={cn(
-                  'p-3 text-right font-semibold',
+                  'p-3 text-right font-semibold tabular-nums',
                   forecastVariance >= 0 ? 'text-red-600' : 'text-green-600'
                 )}>
                   {forecastVariance >= 0 ? '+' : ''}{formatCurrency(forecastVariance)}
                 </td>
                 <td className={cn(
-                  'p-3 text-right font-semibold',
+                  'p-3 text-right font-semibold tabular-nums',
                   actualVariance >= 0 ? 'text-red-600' : 'text-green-600'
                 )}>
                   {actualVariance >= 0 ? '+' : ''}{formatCurrency(actualVariance)}
                 </td>
-                <td colSpan={2}></td>
+                <td></td>
               </tr>
             </tbody>
           </table>
@@ -437,6 +551,9 @@ export function BudgetDetailTab({
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-purple-100"></div>
           <span>Actual: Real spend</span>
+        </div>
+        <div className="ml-auto text-muted-foreground/70">
+          Click any value to edit
         </div>
       </div>
     </div>
