@@ -1,0 +1,201 @@
+'use client';
+
+import type { Vendor, BudgetItem } from '@/types';
+import { VENDOR_TRADE_LABELS } from '@/types';
+import { formatCurrency, cn } from '@/lib/utils';
+import { IconPlus, IconStar, IconPhone, IconMail, IconCheck, IconX } from '@tabler/icons-react';
+
+interface VendorsTabProps {
+  projectId: string;
+  vendors: Vendor[];
+  budgetItems: BudgetItem[];
+}
+
+export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps) {
+  // Get vendors used in this project
+  const projectVendorIds = new Set(
+    budgetItems.filter((item) => item.vendor_id).map((item) => item.vendor_id)
+  );
+  
+  const projectVendors = vendors.filter((v) => projectVendorIds.has(v.id));
+  const otherVendors = vendors.filter((v) => !projectVendorIds.has(v.id));
+
+  // Calculate totals per vendor
+  const vendorTotals = new Map<string, { budget: number; actual: number; items: number }>();
+  budgetItems.forEach((item) => {
+    if (item.vendor_id) {
+      const existing = vendorTotals.get(item.vendor_id) || { budget: 0, actual: 0, items: 0 };
+      vendorTotals.set(item.vendor_id, {
+        budget: existing.budget + item.qty * item.rate,
+        actual: existing.actual + (item.actual || 0),
+        items: existing.items + 1,
+      });
+    }
+  });
+
+  const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
+    const totals = vendorTotals.get(vendor.id);
+    
+    return (
+      <div
+        key={vendor.id}
+        className={cn(
+          'rounded-lg border bg-card p-4',
+          isProjectVendor && 'border-primary/30'
+        )}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h4 className="font-medium">{vendor.name}</h4>
+            <p className="text-sm text-muted-foreground">
+              {VENDOR_TRADE_LABELS[vendor.trade]}
+            </p>
+          </div>
+          {vendor.rating && (
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <IconStar
+                  key={i}
+                  className={cn(
+                    'h-4 w-4',
+                    i < vendor.rating! ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-300'
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Contact Info */}
+        <div className="space-y-1 text-sm mb-3">
+          {vendor.contact_name && (
+            <p className="text-muted-foreground">{vendor.contact_name}</p>
+          )}
+          {vendor.phone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <IconPhone className="h-3 w-3" />
+              <a href={`tel:${vendor.phone}`} className="hover:text-primary">
+                {vendor.phone}
+              </a>
+            </div>
+          )}
+          {vendor.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <IconMail className="h-3 w-3" />
+              <a href={`mailto:${vendor.email}`} className="hover:text-primary">
+                {vendor.email}
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Qualifications */}
+        <div className="flex items-center gap-4 text-xs mb-3">
+          <div className="flex items-center gap-1">
+            {vendor.licensed ? (
+              <IconCheck className="h-3 w-3 text-green-600" />
+            ) : (
+              <IconX className="h-3 w-3 text-zinc-400" />
+            )}
+            <span className={vendor.licensed ? 'text-green-600' : 'text-zinc-400'}>
+              Licensed
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            {vendor.insured ? (
+              <IconCheck className="h-3 w-3 text-green-600" />
+            ) : (
+              <IconX className="h-3 w-3 text-zinc-400" />
+            )}
+            <span className={vendor.insured ? 'text-green-600' : 'text-zinc-400'}>
+              Insured
+            </span>
+          </div>
+          {vendor.price_level && (
+            <span className="text-muted-foreground">{vendor.price_level}</span>
+          )}
+        </div>
+
+        {/* Project Totals (if applicable) */}
+        {totals && (
+          <div className="pt-3 border-t grid grid-cols-3 gap-2 text-sm">
+            <div>
+              <p className="text-muted-foreground text-xs">Items</p>
+              <p className="font-medium">{totals.items}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Budget</p>
+              <p className="font-medium">{formatCurrency(totals.budget)}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">Paid</p>
+              <p className="font-medium">{formatCurrency(totals.actual)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Status Badge */}
+        <div className="mt-3 pt-3 border-t flex items-center justify-between">
+          <span
+            className={cn(
+              'text-xs font-medium px-2 py-1 rounded-full',
+              vendor.status === 'active' && 'bg-green-100 text-green-700',
+              vendor.status === 'inactive' && 'bg-zinc-100 text-zinc-700',
+              vendor.status === 'do_not_use' && 'bg-red-100 text-red-700'
+            )}
+          >
+            {vendor.status === 'do_not_use' ? 'Do Not Use' : vendor.status}
+          </span>
+          
+          {!isProjectVendor && (
+            <button className="text-xs text-primary hover:underline">
+              Add to project
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-medium">Project Vendors</h3>
+          <p className="text-sm text-muted-foreground">
+            {projectVendors.length} vendors assigned to this project
+          </p>
+        </div>
+        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <IconPlus className="h-4 w-4" />
+          Add Vendor
+        </button>
+      </div>
+
+      {/* Project Vendors */}
+      {projectVendors.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-muted-foreground mb-2">No vendors assigned yet</p>
+          <p className="text-sm text-muted-foreground">
+            Assign vendors to budget items or add new vendors to your directory.
+          </p>
+        </div>
+      )}
+
+      {/* All Vendors Directory */}
+      {otherVendors.length > 0 && (
+        <div>
+          <h3 className="font-medium mb-4">Vendor Directory</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {otherVendors.map((vendor) => renderVendorCard(vendor, false))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
