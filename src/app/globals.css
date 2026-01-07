@@ -451,12 +451,77 @@
     @apply rounded-lg border bg-card p-6;
   }
 
+  .stat-card-compact {
+    @apply rounded-lg border bg-card p-4 text-center;
+  }
+
+  .stat-card-compact .stat-value {
+    @apply text-3xl mb-1;
+  }
+
+  .stat-card-compact .stat-label {
+    @apply mb-0;
+  }
+
   .stat-label {
     @apply text-sm text-muted-foreground mb-1;
   }
 
   .stat-value {
     @apply text-2xl font-bold tabular-nums;
+  }
+
+  /* ----------------------------------------
+   * CARD VARIANTS
+   * ---------------------------------------- */
+
+  /* For cards in grid layouts (project list, vendor grid) */
+  .card-grid-item {
+    @apply rounded-lg border bg-card p-4 transition-all;
+    @apply hover:shadow-md hover:border-accent/50;
+  }
+
+  /* ----------------------------------------
+   * EMPTY STATES
+   * ---------------------------------------- */
+
+  .empty-state {
+    @apply rounded-lg border border-dashed p-8 text-center;
+  }
+
+  .empty-state-lg {
+    @apply rounded-lg border border-dashed p-12 text-center;
+  }
+
+  .empty-state-icon {
+    @apply h-10 w-10 mx-auto text-muted-foreground mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-muted-foreground mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-muted-foreground mb-6;
+  }
+
+  /* ----------------------------------------
+   * FORM INPUTS
+   * ---------------------------------------- */
+
+  .form-input {
+    @apply w-full px-4 py-2 rounded-lg border bg-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply placeholder:text-muted-foreground/60;
+  }
+
+  .form-input-with-icon {
+    @apply pl-10;
+  }
+
+  .form-select {
+    @apply px-4 py-2 rounded-lg border bg-background;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   /* ----------------------------------------

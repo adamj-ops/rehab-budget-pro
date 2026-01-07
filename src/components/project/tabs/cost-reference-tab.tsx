@@ -64,14 +64,14 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
             placeholder="Search items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className="form-input form-input-with-icon"
           />
         </div>
 
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value as BudgetCategory | 'all')}
-          className="px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="form-select"
         >
           <option value="all">All Categories</option>
           {BUDGET_CATEGORIES.filter((c) => c.value !== 'contingency').map((cat) => (
@@ -142,8 +142,8 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">No items match your search.</p>
+        <div className="empty-state">
+          <p className="empty-state-title">No items match your search.</p>
         </div>
       )}
 

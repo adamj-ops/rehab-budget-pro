@@ -190,21 +190,21 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold text-primary tabular-nums">{formatCurrency(grossProfit)}</p>
-          <p className="text-sm text-muted-foreground">Gross Profit</p>
+        <div className="stat-card-compact">
+          <p className="stat-value text-primary">{formatCurrency(grossProfit)}</p>
+          <p className="stat-label">Gross Profit</p>
         </div>
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold tabular-nums">{roi.toFixed(1)}%</p>
-          <p className="text-sm text-muted-foreground">ROI</p>
+        <div className="stat-card-compact">
+          <p className="stat-value">{roi.toFixed(1)}%</p>
+          <p className="stat-label">ROI</p>
         </div>
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold tabular-nums">{formatCurrency(totalBudget)}</p>
-          <p className="text-sm text-muted-foreground">Rehab Budget</p>
+        <div className="stat-card-compact">
+          <p className="stat-value">{formatCurrency(totalBudget)}</p>
+          <p className="stat-label">Rehab Budget</p>
         </div>
-        <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-3xl font-bold tabular-nums">{formatCurrency(mao)}</p>
-          <p className="text-sm text-muted-foreground">MAO</p>
+        <div className="stat-card-compact">
+          <p className="stat-value">{formatCurrency(mao)}</p>
+          <p className="stat-label">MAO</p>
         </div>
       </div>
 

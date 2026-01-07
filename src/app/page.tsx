@@ -116,21 +116,19 @@ export default async function HomePage() {
         </div>
 
         {!projects || projects.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="p-12 text-center">
-              <IconHome className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Create your first project to start tracking your rehab budget.
-              </p>
-              <Button asChild>
-                <Link href="/projects/new">
-                  <IconPlus className="h-4 w-4" />
-                  Create Project
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="empty-state-lg">
+            <IconHome className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+            <p className="empty-state-description">
+              Create your first project to start tracking your rehab budget.
+            </p>
+            <Button asChild>
+              <Link href="/projects/new">
+                <IconPlus className="h-4 w-4" />
+                Create Project
+              </Link>
+            </Button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((project) => (

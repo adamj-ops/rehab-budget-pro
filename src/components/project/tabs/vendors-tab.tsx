@@ -181,8 +181,8 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
           {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground mb-2">No vendors assigned yet</p>
+        <div className="empty-state">
+          <p className="empty-state-title">No vendors assigned yet</p>
           <p className="text-sm text-muted-foreground">
             Assign vendors to budget items or add new vendors to your directory.
           </p>

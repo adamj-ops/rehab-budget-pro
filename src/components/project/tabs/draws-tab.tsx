@@ -176,10 +176,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           </table>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <IconClock className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No draws scheduled yet</p>
-          <p className="text-sm text-muted-foreground mb-6">
+        <div className="empty-state">
+          <IconClock className="empty-state-icon" />
+          <p className="empty-state-title">No draws scheduled yet</p>
+          <p className="empty-state-description">
             Create draws to track payments to your vendors.
           </p>
           <Button>
