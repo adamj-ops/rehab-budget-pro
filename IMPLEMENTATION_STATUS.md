@@ -51,7 +51,18 @@
   - Color-coded variances (red = over budget, green = under)
   - Summary cards showing all three budgets + total variance
   - Legend explaining the three-column model
-  - **Vendor assignment column** - assign vendors to budget line items inline
+  - **Add/Delete Line Items**: Inline add form per category with delete confirmation dialog
+
+### Deal Summary Tab (Three-Column Model)
+- ✅ Updated [src/components/project/tabs/deal-summary-tab.tsx](src/components/project/tabs/deal-summary-tab.tsx)
+  - **Rehab Budget Comparison**: Side-by-side Underwriting vs Forecast vs Actual
+  - Variance percentages between budget phases (scope creep, execution variance)
+  - Contingency breakdown for each budget phase
+  - Active scenario highlighting based on data availability
+  - **Profit/ROI by Scenario**: Calculations for each budget phase
+  - **MAO using Underwriting**: 70% rule calculation uses underwriting + contingency
+  - **Spread Analysis**: Shows if purchase price is under/over MAO
+  - Updated Quick Stats bar with active scenario metrics
 
 ### Storage Setup
 - ✅ Documentation for Supabase Storage bucket setup in [supabase/storage-setup.md](supabase/storage-setup.md)
@@ -151,121 +162,39 @@
   - Quick change: Pending → Approved → Paid
   - Auto-sets date_paid when marking as paid
 
-- ✅ **Draws Tab Updated** (`src/components/project/tabs/draws-tab.tsx`)
-  - Full CRUD with edit and delete buttons
-  - Status badge dropdown for quick changes
-  - Summary cards and progress bar
-  - Empty state with call-to-action
+1. ~~**Drag & Drop Reordering**~~ ✅ COMPLETED
+   - ~~Reorder line items within category~~
+   - ~~Update `sort_order` field on drop~~
+   - ~~Drag handle icon with visual feedback~~
 
----
+2. ~~**Add/Delete Line Items**~~ ✅ COMPLETED
+   - ~~"Add Item" button per category~~
+   - ~~Inline add form or modal~~
+   - ~~Delete confirmation dialog~~
 
-## ✅ Completed (Phase 2 - Vendor Management)
+3. ~~**Photo Upload**~~ ✅ COMPLETED
+   - ~~Upload button per line item~~
+   - ~~Photo gallery modal~~
+   - ~~Photo type selector (receipt/progress/before/after)~~
+   - ~~Integration with Supabase Storage~~
 
-### Full Vendor CRUD System
-- ✅ **Vendor Form Sheet** (`src/components/project/vendor-form-sheet.tsx`)
-  - Add and edit vendors with comprehensive fields
-  - 14 fields across 5 sections (Basic Info, Contact, Qualifications, Ratings, Notes)
-  - Trade type dropdown with 21 options
-  - Status selector (Active, Inactive, Do Not Use)
-  - Duplicate vendor detection with warnings
-
-- ✅ **Vendor Detail Sheet** (`src/components/project/vendor-detail-sheet.tsx`)
-  - Read-only detailed view of vendor information
-  - Shows all vendor details, qualifications, and ratings
-  - Displays project budget items assigned to vendor
-  - Integrated tags section
-  - Integrated contact history timeline
-
-- ✅ **Vendor Mutations Hook** (`src/hooks/use-vendor-mutations.ts`)
-  - Create, update, delete operations with React Query
-  - **Optimistic updates** for instant UI feedback
-  - Dependency checking before delete (warns if vendor is assigned to budget items)
-  - Automatic cache invalidation
-
-### Vendor UX Improvements
-- ✅ **Vendor Assignment to Budget Items**
-  - Added vendor dropdown column to budget detail table
-  - Quick vendor assignment without entering full edit mode
-
-- ✅ **Sort Options** (5 modes)
-  - Name A-Z / Name Z-A
-  - Highest Rated
-  - Recently Added
-  - Most Used (by budget item count)
-
-- ✅ **Clear Rating Button**
-  - Click same star to toggle off
-  - X button to clear rating
-  - Works in both standalone and form contexts
-
-- ✅ **Inline Quick Edit**
-  - Edit phone/email directly on vendor cards
-  - No need to open full form for common updates
-  - Cancel/Save buttons inline
-
-- ✅ **Duplicate Detection**
-  - Warns when adding vendors with similar names
-  - Warns when phone number matches existing vendor
-  - Non-blocking - user can still proceed
-
-### Vendor Tags/Categories
-- ✅ **Database Schema** (`supabase/migrations/003_vendor_tags_and_contacts.sql`)
-  - `vendor_tags` table with name, color, description
-  - `vendor_tag_assignments` junction table
-  - RLS policies for user-scoped data
-
-- ✅ **Tag Management UI** (`src/components/project/vendor-tag-selector.tsx`)
-  - 10 color options for tags
-  - Create new tags inline
-  - Assign/unassign tags with single click
-  - Tags display on vendor cards and detail sheet
-
-- ✅ **Tag Badge Component** (`src/components/ui/tag-badge.tsx`)
-  - Colored badges with remove button
-  - Size variants (sm/md)
-
-### Contact History
-- ✅ **Database Schema** (in `003_vendor_tags_and_contacts.sql`)
-  - `vendor_contacts` table with 11 contact types
-  - Support for follow-up reminders
-  - Optional project linking
-
-- ✅ **Contact History UI** (`src/components/project/vendor-contact-history.tsx`)
-  - Timeline view grouped by date
-  - Contact type icons
-  - Log calls, emails, site visits, quotes, payments
-  - Follow-up reminders with pending alerts
-  - Mark follow-ups as complete
-
-### Bulk Operations & Import/Export
-- ✅ **Bulk Selection Mode**
-  - Toggle selection mode with checkbox on vendor cards
-  - Select all / deselect all
-  - Visual highlight for selected vendors
-
-- ✅ **Bulk Actions**
-  - Bulk delete with confirmation
-  - Bulk export to CSV
-
-- ✅ **CSV Export**
-  - Export all vendors or selected only
-  - Proper escaping for commas, quotes, newlines
-  - All vendor fields included
-
-- ✅ **CSV Import**
-  - Upload CSV with validation
-  - Required columns: name, trade
-  - Supports all vendor fields
-  - Error reporting with success/failure counts
-
----
+4. ~~**Deal Summary Tab** - Update for three-column model~~ ✅ COMPLETED
+   - ~~Show underwriting vs forecast vs actual budgets~~
+   - ~~Profit calculations based on actual spend~~
+   - ~~MAO calculation using underwriting~~
 
 ## 📋 Migrations Applied
 
-The following migrations should be run in Supabase SQL Editor:
+5. ~~**Vendor Management**~~ ✅ COMPLETED
+   - ~~Create/edit/delete vendors~~
+   - ~~Link vendors to line items~~
+   - Track vendor performance
+   - Payment history
 
-1. `supabase/migrations/20260106040000_add_three_column_budget_model.sql` - Three-column budget
-2. `supabase/migrations/003_vendor_tags_and_contacts.sql` - Vendor tags and contact history
+6. ~~**Draw Management**~~ ✅ COMPLETED
+   - ~~Create draw requests~~
+   - ~~Track submission → approval → funded~~
+   - ~~Public vendor submission form~~
 
 ---
 
@@ -421,11 +350,38 @@ The following migrations should be run in Supabase SQL Editor:
 - `src/components/ui/star-rating.tsx` - Rating input with clear
 
 ### Database
-- `supabase/migrations/003_vendor_tags_and_contacts.sql` - Tags and contacts schema
+- `supabase/migrations/20260106040000_add_three_column_budget_model.sql` (NEW)
+- `supabase/storage-setup.md` (NEW)
 
----
+### Types
+- `src/types/index.ts` (UPDATED)
 
-## 🔧 Development Commands
+### Pages
+- `src/app/page.tsx` (REWRITTEN - Dashboard with Portfolio Health + Kanban Pipeline)
+- `src/app/dashboard-client.tsx` (NEW - Client component for dashboard interactivity)
+- `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
+
+### Dashboard Components
+- `src/components/dashboard/portfolio-health.tsx` (NEW - Hero metrics cards)
+- `src/components/dashboard/kanban-pipeline.tsx` (NEW - Drag-drop Kanban board)
+- `src/components/dashboard/project-card.tsx` (NEW - Context-aware project cards)
+- `src/components/dashboard/index.ts` (NEW - Component exports)
+
+### Components & Hooks
+- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN - with add/delete/photos)
+- `src/components/project/tabs/deal-summary-tab.tsx` (REWRITTEN - three-column)
+- `src/components/project/photo-gallery.tsx` (NEW - photo upload/gallery modal)
+- `src/components/ui/alert-dialog.tsx` (NEW - delete confirmation)
+- `src/components/ui/checkbox.tsx` (NEW)
+- `src/components/ui/label.tsx` (NEW)
+- `src/components/ui/select.tsx` (NEW)
+- `src/hooks/use-places-autocomplete.ts` (NEW - Google Places integration)
+
+### Updated for Three-Column Model
+- `src/components/project/project-tabs.tsx` (UPDATED - passes budget totals)
+- `src/components/project/tabs/vendors-tab.tsx` (UPDATED)
+- `src/lib/store.ts` (UPDATED)
+- `src/app/page.tsx` (UPDATED)
 
 ```bash
 # Run dev server
@@ -446,7 +402,96 @@ npm run lint
 2. **No RLS enforcement yet** - Need to implement auth first
 3. **No real-time updates** - Changes require manual refresh
 4. **Mobile responsive** - Budget table needs horizontal scroll optimization
+5. **Error boundaries** - Add error handling for failed mutations
 
----
+## 📝 Notes
 
-*Last updated: January 7, 2026*
+- All dependencies already installed (dnd-kit, react-pdf, react-dropzone, etc.)
+- Database schema supports all planned features
+- Three-column model is fully functional and ready to use
+- Category seeding works automatically on project creation
+- Form simplified: Street address is used as project name (no redundant field)
+
+## ✅ Recent Changes
+
+### Phase 2: Dashboard - Kanban Pipeline (Latest - Jan 7, 2026)
+- **Portfolio Health Metrics**: 4-card hero section with Total ARV, Capital Deployed, ROI, Active Projects
+- **Kanban Board**: 5-column pipeline (Leads → Analyzing → Under Contract → In Rehab → Listed)
+- **Drag & Drop**: Move projects between columns to update status (uses @dnd-kit)
+- **Context-Aware Cards**: Different card content based on project status:
+  - Analyzing: ARV, MAO, Projected ROI
+  - Under Contract: ARV, Purchase Price, Close Date, ROI
+  - In Rehab: Progress bar, Budget vs Actual, ROI
+  - Listed: List Price, Days on Market, Showings, ROI
+- **Search**: Filter projects across all columns by name, address, or city
+- **ROI Color Coding**: Green (≥20%), Light Green (15-20%), Yellow (10-15%), Red (<10%)
+- **New Dependencies**: framer-motion, recharts, @radix-ui/react-progress
+
+### Drag & Drop Reordering (Jan 7, 2026)
+- **Drag Handle**: Grip icon (⋮⋮) added to first column of each budget item row
+- **@dnd-kit Integration**: Using DndContext, SortableContext, and useSortable hook
+- **Visual Feedback**: Items highlight and become semi-transparent while dragging
+- **Sort Order Persistence**: Updates `sort_order` field in database on drop
+- **Per-Category Sorting**: Items can only be reordered within their category
+- **Keyboard Support**: Full accessibility with keyboard navigation
+
+### Photo Upload (Jan 7, 2026)
+- **Photo Button**: Camera icon in Actions column for each budget item
+- **Photo Gallery Modal**: View, upload, and delete photos per line item
+- **Photo Types**: Receipt, Progress, Before, After, Other - selectable when uploading
+- **Drag & Drop Upload**: Uses react-dropzone for easy file uploads
+- **File Support**: JPEG, PNG, WebP, and PDF (max 10MB)
+- **Supabase Storage**: Photos stored in `project-photos` bucket with path `{projectId}/{itemId}/{uuid}.{ext}`
+- **Photo Preview**: Full-screen preview with download option
+- **Delete Confirmation**: AlertDialog to prevent accidental deletions
+
+### Vendor CRUD (Jan 7, 2026)
+- **Create Vendor**: Full form modal with all vendor fields (name, trade, contact info, qualifications)
+- **Edit Vendor**: Click pencil icon on any vendor card to edit all fields
+- **Delete Vendor**: Trash icon with AlertDialog confirmation, warns if vendor is assigned to items
+- **Assign to Items**: "Assign to item" button shows list of unassigned budget items
+- **Vendor Form Fields**: Company name, trade (21 options), contact details, licensed/insured/W-9, ratings, reliability, price level, status, notes
+- **React Query Mutations**: Full CRUD with cache invalidation
+
+### Draw Management CRUD (Jan 7, 2026)
+- **Create Draw**: Form with draw number, milestone, amount, description, percent complete
+- **Edit Draw**: Inline editing of all draw fields
+- **Delete Draw**: Confirmation dialog before deletion
+- **Status Workflow**: Dropdown to change status (pending → approved → paid)
+- **Payment Modal**: When marking as paid, capture payment method, reference number, and date
+- **Vendor Request Link**: Button to copy public URL for vendors to submit draw requests
+- **Public Vendor Form**: `/draw-request/[projectId]` - Vendors can submit requests without login
+
+### Deal Summary Three-Column Update (Jan 7, 2026)
+- **Rehab Budget Comparison**: New card showing Underwriting vs Forecast vs Actual side-by-side
+- Each budget phase shows base amount + contingency breakdown
+- Variance percentages between phases (scope creep, execution variance)
+- **Active Scenario Detection**: Highlights most relevant phase based on data availability
+- **Profit/ROI by Scenario**: Shows calculations for each budget phase
+- **MAO Calculation Fixed**: Now correctly uses underwriting budget + contingency
+- **Spread Analysis**: New section showing if purchase price is under/over MAO
+- Updated Quick Stats bar to show active scenario metrics
+
+### Budget Item Add/Delete (Jan 7, 2026)
+- **Add Item Button**: Each category now has an inline "Add item" button
+- **Inline Add Form**: Click to reveal form with name, description, and budget fields
+- **Delete Confirmation**: AlertDialog component for safe deletion
+- **React Query Mutations**: Optimistic updates for add/delete operations
+- New UI components: `alert-dialog.tsx`, `checkbox.tsx`
+
+### Google Places API Integration
+- Added Google Places Autocomplete to address input field
+- **Removed city, state, and ZIP input fields** - they're auto-filled from address selection
+- Auto-filled location shown as green checkmark below address field
+- Custom React hook (`use-places-autocomplete`) handles API integration
+- Updated `.env` to use `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY`
+- Loads Google Maps API directly (no npm dependencies needed)
+- Added TypeScript type definitions for Google Maps API
+- Added comprehensive documentation in [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md)
+
+### Form Simplification
+- Removed separate "Project Name" field from new project form
+- Street address is now the required field and becomes the project name
+- Added validation to prevent empty/whitespace-only addresses
+- Updated placeholder and help text to clarify this behavior
+- Form submission uses `formData.address.trim()` as the project name

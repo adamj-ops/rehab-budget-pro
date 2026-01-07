@@ -5,29 +5,20 @@ Simple, focused budget tracking for fix & flip real estate projects.
 ## Features
 
 ### Project Management
-- **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories with three-column budget model (Underwriting → Forecast → Actual)
-  - Inline editing of amounts and status
-  - Drag & drop reordering of line items within categories
-  - Photo/receipt uploads per line item
-  - Bulk selection and status updates
-- **Vendors**: Master vendor directory with full CRUD
-  - Trade classification and ratings
-  - Tags and contact history tracking
-  - CSV import/export
-- **Draws**: Full payment schedule management
-  - Create, edit, delete draws
-  - Status transitions (Pending → Approved → Paid)
-  - Payment method and milestone tracking
-  - Progress visualization
+- **Deal Summary**: Property info, ARV, purchase price, three-column budget comparison, profit/ROI by scenario, MAO with spread analysis
+- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual), inline add/edit/delete, photo attachments, drag & drop reordering
+- **Vendors**: Full CRUD vendor directory with trade, ratings, contact info, assign vendors to budget items
+- **Draws**: Full CRUD draw management with status workflow (pending → approved → paid), public vendor submission form
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
-### Multi-Project Dashboard (Planned)
+### Multi-Project Dashboard
 - **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
-- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed → Sold)
-- **Gantt Timeline**: Visual project timelines with milestones and dependencies
-- **Risk Alerts**: Automatic detection of over-budget and behind-schedule projects
-- **Budget Insights**: Category-level spending analysis across all projects
+- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed)
+- **Smart Project Cards**: Context-aware content based on project status
+- **Search**: Filter projects across the pipeline
+- **Gantt Timeline**: Visual project timelines (planned)
+- **Risk Alerts**: Over-budget/behind-schedule detection (planned)
+- **Budget Insights**: Category-level spending analysis (planned)
 
 See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and implementation plan.
 
@@ -38,8 +29,9 @@ See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and
 - **Database**: Supabase (PostgreSQL)
 - **State**: Zustand + React Query
 - **Icons**: Tabler Icons
-- **Animations**: Framer Motion (planned)
-- **Charts**: Recharts (planned)
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Drag & Drop**: @dnd-kit
 
 ## Getting Started
 
@@ -151,14 +143,56 @@ rehab-budget-pro/
 
 ## Roadmap
 
-### Completed
-- [x] Add/edit budget items inline
-- [x] Drag & drop reorder line items
-- [x] Add/edit/delete vendors with tags
-- [x] CSV import/export for vendors
-- [x] Create/update/delete draws with status transitions
-- [x] Photo/receipt attachments for line items
-- [x] Bulk selection and status updates
+### Phase 1: Core Features ✅ Complete
+- [x] Project creation with Google Places autocomplete
+- [x] Three-column budget model (Underwriting → Forecast → Actual)
+- [x] Budget category templates with auto-seeding
+- [x] Add/edit/delete budget items inline
+- [x] Deal summary with three-column budget comparison
+- [x] MAO calculation using underwriting budget
+- [x] Profit/ROI calculations by scenario
+- [x] Vendor CRUD (create, edit, delete, assign to items)
+- [x] Draw management with CRUD operations
+- [x] Public vendor draw request form (shareable link)
+- [x] Photo attachments for line items (receipts, progress, before/after)
+- [x] Drag & drop reordering of budget items within categories
+
+### Phase 2: Dashboard - Kanban Pipeline ✅ Complete
+- [x] Install framer-motion, recharts dependencies
+- [x] Portfolio health hero metrics (Total ARV, Capital Deployed, ROI, Active Projects)
+- [x] Kanban board with drag-drop status updates
+- [x] Search projects across pipeline
+- [x] Project cards with context-aware content per status
+
+### Phase 3: Dashboard - Gantt Timeline
+- [ ] Project timeline visualization
+- [ ] Milestone and dependency tracking
+- [ ] Zoom controls and filtering
+- [ ] Today marker and progress indicators
+
+### Phase 4: Dashboard - Risk & Alerts
+- [ ] Attention needed section
+- [ ] Over budget detection
+- [ ] Behind schedule detection
+- [ ] Contingency burn tracking
+
+### Phase 5: Financial Analytics
+- [ ] ROI distribution charts
+- [ ] Profit by project visualization
+- [ ] Time-period filtering
+- [ ] Export to PDF/Excel
+
+### Phase 6: Budget Intelligence
+- [ ] Category breakdown across portfolio
+- [ ] Cost benchmarking vs Minneapolis data
+- [ ] Trend analysis
+
+### Future
+- [ ] User authentication
+- [ ] Real-time collaboration
+- [ ] Mobile app
+
+## Documentation
 
 ### In Progress
 - [ ] User authentication

@@ -3,13 +3,27 @@
 import { Fragment, useMemo, useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconEdit,
+  IconGripVertical,
+  IconPhoto,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react';
+import { PhotoGallery } from '@/components/project/photo-gallery';
+import { toast } from 'sonner';
+
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
+  DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -19,23 +33,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  IconCheck,
-  IconChevronDown,
-  IconChevronRight,
-  IconEdit,
-  IconX,
-  IconUser,
-  IconPlus,
-  IconTrash,
-  IconSquare,
-  IconSquareCheck,
-  IconListCheck,
-  IconLoader2,
-  IconCamera,
-  IconGripVertical,
-} from '@tabler/icons-react';
-import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
@@ -80,6 +77,209 @@ const defaultNewItem: NewItemForm = {
   forecast_amount: 0,
   actual_amount: 0,
 };
+
+// Sortable Budget Item Row Component
+interface SortableBudgetItemRowProps {
+  item: BudgetItem;
+  isEditing: boolean;
+  editValues: Partial<BudgetItem>;
+  onEdit: (item: BudgetItem) => void;
+  onSave: (itemId: string) => void;
+  onCancel: () => void;
+  onInputChange: (field: keyof BudgetItem, value: number | string) => void;
+  onDelete: (item: BudgetItem) => void;
+  onViewPhotos: (item: BudgetItem) => void;
+  updatePending: boolean;
+}
+
+function SortableBudgetItemRow({
+  item,
+  isEditing,
+  editValues,
+  onEdit,
+  onSave,
+  onCancel,
+  onInputChange,
+  onDelete,
+  onViewPhotos,
+  updatePending,
+}: SortableBudgetItemRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
+  const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'border-t hover:bg-muted/50',
+        isDragging && 'bg-muted shadow-lg'
+      )}
+    >
+      <td className="p-3 sticky left-0 bg-background">
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted text-muted-foreground"
+          {...attributes}
+          {...listeners}
+        >
+          <IconGripVertical className="h-4 w-4" />
+        </button>
+      </td>
+      <td className="p-3 sticky left-12 bg-background">
+        <div>
+          <p className="font-medium">{item.item}</p>
+          {item.description && (
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+          )}
+        </div>
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.underwriting_amount ?? ''}
+            onChange={(e) => onInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
+        )}
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.forecast_amount ?? ''}
+            onChange={(e) => onInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
+        )}
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.actual_amount ?? ''}
+            onChange={(e) => onInputChange('actual_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+            placeholder="0"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
+        )}
+      </td>
+      <td className={cn(
+        'p-3 text-right text-sm tabular-nums',
+        itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+      )}>
+        {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
+      </td>
+      <td className={cn(
+        'p-3 text-right text-sm tabular-nums',
+        itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+      )}>
+        {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
+      </td>
+      <td className="p-3 text-center">
+        {isEditing ? (
+          <select
+            value={editValues.status || item.status}
+            onChange={(e) => onInputChange('status', e.target.value)}
+            className="text-xs p-1 rounded border"
+          >
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="complete">Complete</option>
+            <option value="on_hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        ) : (
+          <span className={cn(
+            'inline-block px-2 py-1 rounded-full text-xs font-medium',
+            item.status === 'complete' && 'bg-green-100 text-green-700',
+            item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
+            item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
+            item.status === 'on_hold' && 'bg-yellow-100 text-yellow-700',
+            item.status === 'cancelled' && 'bg-red-100 text-red-700'
+          )}>
+            {STATUS_LABELS[item.status]}
+          </span>
+        )}
+      </td>
+      <td className="p-3 text-center">
+        {isEditing ? (
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => onSave(item.id)}
+              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+              disabled={updatePending}
+            >
+              <IconCheck className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+              disabled={updatePending}
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => onViewPhotos(item)}
+              className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
+              title="View photos"
+            >
+              <IconPhoto className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onEdit(item)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+              title="Edit item"
+            >
+              <IconEdit className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item)}
+              className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+              title="Delete item"
+            >
+              <IconTrash className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
 
 export function BudgetDetailTab({
   projectId,
@@ -138,14 +338,22 @@ export function BudgetDetailTab({
   // Photo Upload State
   const [photoItem, setPhotoItem] = useState<BudgetItem | null>(null);
 
-  // Create a map for quick vendor lookup
-  const vendorMap = useMemo(() => {
-    const map = new Map<string, Vendor>();
-    vendors.forEach((v) => map.set(v.id, v));
-    return map;
-  }, [vendors]);
+  // Photo gallery state
+  const [viewingPhotosForItem, setViewingPhotosForItem] = useState<BudgetItem | null>(null);
 
-  // Group items by category (sorted by sort_order)
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Group items by category and sort by sort_order
   const itemsByCategory = useMemo(() => {
     const grouped = groupBy(budgetItems, 'category');
     return BUDGET_CATEGORIES.map((cat) => {
@@ -234,9 +442,38 @@ export function BudgetDetailTab({
     },
   });
 
-  // Quick vendor assignment (without entering full edit mode)
-  const assignVendorMutation = useMutation({
-    mutationFn: async ({ itemId, vendorId }: { itemId: string; vendorId: string | null }) => {
+  // Mutation for reordering budget items
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      const supabase = getSupabaseClient();
+
+      // Update all items in parallel
+      const results = await Promise.all(
+        updates.map(({ id, sort_order }) =>
+          supabase
+            .from('budget_items')
+            .update({ sort_order })
+            .eq('id', id)
+        )
+      );
+
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        throw errors[0].error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      console.error('Error reordering items:', error);
+      toast.error('Failed to reorder items');
+    },
+  });
+
+  // Mutation for creating budget items
+  const createMutation = useMutation({
+    mutationFn: async (newItem: { category: BudgetCategory; data: NewItemForm }) => {
       const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from('budget_items')
@@ -320,130 +557,25 @@ export function BudgetDetailTab({
     }
   };
 
-  const toggleItemSelection = (itemId: string) => {
-    setSelectedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
-        next.add(itemId);
+  const handleDragEnd = (event: DragEndEvent, categoryItems: BudgetItem[]) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = categoryItems.findIndex((item) => item.id === active.id);
+      const newIndex = categoryItems.findIndex((item) => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(categoryItems, oldIndex, newIndex);
+
+        // Create update array with new sort orders
+        const updates = newOrder.map((item, index) => ({
+          id: item.id,
+          sort_order: index,
+        }));
+
+        reorderMutation.mutate(updates);
       }
-      return next;
-    });
-  };
-
-  const selectAllInCategory = (categoryItems: BudgetItem[]) => {
-    setSelectedItems((prev) => {
-      const next = new Set(prev);
-      categoryItems.forEach((item) => next.add(item.id));
-      return next;
-    });
-  };
-
-  const deselectAllInCategory = (categoryItems: BudgetItem[]) => {
-    setSelectedItems((prev) => {
-      const next = new Set(prev);
-      categoryItems.forEach((item) => next.delete(item.id));
-      return next;
-    });
-  };
-
-  const selectAll = () => {
-    const allIds = budgetItems.map((item) => item.id);
-    setSelectedItems(new Set(allIds));
-  };
-
-  const deselectAll = () => {
-    setSelectedItems(new Set());
-  };
-
-  // Bulk Actions
-  const handleBulkDelete = () => {
-    const itemIds = Array.from(selectedItems);
-    bulkDelete.mutate(
-      { itemIds },
-      {
-        onSuccess: () => {
-          setSelectedItems(new Set());
-          setBulkDeleteOpen(false);
-        },
-      }
-    );
-  };
-
-  const handleBulkStatusUpdate = (status: ItemStatus) => {
-    const itemIds = Array.from(selectedItems);
-    bulkUpdateStatus.mutate(
-      { itemIds, status },
-      {
-        onSuccess: () => {
-          setSelectedItems(new Set());
-          setBulkStatusMenuOpen(false);
-        },
-      }
-    );
-  };
-
-  // Sortable Row Component
-  const SortableRow = ({
-    item,
-    children,
-    isSelected,
-    disabled,
-  }: {
-    item: BudgetItem;
-    children: React.ReactNode;
-    isSelected: boolean;
-    disabled: boolean;
-  }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id, disabled });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    };
-
-    return (
-      <tr
-        ref={setNodeRef}
-        style={style}
-        className={cn(
-          'border-t hover:bg-muted/50 group',
-          isSelected && 'bg-primary/5',
-          isDragging && 'opacity-50 bg-muted shadow-lg relative z-50'
-        )}
-        {...attributes}
-      >
-        {/* Drag Handle Cell */}
-        {!isSelectionMode && (
-          <td className="p-1 w-8 sticky left-0 bg-background">
-            {!disabled && (
-              <button
-                type="button"
-                {...listeners}
-                className={cn(
-                  'p-1 rounded cursor-grab active:cursor-grabbing',
-                  'text-muted-foreground/40 hover:text-muted-foreground',
-                  'opacity-0 group-hover:opacity-100 transition-opacity',
-                  isDragging && 'opacity-100 cursor-grabbing'
-                )}
-                title="Drag to reorder"
-              >
-                <IconGripVertical className="h-4 w-4" />
-              </button>
-            )}
-          </td>
-        )}
-        {children}
-      </tr>
-    );
+    }
   };
 
   return (
@@ -560,9 +692,9 @@ export function BudgetDetailTab({
           <table className="w-full text-sm">
             <thead>
               <tr className="table-header">
-                <th className="w-8 sticky left-0 bg-muted"></th>
-                <th className="min-w-[200px] sticky left-8 bg-muted">Item</th>
-                <th className="text-right w-28 col-underwriting">
+                <th className="text-left p-3 w-12 sticky left-0 bg-muted"></th>
+                <th className="text-left p-3 min-w-[200px] sticky left-12 bg-muted">Item</th>
+                <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
                 </th>
@@ -574,10 +706,10 @@ export function BudgetDetailTab({
                   <div className="font-semibold">Actual</div>
                   <div className="text-xs font-normal text-muted-foreground">Real spend</div>
                 </th>
-                <th className="text-right w-28">Forecast Var</th>
-                <th className="text-right w-28">Actual Var</th>
-                <th className="text-center w-28">Status</th>
-                <th className="text-center w-24">Actions</th>
+                <th className="text-right p-3 w-28">Forecast Var</th>
+                <th className="text-right p-3 w-28">Actual Var</th>
+                <th className="text-center p-3 w-28">Status</th>
+                <th className="text-center p-3 w-28">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -626,10 +758,7 @@ export function BudgetDetailTab({
                           <IconChevronRight className="h-4 w-4" />
                         )}
                       </td>
-                      <td
-                        className="p-3 font-medium sticky left-16 bg-muted"
-                        onClick={() => toggleCategory(category.value)}
-                      >
+                      <td className="p-3 font-medium sticky left-12 bg-muted">
                         {category.label}
                         <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
                           ({category.items.length} items)
@@ -678,247 +807,42 @@ export function BudgetDetailTab({
                       </td>
                     </tr>
 
-                    {/* Item Rows - Wrapped in DndContext for drag & drop */}
-                    {isExpanded && (
+                    {/* Sortable Item Rows */}
+                    {isExpanded && category.items.length > 0 && (
                       <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={(event) => handleDragEnd(event, category.items)}
                       >
                         <SortableContext
-                          items={category.itemIds}
+                          items={category.items.map((item) => item.id)}
                           strategy={verticalListSortingStrategy}
                         >
-                          {category.items.map((item) => {
-                            const isEditing = editingItemId === item.id;
-                            const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
-                            const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
-                            const vendor = item.vendor_id ? vendorMap.get(item.vendor_id) : null;
-                            const isSelected = selectedItems.has(item.id);
-
-                      return (
-                        <tr key={item.id} className="border-t table-row-hover">
-                          <td className="p-3 sticky left-0 bg-background"></td>
-                          <td className="p-3 sticky left-8 bg-background">
-                            <div>
-                              <p className="font-medium">{item.item}</p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground">{item.description}</p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            {isEditing ? (
-                              <Select
-                                value={editValues.vendor_id || '_none'}
-                                onValueChange={(value) =>
-                                  handleInputChange('vendor_id', value === '_none' ? null : value)
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Select..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="_none">
-                                    <span className="text-muted-foreground">No vendor</span>
-                                  </SelectItem>
-                                  {vendors.map((v) => (
-                                    <SelectItem key={v.id} value={v.id}>
-                                      <div className="flex flex-col">
-                                        <span>{v.name}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {VENDOR_TRADE_LABELS[v.trade]}
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Select
-                                value={item.vendor_id || '_none'}
-                                onValueChange={(value) =>
-                                  handleQuickVendorAssign(item.id, value === '_none' ? null : value)
-                                }
-                                disabled={assignVendorMutation.isPending}
-                              >
-                                <SelectTrigger className="h-8 text-xs border-dashed">
-                                  <SelectValue>
-                                    {vendor ? (
-                                      <div className="flex items-center gap-1">
-                                        <IconUser className="h-3 w-3" />
-                                        <span className="truncate max-w-20">{vendor.name}</span>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted-foreground">Assign...</span>
-                                    )}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="_none">
-                                    <span className="text-muted-foreground">No vendor</span>
-                                  </SelectItem>
-                                  {vendors.map((v) => (
-                                    <SelectItem key={v.id} value={v.id}>
-                                      <div className="flex flex-col">
-                                        <span>{v.name}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {VENDOR_TRADE_LABELS[v.trade]}
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.underwriting_amount ?? ''}
-                                onChange={(e) => handleInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
-                                className="inline-input"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.forecast_amount ?? ''}
-                                onChange={(e) => handleInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
-                                className="inline-input"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.actual_amount ?? ''}
-                                onChange={(e) => handleInputChange('actual_amount', parseFloat(e.target.value) || 0)}
-                                className="inline-input"
-                                placeholder="0"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
-                            )}
-                          </td>
-                          <td className={cn(
-                            'p-3 text-right text-sm tabular-nums',
-                            itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
-                          )}>
-                            {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
-                          </td>
-                          <td className={cn(
-                            'p-3 text-right text-sm tabular-nums',
-                            itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
-                          )}>
-                            {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
-                          </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <select
-                                value={editValues.status || item.status}
-                                onChange={(e) => handleInputChange('status', e.target.value)}
-                                className="text-xs p-1 rounded border"
-                              >
-                                <option value="not_started">Not Started</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="complete">Complete</option>
-                                <option value="on_hold">On Hold</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            ) : (
-                              <span className={cn(
-                                'status-badge',
-                                item.status === 'complete' && 'status-complete',
-                                item.status === 'in_progress' && 'status-in-progress',
-                                item.status === 'not_started' && 'status-not-started',
-                                item.status === 'on_hold' && 'status-on-hold',
-                                item.status === 'cancelled' && 'status-cancelled'
-                              )}>
-                                {STATUS_LABELS[item.status]}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSave(item.id)}
-                                  className="action-btn action-btn-save"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconCheck className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleCancel}
-                                  className="action-btn action-btn-cancel"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconX className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setPhotoItem(item)}
-                                  className={cn(
-                                    'p-1 rounded transition-colors relative',
-                                    photoCountByItem.get(item.id)
-                                      ? 'text-primary hover:bg-primary/10'
-                                      : 'text-muted-foreground hover:bg-muted hover:text-primary'
-                                  )}
-                                  title={`Photos (${photoCountByItem.get(item.id) || 0})`}
-                                >
-                                  <IconCamera className="h-4 w-4" />
-                                  {photoCountByItem.get(item.id) ? (
-                                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
-                                      {photoCountByItem.get(item.id)}
-                                    </span>
-                                  ) : null}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(item)}
-                                  className="action-btn action-btn-edit"
-                                  title="Edit item"
-                                >
-                                  <IconEdit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteClick(item)}
-                                  className="action-btn action-btn-delete"
-                                  title="Delete item"
-                                >
-                                  <IconTrash className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          {category.items.map((item) => (
+                            <SortableBudgetItemRow
+                              key={item.id}
+                              item={item}
+                              isEditing={editingItemId === item.id}
+                              editValues={editValues}
+                              onEdit={handleEdit}
+                              onSave={handleSave}
+                              onCancel={handleCancel}
+                              onInputChange={handleInputChange}
+                              onDelete={handleDeleteClick}
+                              onViewPhotos={setViewingPhotosForItem}
+                              updatePending={updateMutation.isPending}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    )}
 
                     {/* Add Item Row (when adding to this category) */}
                     {isExpanded && isAddingToThis && (
-                      <tr className="border-t bg-accent/10">
-                        <td className="p-3 sticky left-0 bg-accent/10"></td>
-                        <td className="p-3 sticky left-8 bg-accent/10">
-                          <div className="space-y-2">
+                      <tr className="border-t bg-green-50/30">
+                        <td className="p-3 sticky left-0 bg-green-50/30"></td>
+                        <td className="p-3 sticky left-12 bg-green-50/30">
+                          <div className="space-y-1">
                             <input
                               type="text"
                               value={newItemForm.item}
@@ -1015,10 +939,8 @@ export function BudgetDetailTab({
 
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
-                {isSelectionMode && <td className="p-3"></td>}
-                {!isSelectionMode && <td className="p-1 bg-muted/50"></td>}
-                <td className="p-3 bg-muted/50"></td>
-                <td className="p-3 font-medium bg-muted/50" colSpan={2}>
+                <td className="p-3 sticky left-0 bg-muted/50"></td>
+                <td className="p-3 font-medium sticky left-12 bg-muted/50">
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td></td>
@@ -1031,10 +953,8 @@ export function BudgetDetailTab({
 
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
-                {isSelectionMode && <td className="p-3"></td>}
-                {!isSelectionMode && <td className="p-1 bg-primary/10"></td>}
-                <td className="p-3 bg-primary/10"></td>
-                <td className="p-3 font-semibold text-primary bg-primary/10" colSpan={2}>
+                <td className="p-3 sticky left-0 bg-primary/10"></td>
+                <td className="p-3 font-semibold text-primary sticky left-12 bg-primary/10">
                   GRAND TOTAL
                 </td>
                 <td></td>
@@ -1067,7 +987,11 @@ export function BudgetDetailTab({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
+      <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2">
+          <IconGripVertical className="h-3 w-3" />
+          <span>Drag to reorder</span>
+        </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded col-underwriting border"></div>
           <span>Underwriting: Pre-deal estimate</span>
@@ -1082,54 +1006,34 @@ export function BudgetDetailTab({
         </div>
       </div>
 
-      {/* Add Item Sheet */}
-      {addItemCategory && (
-        <BudgetItemFormSheet
-          open={!!addItemCategory}
-          onOpenChange={(open) => !open && setAddItemCategory(null)}
-          category={addItemCategory}
-          vendors={vendors}
-          onSubmit={handleAddItem}
-          isPending={createItem.isPending}
-        />
-      )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Budget Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{itemToDelete?.item}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Delete Item Confirmation */}
-      <ConfirmDialog
-        open={!!deleteItemId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDeleteItemId(null);
-            setDeleteItemName('');
-          }
-        }}
-        title="Delete Line Item"
-        description={`Are you sure you want to delete "${deleteItemName}"? This action cannot be undone.`}
-        confirmText="Delete"
-        variant="destructive"
-        onConfirm={handleConfirmDelete}
-        isPending={deleteItem.isPending}
-      />
-
-      {/* Bulk Delete Confirmation */}
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        onOpenChange={setBulkDeleteOpen}
-        title="Delete Selected Items"
-        description={`Are you sure you want to delete ${selectedItems.size} selected item${selectedItems.size !== 1 ? 's' : ''}? This action cannot be undone.`}
-        confirmText={`Delete ${selectedItems.size} Item${selectedItems.size !== 1 ? 's' : ''}`}
-        variant="destructive"
-        onConfirm={handleBulkDelete}
-        isPending={bulkDelete.isPending}
-      />
-
-      {/* Photo Upload Sheet */}
-      {photoItem && (
-        <PhotoUploadSheet
-          open={!!photoItem}
-          onOpenChange={(open) => !open && setPhotoItem(null)}
+      {/* Photo Gallery Modal */}
+      {viewingPhotosForItem && (
+        <PhotoGallery
           projectId={projectId}
-          budgetItem={photoItem}
+          budgetItem={viewingPhotosForItem}
+          onClose={() => setViewingPhotosForItem(null)}
         />
       )}
     </div>

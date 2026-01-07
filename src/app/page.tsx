@@ -1,16 +1,15 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import type { ProjectStatus } from '@/types';
-import { PROJECT_STATUS_LABELS } from '@/types';
-import { IconPlus, IconHome } from '@tabler/icons-react';
+import type { ProjectStatus, BudgetCategory } from '@/types';
+import { IconPlus, IconChartBar } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { DashboardClient } from './dashboard-client';
 
 export default async function HomePage() {
   const supabase = await createClient();
 
+  // Fetch projects with calculated fields
   const { data: projects, error } = await supabase
     .from('projects')
     .select('*')
@@ -20,145 +19,130 @@ export default async function HomePage() {
     console.error('Error fetching projects:', error);
   }
 
-  const getStatusVariant = (status: ProjectStatus) => {
-    switch (status) {
-      case 'in_rehab': return 'active';
-      case 'under_contract': return 'pending';
-      case 'sold': return 'success';
-      case 'listed': return 'complete';
-      default: return 'secondary';
-    }
+  // Fetch budget totals per project with category
+  const { data: budgetTotals } = await supabase
+    .from('budget_items')
+    .select('project_id, category, underwriting_amount, forecast_amount, actual_amount');
+
+  // Calculate budget totals per project
+  const projectBudgets = new Map<string, { budget: number; actual: number }>();
+  budgetTotals?.forEach((item) => {
+    const existing = projectBudgets.get(item.project_id) || { budget: 0, actual: 0 };
+    const budget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
+    projectBudgets.set(item.project_id, {
+      budget: existing.budget + budget,
+      actual: existing.actual + (item.actual_amount || 0),
+    });
+  });
+
+  // Calculate category spends across all projects
+  const categorySpendMap = new Map<BudgetCategory, { budget: number; actual: number; projects: Set<string> }>();
+  budgetTotals?.forEach((item) => {
+    const category = item.category as BudgetCategory;
+    const existing = categorySpendMap.get(category) || { budget: 0, actual: 0, projects: new Set() };
+    const budget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
+    existing.budget += budget;
+    existing.actual += item.actual_amount || 0;
+    existing.projects.add(item.project_id);
+    categorySpendMap.set(category, existing);
+  });
+
+  const categorySpends = Array.from(categorySpendMap.entries()).map(([category, data]) => ({
+    category,
+    budget: data.budget,
+    actual: data.actual,
+    projectCount: data.projects.size,
+  }));
+
+  // Transform projects for dashboard
+  const dashboardProjects = (projects || []).map((project) => {
+    const budgets = projectBudgets.get(project.id) || { budget: 0, actual: 0 };
+    const totalInvestment = (project.purchase_price || 0) + budgets.budget;
+    const grossProfit = (project.arv || 0) - totalInvestment;
+    const roi = totalInvestment > 0 ? (grossProfit / totalInvestment) * 100 : 0;
+
+    // Calculate MAO (70% rule)
+    const mao = (project.arv || 0) * 0.7 - budgets.budget;
+
+    return {
+      id: project.id,
+      name: project.name,
+      address: project.address,
+      city: project.city,
+      status: project.status as ProjectStatus,
+      arv: project.arv || 0,
+      purchase_price: project.purchase_price || 0,
+      sqft: project.sqft,
+      mao: mao,
+      roi: roi,
+      rehab_budget: budgets.budget,
+      rehab_actual: budgets.actual,
+      close_date: project.close_date,
+      target_complete_date: project.target_complete_date,
+      list_date: project.list_date,
+      sale_date: project.sale_date,
+      rehab_progress: budgets.budget > 0 ? Math.min(100, Math.round((budgets.actual / budgets.budget) * 100)) : 0,
+    };
+  });
+
+  // Calculate portfolio metrics
+  const activeProjects = dashboardProjects.filter((p) => p.status !== 'sold' && p.status !== 'dead');
+  const soldProjects = dashboardProjects.filter((p) => p.status === 'sold');
+
+  const totalARV = activeProjects.reduce((sum, p) => sum + p.arv, 0);
+  const capitalDeployed = activeProjects.reduce((sum, p) => sum + p.purchase_price + (p.rehab_actual || 0), 0);
+  const averageROI = soldProjects.length > 0
+    ? soldProjects.reduce((sum, p) => sum + p.roi, 0) / soldProjects.length
+    : activeProjects.length > 0
+      ? activeProjects.reduce((sum, p) => sum + p.roi, 0) / activeProjects.length
+      : 0;
+
+  const projectCounts = {
+    total: dashboardProjects.length,
+    analyzing: dashboardProjects.filter((p) => p.status === 'analyzing').length,
+    underContract: dashboardProjects.filter((p) => p.status === 'under_contract').length,
+    inRehab: dashboardProjects.filter((p) => p.status === 'in_rehab').length,
+    listed: dashboardProjects.filter((p) => p.status === 'listed').length,
+    sold: dashboardProjects.filter((p) => p.status === 'sold').length,
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      {/* Page Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="flex h-14 items-center justify-between px-6">
-          <h1 className="text-lg font-semibold">Dashboard</h1>
-          <Button asChild>
-            <Link href="/projects/new">
-              <IconPlus className="h-4 w-4" />
-              New Project
-            </Link>
-          </Button>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
+              <IconChartBar className="h-6 w-6 text-accent-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">Rehab Budget Pro</h1>
+              <p className="text-sm text-muted-foreground">Fix & Flip Portfolio Dashboard</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button asChild>
+              <Link href="/projects/new">
+                <IconPlus className="h-4 w-4" />
+                New Project
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="p-6">
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="card-hover">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Projects
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold tabular-nums">{projects?.length || 0}</p>
-            </CardContent>
-          </Card>
-          <Card className="card-hover">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                In Rehab
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-accent tabular-nums">
-                {projects?.filter((p) => p.status === 'in_rehab').length || 0}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="card-hover">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Under Contract
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold tabular-nums">
-                {projects?.filter((p) => p.status === 'under_contract').length || 0}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="card-hover">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Sold This Year
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-success tabular-nums">
-                {projects?.filter((p) => p.status === 'sold').length || 0}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="mb-6">
-          <h2 className="section-header-lg mb-0">Projects</h2>
-        </div>
-
-        {!projects || projects.length === 0 ? (
-          <div className="empty-state-lg">
-            <IconHome className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No projects yet</h3>
-            <p className="empty-state-description">
-              Create your first project to start tracking your rehab budget.
-            </p>
-            <Button asChild>
-              <Link href="/projects/new">
-                <IconPlus className="h-4 w-4" />
-                Create Project
-              </Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="block"
-              >
-                <Card className="h-full hover-lift hover:border-accent/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium">{project.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {project.address || 'No address'}
-                          {project.city && `, ${project.city}`}
-                        </p>
-                      </div>
-                      <Badge variant={getStatusVariant(project.status as ProjectStatus)}>
-                        {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">ARV</p>
-                        <p className="font-medium tabular-nums">{formatCurrency(project.arv)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Purchase</p>
-                        <p className="font-medium tabular-nums">{formatCurrency(project.purchase_price)}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                      Created {formatDate(project.created_at)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
+      <main className="container mx-auto px-4 py-8 space-y-8">
+        <DashboardClient
+          projects={dashboardProjects}
+          totalARV={totalARV}
+          capitalDeployed={capitalDeployed}
+          averageROI={averageROI}
+          projectCounts={projectCounts}
+          categorySpends={categorySpends}
+        />
       </main>
     </div>
   );

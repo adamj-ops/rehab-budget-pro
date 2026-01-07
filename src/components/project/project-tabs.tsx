@@ -131,8 +131,10 @@ export function ProjectTabs({
         {activeTab === 'summary' && (
           <DealSummaryTab
             project={project}
-            totalBudget={totalBudgetWithContingency}
-            totalActual={totalActual}
+            underwritingTotal={totalUnderwriting}
+            forecastTotal={totalForecast}
+            actualTotal={totalActual}
+            contingencyPercent={project.contingency_percent}
           />
         )}
         
