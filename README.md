@@ -11,12 +11,14 @@ Simple, focused budget tracking for fix & flip real estate projects.
 - **Draws**: Full CRUD draw management with status workflow (pending → approved → paid), public vendor submission form
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
-### Multi-Project Dashboard (Planned)
+### Multi-Project Dashboard
 - **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
-- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed → Sold)
-- **Gantt Timeline**: Visual project timelines with milestones and dependencies
-- **Risk Alerts**: Automatic detection of over-budget and behind-schedule projects
-- **Budget Insights**: Category-level spending analysis across all projects
+- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed)
+- **Smart Project Cards**: Context-aware content based on project status
+- **Search**: Filter projects across the pipeline
+- **Gantt Timeline**: Visual project timelines (planned)
+- **Risk Alerts**: Over-budget/behind-schedule detection (planned)
+- **Budget Insights**: Category-level spending analysis (planned)
 
 See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and implementation plan.
 
@@ -27,8 +29,9 @@ See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and
 - **Database**: Supabase (PostgreSQL)
 - **State**: Zustand + React Query
 - **Icons**: Tabler Icons
-- **Animations**: Framer Motion (planned)
-- **Charts**: Recharts (planned)
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Drag & Drop**: @dnd-kit
 
 ## Getting Started
 
@@ -154,12 +157,12 @@ rehab-budget-pro/
 - [x] Photo attachments for line items (receipts, progress, before/after)
 - [x] Drag & drop reordering of budget items within categories
 
-### Phase 2: Dashboard - Kanban Pipeline
-- [ ] Install framer-motion, recharts dependencies
-- [ ] Portfolio health hero metrics
-- [ ] Kanban board with drag-drop status updates
-- [ ] Search, filter, sort functionality
-- [ ] Project cards with context-aware content
+### Phase 2: Dashboard - Kanban Pipeline ✅ Complete
+- [x] Install framer-motion, recharts dependencies
+- [x] Portfolio health hero metrics (Total ARV, Capital Deployed, ROI, Active Projects)
+- [x] Kanban board with drag-drop status updates
+- [x] Search projects across pipeline
+- [x] Project cards with context-aware content per status
 
 ### Phase 3: Dashboard - Gantt Timeline
 - [ ] Project timeline visualization

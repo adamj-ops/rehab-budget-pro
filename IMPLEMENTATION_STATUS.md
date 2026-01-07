@@ -285,7 +285,15 @@ psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
 - `src/types/index.ts` (UPDATED)
 
 ### Pages
+- `src/app/page.tsx` (REWRITTEN - Dashboard with Portfolio Health + Kanban Pipeline)
+- `src/app/dashboard-client.tsx` (NEW - Client component for dashboard interactivity)
 - `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
+
+### Dashboard Components
+- `src/components/dashboard/portfolio-health.tsx` (NEW - Hero metrics cards)
+- `src/components/dashboard/kanban-pipeline.tsx` (NEW - Drag-drop Kanban board)
+- `src/components/dashboard/project-card.tsx` (NEW - Context-aware project cards)
+- `src/components/dashboard/index.ts` (NEW - Component exports)
 
 ### Components & Hooks
 - `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN - with add/delete/photos)
@@ -339,7 +347,20 @@ This helps investors understand:
 
 ## ✅ Recent Changes
 
-### Drag & Drop Reordering (Latest - Jan 7, 2026)
+### Phase 2: Dashboard - Kanban Pipeline (Latest - Jan 7, 2026)
+- **Portfolio Health Metrics**: 4-card hero section with Total ARV, Capital Deployed, ROI, Active Projects
+- **Kanban Board**: 5-column pipeline (Leads → Analyzing → Under Contract → In Rehab → Listed)
+- **Drag & Drop**: Move projects between columns to update status (uses @dnd-kit)
+- **Context-Aware Cards**: Different card content based on project status:
+  - Analyzing: ARV, MAO, Projected ROI
+  - Under Contract: ARV, Purchase Price, Close Date, ROI
+  - In Rehab: Progress bar, Budget vs Actual, ROI
+  - Listed: List Price, Days on Market, Showings, ROI
+- **Search**: Filter projects across all columns by name, address, or city
+- **ROI Color Coding**: Green (≥20%), Light Green (15-20%), Yellow (10-15%), Red (<10%)
+- **New Dependencies**: framer-motion, recharts, @radix-ui/react-progress
+
+### Drag & Drop Reordering (Jan 7, 2026)
 - **Drag Handle**: Grip icon (⋮⋮) added to first column of each budget item row
 - **@dnd-kit Integration**: Using DndContext, SortableContext, and useSortable hook
 - **Visual Feedback**: Items highlight and become semi-transparent while dragging
