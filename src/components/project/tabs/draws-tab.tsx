@@ -3,28 +3,8 @@
 import { useState } from 'react';
 import type { Draw, DrawStatus, Vendor } from '@/types';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import {
-  IconPlus,
-  IconCheck,
-  IconClock,
-  IconAlertCircle,
-  IconEdit,
-  IconTrash,
-  IconChevronRight,
-  IconCreditCard,
-  IconBuildingBank,
-} from '@tabler/icons-react';
+import { IconPlus, IconCheck, IconClock, IconAlertCircle } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { DrawFormSheet } from '@/components/project/draw-form-sheet';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { useDrawMutations } from '@/hooks/use-draw-mutations';
 
 interface DrawsTabProps {
   projectId: string;
@@ -146,11 +126,11 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       </div>
 
       {/* Progress Bar */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Payment Progress</span>
-          <span className="text-sm text-muted-foreground">
-            {totalBudget > 0 ? ((totalPaid / totalBudget) * 100).toFixed(1) : 0}% paid
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {((totalPaid / totalBudget) * 100).toFixed(1)}% paid
           </span>
         </div>
         <div className="h-4 bg-muted rounded-full overflow-hidden">
@@ -165,17 +145,17 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
             />
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
+        <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
             Paid
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-yellow-500" />
-            Pending/Approved
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
+            Pending
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-muted" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             Remaining
           </div>
         </div>
@@ -183,9 +163,9 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Draw Schedule</h3>
-        <Button onClick={handleOpenCreate}>
-          <IconPlus className="h-4 w-4 mr-2" />
+        <h3 className="section-header mb-0">Draw Schedule</h3>
+        <Button>
+          <IconPlus className="icon-sm" />
           Add Draw
         </Button>
       </div>
@@ -208,8 +188,8 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
               </tr>
             </thead>
             <tbody>
-              {sortedDraws.map((draw) => (
-                <tr key={draw.id} className="border-t hover:bg-muted/50">
+              {draws.map((draw) => (
+                <tr key={draw.id} className="border-t table-row-hover">
                   <td className="p-3 font-medium">{draw.draw_number}</td>
                   <td className="p-3">
                     <div>
@@ -233,31 +213,19 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
                     {formatDate(draw.date_paid)}
                   </td>
                   <td className="p-3 text-center">
-                    <StatusBadgeWithMenu
-                      draw={draw}
-                      onStatusChange={handleStatusChange}
-                      isPending={updateStatus.isPending}
-                    />
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(draw)}
-                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                        title="Edit draw"
-                      >
-                        <IconEdit className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDelete(draw)}
-                        className="p-1.5 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
-                        title="Delete draw"
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <span
+                      className={cn(
+                        'status-badge',
+                        draw.status === 'paid' && 'status-paid',
+                        draw.status === 'approved' && 'status-approved',
+                        draw.status === 'pending' && 'status-pending'
+                      )}
+                    >
+                      {draw.status === 'paid' && <IconCheck className="h-3 w-3" />}
+                      {draw.status === 'approved' && <IconAlertCircle className="h-3 w-3" />}
+                      {draw.status === 'pending' && <IconClock className="h-3 w-3" />}
+                      {draw.status.charAt(0).toUpperCase() + draw.status.slice(1)}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -274,14 +242,14 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           </table>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <IconBuildingBank className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground mb-2">No draws scheduled yet</p>
-          <p className="text-sm text-muted-foreground mb-4">
+        <div className="empty-state">
+          <IconClock className="empty-state-icon" />
+          <p className="empty-state-title">No draws scheduled yet</p>
+          <p className="empty-state-description">
             Create draws to track payments to your vendors.
           </p>
-          <Button onClick={handleOpenCreate}>
-            <IconPlus className="h-4 w-4 mr-2" />
+          <Button>
+            <IconPlus className="h-4 w-4" />
             Create First Draw
           </Button>
         </div>

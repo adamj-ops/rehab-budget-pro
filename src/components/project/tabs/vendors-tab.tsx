@@ -1,57 +1,10 @@
 'use client'
 
-import * as React from 'react'
-import type { Vendor, BudgetItem, VendorTrade } from '@/types'
-import { VENDOR_TRADE_LABELS } from '@/types'
-import { formatCurrency, cn } from '@/lib/utils'
-import { useVendorMutations } from '@/hooks/use-vendor-mutations'
-import { VendorFormSheet } from '@/components/project/vendor-form-sheet'
-import { VendorDetailSheet } from '@/components/project/vendor-detail-sheet'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { StarRating } from '@/components/ui/star-rating'
-import {
-  IconPlus,
-  IconPhone,
-  IconMail,
-  IconCheck,
-  IconX,
-  IconDotsVertical,
-  IconPencil,
-  IconTrash,
-  IconSearch,
-  IconSortAscending,
-  IconSquare,
-  IconSquareCheck,
-  IconDownload,
-  IconUpload,
-  IconTag,
-} from '@tabler/icons-react'
-import { Checkbox } from '@/components/ui/checkbox'
+import type { Vendor, BudgetItem } from '@/types';
+import { VENDOR_TRADE_LABELS } from '@/types';
+import { formatCurrency, cn } from '@/lib/utils';
+import { IconPlus, IconStar, IconPhone, IconMail, IconCheck, IconX } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
 
 interface VendorsTabProps {
   projectId: string
@@ -467,61 +420,18 @@ export function VendorsTab({
   }
 
   const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
-    const totals = vendorTotals.get(vendor.id)
-    const isSelected = selectedVendors.has(vendor.id)
+    const totals = vendorTotals.get(vendor.id);
 
     return (
       <div
         key={vendor.id}
         className={cn(
-          'rounded-lg border bg-card p-4 transition-shadow hover:shadow-md',
-          isProjectVendor && 'border-primary/30',
-          isSelected && 'ring-2 ring-primary border-primary'
+          'rounded-lg border bg-card p-6',
+          isProjectVendor && 'border-primary/30 ring-1 ring-primary/10'
         )}
       >
-        {/* Action buttons (top right) */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Actions</span>
-                <IconEdit className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEditVendor(vendor)}>
-                <IconEdit className="h-4 w-4 mr-2" />
-                Edit Vendor
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => handleDeleteVendor(vendor)}
-                className="text-destructive focus:text-destructive"
-              >
-                <IconTrash className="h-4 w-4 mr-2" />
-                Delete Vendor
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div className="flex items-start justify-between mb-3">
-          {isSelectionMode && (
-            <div className="mr-3 mt-0.5">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => toggleVendorSelection(vendor.id)}
-              />
-            </div>
-          )}
-          <div
-            className="flex-1 cursor-pointer"
-            onClick={() =>
-              isSelectionMode
-                ? toggleVendorSelection(vendor.id)
-                : setViewingVendor(vendor)
-            }
-          >
+        <div className="flex items-start justify-between mb-4">
+          <div>
             <h4 className="font-medium">{vendor.name}</h4>
             <p className="text-sm text-muted-foreground">
               {VENDOR_TRADE_LABELS[vendor.trade]}
@@ -560,32 +470,24 @@ export function VendorsTab({
         </div>
 
         {/* Contact Info */}
-        {quickEditId === vendor.id ? (
-          <div className="space-y-2 mb-3 p-2 bg-muted/50 rounded-md">
-            {vendor.contact_name && (
-              <p className="text-sm text-muted-foreground">{vendor.contact_name}</p>
-            )}
-            <div className="flex items-center gap-2">
-              <IconPhone className="h-3 w-3 text-muted-foreground" />
-              <Input
-                value={quickEditData.phone}
-                onChange={(e) =>
-                  setQuickEditData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                placeholder="Phone number"
-                className="h-7 text-sm"
-              />
+        <div className="space-y-1.5 text-sm mb-4">
+          {vendor.contact_name && (
+            <p className="text-muted-foreground">{vendor.contact_name}</p>
+          )}
+          {vendor.phone && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <IconPhone className="h-3.5 w-3.5" />
+              <a href={`tel:${vendor.phone}`} className="hover:text-primary transition-colors">
+                {vendor.phone}
+              </a>
             </div>
-            <div className="flex items-center gap-2">
-              <IconMail className="h-3 w-3 text-muted-foreground" />
-              <Input
-                value={quickEditData.email}
-                onChange={(e) =>
-                  setQuickEditData((prev) => ({ ...prev, email: e.target.value }))
-                }
-                placeholder="Email address"
-                className="h-7 text-sm"
-              />
+          )}
+          {vendor.email && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <IconMail className="h-3.5 w-3.5" />
+              <a href={`mailto:${vendor.email}`} className="hover:text-primary transition-colors">
+                {vendor.email}
+              </a>
             </div>
             <div className="flex gap-2 pt-1">
               <Button
@@ -631,7 +533,7 @@ export function VendorsTab({
         )}
 
         {/* Qualifications */}
-        <div className="flex items-center gap-4 text-xs mb-3">
+        <div className="flex items-center gap-4 text-xs mb-4">
           <div className="flex items-center gap-1">
             {vendor.licensed ? (
               <IconCheck className="h-3 w-3 text-green-600" />
@@ -680,24 +582,22 @@ export function VendorsTab({
         )}
 
         {/* Status Badge */}
-        <div className="mt-3 pt-3 border-t flex items-center justify-between">
+        <div className="mt-4 pt-4 border-t flex items-center justify-between">
           <span
             className={cn(
-              'text-xs font-medium px-2 py-1 rounded-full capitalize',
-              vendor.status === 'active' && 'bg-green-100 text-green-700',
-              vendor.status === 'inactive' && 'bg-zinc-100 text-zinc-700',
-              vendor.status === 'do_not_use' && 'bg-red-100 text-red-700'
+              'status-badge',
+              vendor.status === 'active' && 'status-active',
+              vendor.status === 'inactive' && 'status-inactive',
+              vendor.status === 'do_not_use' && 'status-do-not-use'
             )}
           >
-            {vendor.status === 'do_not_use'
-              ? 'Do Not Use'
-              : vendor.status}
+            {vendor.status === 'do_not_use' ? 'Do Not Use' : vendor.status.charAt(0).toUpperCase() + vendor.status.slice(1)}
           </span>
 
-          {vendor.reliability && (
-            <span className="text-xs text-muted-foreground capitalize">
-              {vendor.reliability}
-            </span>
+          {!isProjectVendor && (
+            <Button variant="link" size="sm" className="h-auto p-0 text-xs">
+              Add to project
+            </Button>
           )}
         </div>
       </div>
@@ -716,155 +616,17 @@ export function VendorsTab({
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-medium">Vendor Management</h3>
-          <p className="text-sm text-muted-foreground">
-            {projectVendors.length} vendor{projectVendors.length !== 1 && 's'}{' '}
-            assigned to this project
+      <div className="flex items-center justify-between">
+        <div className="section-title-group">
+          <h3 className="section-header">Project Vendors</h3>
+          <p className="section-subheader">
+            {projectVendors.length} vendors assigned to this project
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Import/Export dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <IconDownload className="h-4 w-4 mr-2" />
-                Import/Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleImportClick}>
-                <IconUpload className="h-4 w-4 mr-2" />
-                Import from CSV
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleExportAll}>
-                <IconDownload className="h-4 w-4 mr-2" />
-                Export All Vendors
-              </DropdownMenuItem>
-              {selectedVendors.size > 0 && (
-                <DropdownMenuItem onClick={handleExportSelected}>
-                  <IconDownload className="h-4 w-4 mr-2" />
-                  Export Selected ({selectedVendors.size})
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Select mode toggle */}
-          <Button
-            variant={isSelectionMode ? 'secondary' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setIsSelectionMode(!isSelectionMode)
-              if (isSelectionMode) clearSelection()
-            }}
-          >
-            {isSelectionMode ? (
-              <IconSquareCheck className="h-4 w-4 mr-2" />
-            ) : (
-              <IconSquare className="h-4 w-4 mr-2" />
-            )}
-            Select
-          </Button>
-
-          <Button onClick={() => setIsAddOpen(true)}>
-            <IconPlus className="h-4 w-4 mr-2" />
-            Add Vendor
-          </Button>
-        </div>
-      </div>
-
-      {/* Bulk Actions Toolbar */}
-      {isSelectionMode && (
-        <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Checkbox
-              checked={
-                selectedVendors.size === filteredVendors.length &&
-                filteredVendors.length > 0
-              }
-              onCheckedChange={(checked) => {
-                if (checked) selectAllVendors()
-                else clearSelection()
-              }}
-            />
-            <span className="text-sm">
-              {selectedVendors.size > 0
-                ? `${selectedVendors.size} selected`
-                : 'Select all'}
-            </span>
-          </div>
-          {selectedVendors.size > 0 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportSelected}
-              >
-                <IconDownload className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-                disabled={deleteVendor.isPending}
-              >
-                <IconTrash className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Search, Filter, and Sort */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search vendors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select
-          value={tradeFilter}
-          onValueChange={(value) =>
-            setTradeFilter(value as VendorTrade | 'all')
-          }
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by trade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Trades</SelectItem>
-            {ALL_TRADES.map((trade) => (
-              <SelectItem key={trade} value={trade}>
-                {VENDOR_TRADE_LABELS[trade]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={sortBy}
-          onValueChange={(value) => setSortBy(value as SortOption)}
-        >
-          <SelectTrigger className="w-full sm:w-44">
-            <IconSortAscending className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            {SORT_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Button>
+          <IconPlus className="icon-sm" />
+          Add Vendor
+        </Button>
       </div>
 
       {/* Project Vendors */}
@@ -892,8 +654,8 @@ export function VendorsTab({
           </Button>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground mb-2">No vendors assigned yet</p>
+        <div className="empty-state">
+          <p className="empty-state-title">No vendors assigned yet</p>
           <p className="text-sm text-muted-foreground">
             Assign vendors to budget items in the Budget Detail tab.
           </p>
@@ -903,9 +665,7 @@ export function VendorsTab({
       {/* All Vendors Directory */}
       {otherVendors.length > 0 && (
         <div>
-          <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
-            Vendor Directory ({otherVendors.length})
-          </h4>
+          <h3 className="section-header">Vendor Directory</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {otherVendors.map((vendor) => renderVendorCard(vendor, false))}
           </div>

@@ -109,6 +109,23 @@ Each tab is a standalone component that queries its own data:
 - **Theme**: Custom theme variables in `globals.css` for Mira variant
 - **Dark Mode**: Supported via `ThemeProvider` with `data-theme` attribute
 - **Fonts**: Inter (sans) and JetBrains Mono (mono) from fontsource-variable
+- **Animations**: `tailwindcss-animate` plugin for enter/exit animations
+
+### UI Consistency Utilities
+
+The project uses reusable CSS utility classes defined in `globals.css` for consistent styling:
+
+- **Status badges**: `.status-badge`, `.status-active`, `.status-pending`, `.status-completed`, `.status-draft`
+- **Stat cards**: `.stat-card`, `.stat-card-compact`, `.stat-label`, `.stat-value`
+- **Tables**: `.table-header`, `.table-row-hover`, `.col-underwriting`, `.col-forecast`, `.col-actual`
+- **Forms**: `.form-input`, `.form-select`, `.inline-input`
+- **Empty states**: `.empty-state`, `.empty-state-lg`, `.empty-state-icon`
+- **Section headers**: `.section-header`, `.section-header-lg`, `.section-subheader`
+- **Icons**: `.icon-xs`, `.icon-sm`, `.icon-md`, `.icon-lg`, `.icon-xl`
+- **Animations**: `.fade-in`, `.scale-in`, `.slide-in-bottom`, `.modal-enter`, `.dropdown-enter`
+- **Transitions**: `.transition-base`, `.transition-fast`, `.hover-lift`
+
+Always prefer these utility classes over inline styles for consistency.
 
 ## Key Patterns to Follow
 
