@@ -2,9 +2,37 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPhoto, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconEdit,
+  IconGripVertical,
+  IconPhoto,
+  IconPlus,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react';
 import { PhotoGallery } from '@/components/project/photo-gallery';
 import { toast } from 'sonner';
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
@@ -43,6 +71,209 @@ const defaultNewItem: NewItemForm = {
   actual_amount: 0,
 };
 
+// Sortable Budget Item Row Component
+interface SortableBudgetItemRowProps {
+  item: BudgetItem;
+  isEditing: boolean;
+  editValues: Partial<BudgetItem>;
+  onEdit: (item: BudgetItem) => void;
+  onSave: (itemId: string) => void;
+  onCancel: () => void;
+  onInputChange: (field: keyof BudgetItem, value: number | string) => void;
+  onDelete: (item: BudgetItem) => void;
+  onViewPhotos: (item: BudgetItem) => void;
+  updatePending: boolean;
+}
+
+function SortableBudgetItemRow({
+  item,
+  isEditing,
+  editValues,
+  onEdit,
+  onSave,
+  onCancel,
+  onInputChange,
+  onDelete,
+  onViewPhotos,
+  updatePending,
+}: SortableBudgetItemRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 'auto',
+  };
+
+  const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
+  const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'border-t hover:bg-muted/50',
+        isDragging && 'bg-muted shadow-lg'
+      )}
+    >
+      <td className="p-3 sticky left-0 bg-background">
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted text-muted-foreground"
+          {...attributes}
+          {...listeners}
+        >
+          <IconGripVertical className="h-4 w-4" />
+        </button>
+      </td>
+      <td className="p-3 sticky left-12 bg-background">
+        <div>
+          <p className="font-medium">{item.item}</p>
+          {item.description && (
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+          )}
+        </div>
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.underwriting_amount ?? ''}
+            onChange={(e) => onInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
+        )}
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.forecast_amount ?? ''}
+            onChange={(e) => onInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
+        )}
+      </td>
+      <td className="p-3 text-right">
+        {isEditing ? (
+          <input
+            type="number"
+            step="0.01"
+            value={editValues.actual_amount ?? ''}
+            onChange={(e) => onInputChange('actual_amount', parseFloat(e.target.value) || 0)}
+            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+            placeholder="0"
+          />
+        ) : (
+          <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
+        )}
+      </td>
+      <td className={cn(
+        'p-3 text-right text-sm tabular-nums',
+        itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+      )}>
+        {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
+      </td>
+      <td className={cn(
+        'p-3 text-right text-sm tabular-nums',
+        itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+      )}>
+        {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
+      </td>
+      <td className="p-3 text-center">
+        {isEditing ? (
+          <select
+            value={editValues.status || item.status}
+            onChange={(e) => onInputChange('status', e.target.value)}
+            className="text-xs p-1 rounded border"
+          >
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="complete">Complete</option>
+            <option value="on_hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        ) : (
+          <span className={cn(
+            'inline-block px-2 py-1 rounded-full text-xs font-medium',
+            item.status === 'complete' && 'bg-green-100 text-green-700',
+            item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
+            item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
+            item.status === 'on_hold' && 'bg-yellow-100 text-yellow-700',
+            item.status === 'cancelled' && 'bg-red-100 text-red-700'
+          )}>
+            {STATUS_LABELS[item.status]}
+          </span>
+        )}
+      </td>
+      <td className="p-3 text-center">
+        {isEditing ? (
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => onSave(item.id)}
+              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+              disabled={updatePending}
+            >
+              <IconCheck className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+              disabled={updatePending}
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => onViewPhotos(item)}
+              className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
+              title="View photos"
+            >
+              <IconPhoto className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onEdit(item)}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+              title="Edit item"
+            >
+              <IconEdit className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item)}
+              className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+              title="Delete item"
+            >
+              <IconTrash className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
 export function BudgetDetailTab({
   projectId,
   budgetItems,
@@ -65,11 +296,23 @@ export function BudgetDetailTab({
   // Photo gallery state
   const [viewingPhotosForItem, setViewingPhotosForItem] = useState<BudgetItem | null>(null);
 
-  // Group items by category
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Group items by category and sort by sort_order
   const itemsByCategory = useMemo(() => {
     const grouped = groupBy(budgetItems, 'category');
     return BUDGET_CATEGORIES.map((cat) => {
-      const items = grouped[cat.value] || [];
+      const items = (grouped[cat.value] || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       return {
         ...cat,
         items,
@@ -129,6 +372,35 @@ export function BudgetDetailTab({
     onError: (error) => {
       console.error('Error updating budget item:', error);
       toast.error('Failed to update budget item');
+    },
+  });
+
+  // Mutation for reordering budget items
+  const reorderMutation = useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      const supabase = getSupabaseClient();
+
+      // Update all items in parallel
+      const results = await Promise.all(
+        updates.map(({ id, sort_order }) =>
+          supabase
+            .from('budget_items')
+            .update({ sort_order })
+            .eq('id', id)
+        )
+      );
+
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        throw errors[0].error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      console.error('Error reordering items:', error);
+      toast.error('Failed to reorder items');
     },
   });
 
@@ -256,6 +528,27 @@ export function BudgetDetailTab({
     }
   };
 
+  const handleDragEnd = (event: DragEndEvent, categoryItems: BudgetItem[]) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = categoryItems.findIndex((item) => item.id === active.id);
+      const newIndex = categoryItems.findIndex((item) => item.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(categoryItems, oldIndex, newIndex);
+
+        // Create update array with new sort orders
+        const updates = newOrder.map((item, index) => ({
+          id: item.id,
+          sort_order: index,
+        }));
+
+        reorderMutation.mutate(updates);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary Bar - Three Columns */}
@@ -303,8 +596,8 @@ export function BudgetDetailTab({
           <table className="w-full text-sm">
             <thead>
               <tr className="table-header">
-                <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
-                <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
+                <th className="text-left p-3 w-12 sticky left-0 bg-muted"></th>
+                <th className="text-left p-3 min-w-[200px] sticky left-12 bg-muted">Item</th>
                 <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
@@ -320,7 +613,7 @@ export function BudgetDetailTab({
                 <th className="text-right p-3 w-28">Forecast Var</th>
                 <th className="text-right p-3 w-28">Actual Var</th>
                 <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-24">Actions</th>
+                <th className="text-center p-3 w-28">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -344,7 +637,7 @@ export function BudgetDetailTab({
                           <IconChevronRight className="h-4 w-4" />
                         )}
                       </td>
-                      <td className="p-3 font-medium sticky left-8 bg-muted">
+                      <td className="p-3 font-medium sticky left-12 bg-muted">
                         {category.label}
                         <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
                           ({category.items.length} items)
@@ -374,159 +667,41 @@ export function BudgetDetailTab({
                       <td colSpan={2}></td>
                     </tr>
 
-                    {/* Item Rows */}
-                    {isExpanded && category.items.map((item) => {
-                      const isEditing = editingItemId === item.id;
-                      const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
-                      const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
-
-                      return (
-                        <tr key={item.id} className="border-t hover:bg-muted/50">
-                          <td className="p-3 sticky left-0 bg-background"></td>
-                          <td className="p-3 sticky left-8 bg-background">
-                            <div>
-                              <p className="font-medium">{item.item}</p>
-                              {item.description && (
-                                <p className="text-xs text-muted-foreground">{item.description}</p>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.underwriting_amount ?? ''}
-                                onChange={(e) => handleInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.forecast_amount ?? ''}
-                                onChange={(e) => handleInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {isEditing ? (
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={editValues.actual_amount ?? ''}
-                                onChange={(e) => handleInputChange('actual_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-                                placeholder="0"
-                              />
-                            ) : (
-                              <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
-                            )}
-                          </td>
-                          <td className={cn(
-                            'p-3 text-right text-sm tabular-nums',
-                            itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
-                          )}>
-                            {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
-                          </td>
-                          <td className={cn(
-                            'p-3 text-right text-sm tabular-nums',
-                            itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
-                          )}>
-                            {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
-                          </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <select
-                                value={editValues.status || item.status}
-                                onChange={(e) => handleInputChange('status', e.target.value)}
-                                className="text-xs p-1 rounded border"
-                              >
-                                <option value="not_started">Not Started</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="complete">Complete</option>
-                                <option value="on_hold">On Hold</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            ) : (
-                              <span className={cn(
-                                'inline-block px-2 py-1 rounded-full text-xs font-medium',
-                                item.status === 'complete' && 'bg-green-100 text-green-700',
-                                item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
-                                item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
-                                item.status === 'on_hold' && 'bg-yellow-100 text-yellow-700',
-                                item.status === 'cancelled' && 'bg-red-100 text-red-700'
-                              )}>
-                                {STATUS_LABELS[item.status]}
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3 text-center">
-                            {isEditing ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSave(item.id)}
-                                  className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconCheck className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleCancel}
-                                  className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
-                                  disabled={updateMutation.isPending}
-                                >
-                                  <IconX className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setViewingPhotosForItem(item)}
-                                  className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
-                                  title="View photos"
-                                >
-                                  <IconPhoto className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEdit(item)}
-                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                                  title="Edit item"
-                                >
-                                  <IconEdit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteClick(item)}
-                                  className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
-                                  title="Delete item"
-                                >
-                                  <IconTrash className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {/* Sortable Item Rows */}
+                    {isExpanded && category.items.length > 0 && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, category.items)}
+                      >
+                        <SortableContext
+                          items={category.items.map((item) => item.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {category.items.map((item) => (
+                            <SortableBudgetItemRow
+                              key={item.id}
+                              item={item}
+                              isEditing={editingItemId === item.id}
+                              editValues={editValues}
+                              onEdit={handleEdit}
+                              onSave={handleSave}
+                              onCancel={handleCancel}
+                              onInputChange={handleInputChange}
+                              onDelete={handleDeleteClick}
+                              onViewPhotos={setViewingPhotosForItem}
+                              updatePending={updateMutation.isPending}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    )}
 
                     {/* Add Item Row (when adding to this category) */}
                     {isExpanded && isAddingToThis && (
                       <tr className="border-t bg-green-50/30">
                         <td className="p-3 sticky left-0 bg-green-50/30"></td>
-                        <td className="p-3 sticky left-8 bg-green-50/30">
+                        <td className="p-3 sticky left-12 bg-green-50/30">
                           <div className="space-y-1">
                             <input
                               type="text"
@@ -635,7 +810,7 @@ export function BudgetDetailTab({
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
                 <td className="p-3 sticky left-0 bg-muted/50"></td>
-                <td className="p-3 font-medium sticky left-8 bg-muted/50">
+                <td className="p-3 font-medium sticky left-12 bg-muted/50">
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td colSpan={2}></td>
@@ -648,7 +823,7 @@ export function BudgetDetailTab({
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
                 <td className="p-3 sticky left-0 bg-primary/10"></td>
-                <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10">
+                <td className="p-3 font-semibold text-primary sticky left-12 bg-primary/10">
                   GRAND TOTAL
                 </td>
                 <td className="p-3 text-right font-semibold">
@@ -680,7 +855,11 @@ export function BudgetDetailTab({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground">
+      <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-2">
+          <IconGripVertical className="h-3 w-3" />
+          <span>Drag to reorder</span>
+        </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-blue-100"></div>
           <span>Underwriting: Pre-deal estimate</span>

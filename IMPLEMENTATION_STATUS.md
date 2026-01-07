@@ -106,10 +106,10 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
 
 ### High Priority
 
-1. **Drag & Drop Reordering** (@dnd-kit already installed)
-   - Reorder categories within project
-   - Reorder line items within category
-   - Update `sort_order` field on drop
+1. ~~**Drag & Drop Reordering**~~ ✅ COMPLETED
+   - ~~Reorder line items within category~~
+   - ~~Update `sort_order` field on drop~~
+   - ~~Drag handle icon with visual feedback~~
 
 2. ~~**Add/Delete Line Items**~~ ✅ COMPLETED
    - ~~"Add Item" button per category~~
@@ -339,7 +339,15 @@ This helps investors understand:
 
 ## ✅ Recent Changes
 
-### Photo Upload (Latest - Jan 7, 2026)
+### Drag & Drop Reordering (Latest - Jan 7, 2026)
+- **Drag Handle**: Grip icon (⋮⋮) added to first column of each budget item row
+- **@dnd-kit Integration**: Using DndContext, SortableContext, and useSortable hook
+- **Visual Feedback**: Items highlight and become semi-transparent while dragging
+- **Sort Order Persistence**: Updates `sort_order` field in database on drop
+- **Per-Category Sorting**: Items can only be reordered within their category
+- **Keyboard Support**: Full accessibility with keyboard navigation
+
+### Photo Upload (Jan 7, 2026)
 - **Photo Button**: Camera icon in Actions column for each budget item
 - **Photo Gallery Modal**: View, upload, and delete photos per line item
 - **Photo Types**: Receipt, Progress, Before, After, Other - selectable when uploading
