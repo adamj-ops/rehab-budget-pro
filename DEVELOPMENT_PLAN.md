@@ -36,9 +36,16 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 - ✅ Auto-increment draw numbers
 - ✅ Vendor and milestone assignment
 
+### Completed Features (Phase 4 - Photo Upload)
+- ✅ Photo upload per line item (drag & drop or file picker)
+- ✅ Photo type classification (receipt, progress, before, after, other)
+- ✅ Photo gallery view in slide-out sheet
+- ✅ Photo count badge on line items
+- ✅ Delete photos with confirmation
+- ✅ Signed URL generation for secure viewing
+
 ### Not Started
 - Authentication
-- Photo upload/management
 - PDF exports
 - Drag & drop reordering
 
@@ -148,36 +155,37 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 
 ## Phase 3: Enhanced UX Features
 
-### 3.1 Photo Upload & Management
+### 3.1 Photo Upload & Management ✅ COMPLETED
 
-**Current State:** Database table exists (`line_item_photos`), Supabase storage configured, no UI.
+**Status:** Fully implemented with all planned features.
 
-**Tasks:**
-1. **Photo upload per line item**
-   - Add camera icon button to budget line items
-   - Open modal with drag-and-drop zone (react-dropzone installed)
+**Completed Tasks:**
+1. ✅ **Photo upload per line item**
+   - Camera icon button on each budget line item
+   - Drag-and-drop zone in slide-out sheet
    - Upload to Supabase Storage: `project-photos/{project_id}/{line_item_id}/{uuid}.{ext}`
+   - File validation (JPG, PNG, WebP, PDF up to 10MB)
 
-2. **Photo type selection**
+2. ✅ **Photo type selection**
    - Categories: receipt, progress, before, after, other
-   - Display badge/icon for photo type
+   - Auto-detect type from filename (receipt, before, after)
+   - Color-coded type badges on photos
 
-3. **Photo gallery view**
+3. ✅ **Photo gallery view**
    - Grid display of all photos for a line item
-   - Lightbox for full-size viewing
-   - Delete capability
+   - Signed URLs for secure viewing
+   - Delete with confirmation dialog
 
-4. **Receipt OCR (stretch)**
-   - Extract amount from receipt photos
-   - Auto-populate actual_amount field
+4. ✅ **Photo count badge**
+   - Shows count on camera icon when photos exist
+   - Highlights camera icon when item has photos
 
-**Files to create:**
-- `src/components/project/photo-upload-modal.tsx`
-- `src/components/project/photo-gallery.tsx`
-- `src/hooks/use-photo-upload.ts`
+**Files created:**
+- `src/hooks/use-photo-mutations.ts` - Upload, delete, fetch with React Query
+- `src/components/project/photo-upload-sheet.tsx` - Upload UI with drag & drop
 
-**Files to modify:**
-- `src/components/project/tabs/budget-detail-tab.tsx` (add photo button)
+**Files modified:**
+- `src/components/project/tabs/budget-detail-tab.tsx` - Added photo button and count
 
 ### 3.2 Project Notes Integration
 

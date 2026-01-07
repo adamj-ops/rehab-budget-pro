@@ -15,6 +15,7 @@ import {
   IconSquareCheck,
   IconListCheck,
   IconLoader2,
+  IconCamera,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -33,7 +34,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BudgetItemFormSheet } from '@/components/project/budget-item-form-sheet';
+import { PhotoUploadSheet } from '@/components/project/photo-upload-sheet';
 import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
+import { useProjectPhotos } from '@/hooks/use-photo-mutations';
 
 interface BudgetDetailTabProps {
   projectId: string;
@@ -50,6 +53,17 @@ export function BudgetDetailTab({
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
   const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
+  const { data: projectPhotos = [] } = useProjectPhotos(projectId);
+
+  // Create photo count map by line item
+  const photoCountByItem = useMemo(() => {
+    const counts = new Map<string, number>();
+    projectPhotos.forEach((photo) => {
+      const current = counts.get(photo.line_item_id) || 0;
+      counts.set(photo.line_item_id, current + 1);
+    });
+    return counts;
+  }, [projectPhotos]);
 
   // UI State
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -70,6 +84,9 @@ export function BudgetDetailTab({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkStatusMenuOpen, setBulkStatusMenuOpen] = useState(false);
+
+  // Photo Upload State
+  const [photoItem, setPhotoItem] = useState<BudgetItem | null>(null);
 
   // Create a map for quick vendor lookup
   const vendorMap = useMemo(() => {
@@ -727,6 +744,24 @@ export function BudgetDetailTab({
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
+                                  onClick={() => setPhotoItem(item)}
+                                  className={cn(
+                                    'p-1 rounded transition-colors relative',
+                                    photoCountByItem.get(item.id)
+                                      ? 'text-primary hover:bg-primary/10'
+                                      : 'text-muted-foreground hover:bg-muted hover:text-primary'
+                                  )}
+                                  title={`Photos (${photoCountByItem.get(item.id) || 0})`}
+                                >
+                                  <IconCamera className="h-4 w-4" />
+                                  {photoCountByItem.get(item.id) ? (
+                                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-medium rounded-full h-4 w-4 flex items-center justify-center">
+                                      {photoCountByItem.get(item.id)}
+                                    </span>
+                                  ) : null}
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleEdit(item)}
                                   className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
                                   title="Edit item"
@@ -872,6 +907,16 @@ export function BudgetDetailTab({
         onConfirm={handleBulkDelete}
         isPending={bulkDelete.isPending}
       />
+
+      {/* Photo Upload Sheet */}
+      {photoItem && (
+        <PhotoUploadSheet
+          open={!!photoItem}
+          onOpenChange={(open) => !open && setPhotoItem(null)}
+          projectId={projectId}
+          budgetItem={photoItem}
+        />
+      )}
     </div>
   );
 }

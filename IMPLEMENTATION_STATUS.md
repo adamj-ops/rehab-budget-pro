@@ -100,6 +100,37 @@
 
 ---
 
+## ✅ Completed (Phase 4 - Photo Upload)
+
+### Photo Upload System
+- ✅ **Photo Upload Sheet** (`src/components/project/photo-upload-sheet.tsx`)
+  - Drag & drop zone for file upload
+  - File picker alternative
+  - Photo type selection (receipt, progress, before, after, other)
+  - Caption input
+  - File validation (JPG, PNG, WebP, PDF up to 10MB)
+  - Auto-detect photo type from filename
+
+- ✅ **Photo Mutations Hook** (`src/hooks/use-photo-mutations.ts`)
+  - `uploadPhoto` - Upload to Supabase Storage + create DB record
+  - `deletePhoto` - Remove from storage + delete DB record
+  - `getPhotoUrl` - Generate signed URLs for secure viewing
+  - `useLineItemPhotos` - Fetch photos for a line item
+  - `useProjectPhotos` - Fetch all photos for a project
+
+- ✅ **Photo Gallery**
+  - Grid display in upload sheet
+  - Photo thumbnails with type badges
+  - Delete button on hover
+  - PDF file support with icon display
+
+- ✅ **Budget Line Item Integration**
+  - Camera icon button on each line item
+  - Photo count badge when photos exist
+  - Highlighted icon when item has photos
+
+---
+
 ## ✅ Completed (Phase 3 - Draw Management)
 
 ### Full Draw CRUD System
@@ -307,21 +338,46 @@ The following migrations should be run in Supabase SQL Editor:
     - Edit opens form sheet with all fields
     - Delete with confirmation dialog
 
+### Photo Management
+11. **Upload photos** → Click camera icon on any budget line item
+    - Drag & drop or click to browse
+    - Select photo type: Receipt, Progress, Before, After, Other
+    - Add optional caption
+
+12. **View photos** → Opens sheet showing all uploaded photos
+    - Grid gallery with thumbnails
+    - Type badges (color-coded)
+    - Delete with confirmation
+
+13. **Photo count badge** → Shows on camera icon
+    - Number badge when photos exist
+    - Highlighted icon color
+
 ---
 
 ## 🚧 Next Steps (Remaining Features)
 
 ### High Priority
-1. **Photo Upload** - Upload receipts and progress photos to budget items
-2. **Drag & Drop Reordering** - Reorder categories and line items
+1. **Drag & Drop Reordering** - Reorder categories and line items
+2. **PDF Exports** - Underwriting summary and investor packets
 
 ### Medium Priority
-4. **PDF Exports** - Underwriting summary and investor packets
-5. **Authentication** - User login and protected routes
+3. **Authentication** - User login and protected routes
 
 ### Low Priority
-6. **Budget Templates** - Save and reuse budget structures
-7. **Real-time Updates** - Supabase subscriptions for live sync
+4. **Budget Templates** - Save and reuse budget structures
+5. **Real-time Updates** - Supabase subscriptions for live sync
+
+---
+
+## 📁 Key Files - Photo Upload
+
+### Hooks
+- `src/hooks/use-photo-mutations.ts` - Upload, delete, fetch, signed URLs
+
+### Components
+- `src/components/project/photo-upload-sheet.tsx` - Upload sheet with drag & drop
+- `src/components/project/tabs/budget-detail-tab.tsx` - Photo button integration
 
 ---
 
