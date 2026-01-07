@@ -253,9 +253,9 @@ export function BudgetDetailTab({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Summary Bar - Three Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted">
+    <div className="space-y-6">
+      {/* Summary Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-lg bg-muted">
         <div>
           <p className="text-sm text-muted-foreground">Underwriting</p>
           <p className="text-xl font-semibold tabular-nums">{formatCurrency(underwritingTotal)}</p>
@@ -299,24 +299,24 @@ export function BudgetDetailTab({
           <table className="w-full text-sm">
             <thead>
               <tr className="table-header">
-                <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
-                <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
-                <th className="text-right p-3 w-28 bg-blue-50">
+                <th className="w-8 sticky left-0 bg-muted"></th>
+                <th className="min-w-[200px] sticky left-8 bg-muted">Item</th>
+                <th className="text-right w-28 col-underwriting">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-green-50">
+                <th className="text-right w-28 col-forecast">
                   <div className="font-semibold">Forecast</div>
                   <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-purple-50">
+                <th className="text-right w-28 col-actual">
                   <div className="font-semibold">Actual</div>
                   <div className="text-xs font-normal text-muted-foreground">Real spend</div>
                 </th>
-                <th className="text-right p-3 w-28">Forecast Var</th>
-                <th className="text-right p-3 w-28">Actual Var</th>
-                <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-24">Actions</th>
+                <th className="text-right w-28">Forecast Var</th>
+                <th className="text-right w-28">Actual Var</th>
+                <th className="text-center w-28">Status</th>
+                <th className="text-center w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -346,13 +346,13 @@ export function BudgetDetailTab({
                           ({category.items.length} items)
                         </span>
                       </td>
-                      <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-underwriting tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-green-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-forecast tabular-nums">
                         {formatCurrency(category.forecast)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-purple-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-actual tabular-nums">
                         {formatCurrency(category.actual)}
                       </td>
                       <td className={cn(
@@ -394,7 +394,7 @@ export function BudgetDetailTab({
                                 step="0.01"
                                 value={editValues.underwriting_amount ?? ''}
                                 onChange={(e) => handleInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                                className="inline-input"
                               />
                             ) : (
                               <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
@@ -407,7 +407,7 @@ export function BudgetDetailTab({
                                 step="0.01"
                                 value={editValues.forecast_amount ?? ''}
                                 onChange={(e) => handleInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                                className="inline-input"
                               />
                             ) : (
                               <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
@@ -420,7 +420,7 @@ export function BudgetDetailTab({
                                 step="0.01"
                                 value={editValues.actual_amount ?? ''}
                                 onChange={(e) => handleInputChange('actual_amount', parseFloat(e.target.value) || 0)}
-                                className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                                className="inline-input"
                                 placeholder="0"
                               />
                             ) : (
@@ -454,12 +454,12 @@ export function BudgetDetailTab({
                               </select>
                             ) : (
                               <span className={cn(
-                                'inline-block px-2 py-1 rounded-full text-xs font-medium',
-                                item.status === 'complete' && 'bg-green-100 text-green-700',
-                                item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
-                                item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
-                                item.status === 'on_hold' && 'bg-yellow-100 text-yellow-700',
-                                item.status === 'cancelled' && 'bg-red-100 text-red-700'
+                                'status-badge',
+                                item.status === 'complete' && 'status-complete',
+                                item.status === 'in_progress' && 'status-in-progress',
+                                item.status === 'not_started' && 'status-not-started',
+                                item.status === 'on_hold' && 'status-on-hold',
+                                item.status === 'cancelled' && 'status-cancelled'
                               )}>
                                 {STATUS_LABELS[item.status]}
                               </span>
@@ -471,7 +471,7 @@ export function BudgetDetailTab({
                                 <button
                                   type="button"
                                   onClick={() => handleSave(item.id)}
-                                  className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+                                  className="action-btn action-btn-save"
                                   disabled={updateMutation.isPending}
                                 >
                                   <IconCheck className="h-4 w-4" />
@@ -479,7 +479,7 @@ export function BudgetDetailTab({
                                 <button
                                   type="button"
                                   onClick={handleCancel}
-                                  className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                                  className="action-btn action-btn-cancel"
                                   disabled={updateMutation.isPending}
                                 >
                                   <IconX className="h-4 w-4" />
@@ -490,7 +490,7 @@ export function BudgetDetailTab({
                                 <button
                                   type="button"
                                   onClick={() => handleEdit(item)}
-                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                  className="action-btn action-btn-edit"
                                   title="Edit item"
                                 >
                                   <IconEdit className="h-4 w-4" />
@@ -498,7 +498,7 @@ export function BudgetDetailTab({
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteClick(item)}
-                                  className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+                                  className="action-btn action-btn-delete"
                                   title="Delete item"
                                 >
                                   <IconTrash className="h-4 w-4" />
@@ -512,16 +512,16 @@ export function BudgetDetailTab({
 
                     {/* Add Item Row (when adding to this category) */}
                     {isExpanded && isAddingToThis && (
-                      <tr className="border-t bg-green-50/30">
-                        <td className="p-3 sticky left-0 bg-green-50/30"></td>
-                        <td className="p-3 sticky left-8 bg-green-50/30">
-                          <div className="space-y-1">
+                      <tr className="border-t bg-accent/10">
+                        <td className="p-3 sticky left-0 bg-accent/10"></td>
+                        <td className="p-3 sticky left-8 bg-accent/10">
+                          <div className="space-y-2">
                             <input
                               type="text"
                               value={newItemForm.item}
                               onChange={(e) => handleNewItemChange('item', e.target.value)}
                               placeholder="Item name *"
-                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                              className="w-full px-2 py-1.5 rounded border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                               autoFocus
                             />
                             <input
@@ -529,7 +529,7 @@ export function BudgetDetailTab({
                               value={newItemForm.description}
                               onChange={(e) => handleNewItemChange('description', e.target.value)}
                               placeholder="Description (optional)"
-                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+                              className="w-full px-2 py-1 rounded border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                             />
                           </div>
                         </td>
@@ -540,7 +540,7 @@ export function BudgetDetailTab({
                             value={newItemForm.underwriting_amount || ''}
                             onChange={(e) => handleNewItemChange('underwriting_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3 text-right">
@@ -550,7 +550,7 @@ export function BudgetDetailTab({
                             value={newItemForm.forecast_amount || ''}
                             onChange={(e) => handleNewItemChange('forecast_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3 text-right">
@@ -560,7 +560,7 @@ export function BudgetDetailTab({
                             value={newItemForm.actual_amount || ''}
                             onChange={(e) => handleNewItemChange('actual_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3"></td>
@@ -571,7 +571,7 @@ export function BudgetDetailTab({
                             <button
                               type="button"
                               onClick={handleSaveNewItem}
-                              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+                              className="action-btn action-btn-save"
                               disabled={createMutation.isPending}
                               title="Save item"
                             >
@@ -580,7 +580,7 @@ export function BudgetDetailTab({
                             <button
                               type="button"
                               onClick={handleCancelAdd}
-                              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                              className="action-btn action-btn-cancel"
                               disabled={createMutation.isPending}
                               title="Cancel"
                             >
@@ -668,17 +668,17 @@ export function BudgetDetailTab({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-6 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-blue-100"></div>
+          <div className="w-3 h-3 rounded col-underwriting border"></div>
           <span>Underwriting: Pre-deal estimate</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-green-100"></div>
+          <div className="w-3 h-3 rounded col-forecast border"></div>
           <span>Forecast: Post-walkthrough/bid</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-purple-100"></div>
+          <div className="w-3 h-3 rounded col-actual border"></div>
           <span>Actual: Real spend</span>
         </div>
       </div>

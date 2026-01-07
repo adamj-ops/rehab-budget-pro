@@ -361,23 +361,140 @@
 
   /* Status badges */
   .status-badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium;
   }
 
   .status-active {
-    @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+    @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400;
   }
 
   .status-pending {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+    @apply bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400;
   }
 
   .status-complete {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400;
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
   }
 
   .status-cancelled {
-    @apply bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400;
+    @apply bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400;
+  }
+
+  .status-in-progress {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  .status-not-started {
+    @apply bg-zinc-100 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400;
+  }
+
+  .status-on-hold {
+    @apply bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+
+  .status-paid {
+    @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .status-approved {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+
+  .status-do-not-use {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  }
+
+  .status-inactive {
+    @apply bg-zinc-100 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400;
+  }
+
+  /* ----------------------------------------
+   * TABLE STYLES
+   * ---------------------------------------- */
+
+  /* Table header row */
+  .table-header {
+    @apply bg-muted text-left font-medium;
+  }
+
+  .table-header th {
+    @apply p-3 text-sm;
+  }
+
+  /* Category header in expandable tables */
+  .category-header {
+    @apply bg-muted font-medium;
+  }
+
+  .category-header td {
+    @apply p-3;
+  }
+
+  /* Column background highlights */
+  .col-underwriting {
+    @apply bg-blue-50 dark:bg-blue-950/30;
+  }
+
+  .col-forecast {
+    @apply bg-green-50 dark:bg-green-950/30;
+  }
+
+  .col-actual {
+    @apply bg-purple-50 dark:bg-purple-950/30;
+  }
+
+  /* ----------------------------------------
+   * STAT CARDS
+   * ---------------------------------------- */
+
+  .stat-card {
+    @apply rounded-lg border bg-card p-6;
+  }
+
+  .stat-label {
+    @apply text-sm text-muted-foreground mb-1;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold tabular-nums;
+  }
+
+  /* ----------------------------------------
+   * INLINE EDIT INPUTS
+   * ---------------------------------------- */
+
+  .inline-input {
+    @apply w-24 text-right px-2 py-1.5 rounded border bg-background text-sm tabular-nums;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1;
+  }
+
+  .inline-input-sm {
+    @apply w-20 text-right px-2 py-1 rounded border bg-background text-xs tabular-nums;
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1;
+  }
+
+  /* ----------------------------------------
+   * ACTION BUTTONS (inline/icon buttons)
+   * ---------------------------------------- */
+
+  .action-btn {
+    @apply p-1.5 rounded transition-colors;
+  }
+
+  .action-btn-edit {
+    @apply hover:bg-muted text-muted-foreground hover:text-primary;
+  }
+
+  .action-btn-delete {
+    @apply hover:bg-red-100 text-muted-foreground hover:text-red-600 dark:hover:bg-red-900/30;
+  }
+
+  .action-btn-save {
+    @apply hover:bg-green-100 text-green-600 dark:hover:bg-green-900/30;
+  }
+
+  .action-btn-cancel {
+    @apply hover:bg-red-100 text-red-600 dark:hover:bg-red-900/30;
   }
 }
 

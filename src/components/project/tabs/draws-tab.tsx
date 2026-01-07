@@ -3,6 +3,7 @@
 import type { Draw, Vendor } from '@/types';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { IconPlus, IconCheck, IconClock, IconAlertCircle } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
 
 interface DrawsTabProps {
   projectId: string;
@@ -62,10 +63,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       </div>
 
       {/* Progress Bar */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Payment Progress</span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {((totalPaid / totalBudget) * 100).toFixed(1)}% paid
           </span>
         </div>
@@ -81,17 +82,17 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
             />
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
+        <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
             Paid
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
             Pending
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-muted" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             Remaining
           </div>
         </div>
@@ -100,10 +101,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Draw Schedule</h3>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <Button>
           <IconPlus className="h-4 w-4" />
           Add Draw
-        </button>
+        </Button>
       </div>
 
       {/* Draws Table */}
@@ -148,10 +149,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
                   <td className="p-3 text-center">
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
-                        draw.status === 'paid' && 'bg-green-100 text-green-700',
-                        draw.status === 'approved' && 'bg-blue-100 text-blue-700',
-                        draw.status === 'pending' && 'bg-yellow-100 text-yellow-700'
+                        'status-badge',
+                        draw.status === 'paid' && 'status-paid',
+                        draw.status === 'approved' && 'status-approved',
+                        draw.status === 'pending' && 'status-pending'
                       )}
                     >
                       {draw.status === 'paid' && <IconCheck className="h-3 w-3" />}
@@ -176,15 +177,15 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <IconClock className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <IconClock className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-2">No draws scheduled yet</p>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-6">
             Create draws to track payments to your vendors.
           </p>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <Button>
             <IconPlus className="h-4 w-4" />
             Create First Draw
-          </button>
+          </Button>
         </div>
       )}
     </div>

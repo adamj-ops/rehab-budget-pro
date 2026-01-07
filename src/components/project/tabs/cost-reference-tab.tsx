@@ -64,14 +64,14 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
             placeholder="Search items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           />
         </div>
-        
+
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value as BudgetCategory | 'all')}
-          className="px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          className="px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         >
           <option value="all">All Categories</option>
           {BUDGET_CATEGORIES.filter((c) => c.value !== 'contingency').map((cat) => (
@@ -148,8 +148,8 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
       )}
 
       {/* Legend */}
-      <div className="rounded-lg bg-muted p-4 text-sm">
-        <h4 className="font-medium mb-2">Price Guide Legend</h4>
+      <div className="rounded-lg bg-muted p-6 text-sm">
+        <h4 className="font-medium mb-3">Price Guide Legend</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <span className="text-green-600 font-medium">Low:</span>{' '}
@@ -164,7 +164,7 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
             <span className="text-muted-foreground">Premium materials, high-end finishes</span>
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs text-muted-foreground">
           Prices are estimates for the Minneapolis metro area and may vary based on project specifics,
           vendor availability, and market conditions. Always get multiple quotes.
         </p>

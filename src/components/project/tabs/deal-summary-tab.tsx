@@ -30,7 +30,7 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
     <div className="space-y-6">
       {/* Property Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg border bg-card p-5">
+        <div className="rounded-lg border bg-card p-6">
           <h3 className="font-medium mb-4">Property Information</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -65,7 +65,7 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
         </div>
 
         {/* Timeline */}
-        <div className="rounded-lg border bg-card p-5">
+        <div className="rounded-lg border bg-card p-6">
           <h3 className="font-medium mb-4">Timeline</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -97,7 +97,7 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
       </div>
 
       {/* Financial Summary */}
-      <div className="rounded-lg border bg-card p-5">
+      <div className="rounded-lg border bg-card p-6">
         <h3 className="font-medium mb-4">Deal Analysis</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {/* Column 1: Acquisition */}
@@ -210,8 +210,8 @@ export function DealSummaryTab({ project, totalBudget, totalActual }: DealSummar
 
       {/* Notes */}
       {project.notes && (
-        <div className="rounded-lg border bg-card p-5">
-          <h3 className="font-medium mb-3">Notes</h3>
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="font-medium mb-4">Notes</h3>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project.notes}</p>
         </div>
       )}

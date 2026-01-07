@@ -4,6 +4,7 @@ import type { Vendor, BudgetItem } from '@/types';
 import { VENDOR_TRADE_LABELS } from '@/types';
 import { formatCurrency, cn } from '@/lib/utils';
 import { IconPlus, IconStar, IconPhone, IconMail, IconCheck, IconX } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
 
 interface VendorsTabProps {
   projectId: string;
@@ -36,16 +37,16 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
 
   const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
     const totals = vendorTotals.get(vendor.id);
-    
+
     return (
       <div
         key={vendor.id}
         className={cn(
-          'rounded-lg border bg-card p-4',
-          isProjectVendor && 'border-primary/30'
+          'rounded-lg border bg-card p-6',
+          isProjectVendor && 'border-primary/30 ring-1 ring-primary/10'
         )}
       >
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-4">
           <div>
             <h4 className="font-medium">{vendor.name}</h4>
             <p className="text-sm text-muted-foreground">
@@ -68,22 +69,22 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
         </div>
 
         {/* Contact Info */}
-        <div className="space-y-1 text-sm mb-3">
+        <div className="space-y-1.5 text-sm mb-4">
           {vendor.contact_name && (
             <p className="text-muted-foreground">{vendor.contact_name}</p>
           )}
           {vendor.phone && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <IconPhone className="h-3 w-3" />
-              <a href={`tel:${vendor.phone}`} className="hover:text-primary">
+              <IconPhone className="h-3.5 w-3.5" />
+              <a href={`tel:${vendor.phone}`} className="hover:text-primary transition-colors">
                 {vendor.phone}
               </a>
             </div>
           )}
           {vendor.email && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <IconMail className="h-3 w-3" />
-              <a href={`mailto:${vendor.email}`} className="hover:text-primary">
+              <IconMail className="h-3.5 w-3.5" />
+              <a href={`mailto:${vendor.email}`} className="hover:text-primary transition-colors">
                 {vendor.email}
               </a>
             </div>
@@ -91,7 +92,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
         </div>
 
         {/* Qualifications */}
-        <div className="flex items-center gap-4 text-xs mb-3">
+        <div className="flex items-center gap-4 text-xs mb-4">
           <div className="flex items-center gap-1">
             {vendor.licensed ? (
               <IconCheck className="h-3 w-3 text-green-600" />
@@ -136,22 +137,22 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
         )}
 
         {/* Status Badge */}
-        <div className="mt-3 pt-3 border-t flex items-center justify-between">
+        <div className="mt-4 pt-4 border-t flex items-center justify-between">
           <span
             className={cn(
-              'text-xs font-medium px-2 py-1 rounded-full',
-              vendor.status === 'active' && 'bg-green-100 text-green-700',
-              vendor.status === 'inactive' && 'bg-zinc-100 text-zinc-700',
-              vendor.status === 'do_not_use' && 'bg-red-100 text-red-700'
+              'status-badge',
+              vendor.status === 'active' && 'status-active',
+              vendor.status === 'inactive' && 'status-inactive',
+              vendor.status === 'do_not_use' && 'status-do-not-use'
             )}
           >
-            {vendor.status === 'do_not_use' ? 'Do Not Use' : vendor.status}
+            {vendor.status === 'do_not_use' ? 'Do Not Use' : vendor.status.charAt(0).toUpperCase() + vendor.status.slice(1)}
           </span>
-          
+
           {!isProjectVendor && (
-            <button className="text-xs text-primary hover:underline">
+            <Button variant="link" size="sm" className="h-auto p-0 text-xs">
               Add to project
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -168,10 +169,10 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
             {projectVendors.length} vendors assigned to this project
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <Button>
           <IconPlus className="h-4 w-4" />
           Add Vendor
-        </button>
+        </Button>
       </div>
 
       {/* Project Vendors */}
