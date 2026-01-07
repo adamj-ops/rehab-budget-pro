@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ProjectTabs } from '@/components/project/project-tabs';
-import { IconArrowLeft, IconHome } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
+import { IconArrowLeft, IconHome, IconPencil } from '@tabler/icons-react';
 
 interface ProjectPageProps {
   params: Promise<{ id: string }>;
@@ -77,6 +78,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </p>
               </div>
             </div>
+
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/projects/${id}/edit`}>
+                <IconPencil className="h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
