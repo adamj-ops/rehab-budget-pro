@@ -2,13 +2,13 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPlus, IconTrash, IconX, IconUser } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
-import type { BudgetCategory, BudgetItem } from '@/types';
-import { BUDGET_CATEGORIES, STATUS_LABELS } from '@/types';
+import type { BudgetCategory, BudgetItem, Vendor } from '@/types';
+import { BUDGET_CATEGORIES, STATUS_LABELS, VENDOR_TRADE_LABELS } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +19,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
   contingencyPercent: number;
+  vendors?: Vendor[];
 }
 
 interface NewItemForm {
@@ -46,6 +60,7 @@ export function BudgetDetailTab({
   projectId,
   budgetItems,
   contingencyPercent,
+  vendors = [],
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -197,6 +212,36 @@ export function BudgetDetailTab({
     },
   });
 
+  // Mutation for assigning vendor to budget item (quick assign without full edit mode)
+  const assignVendorMutation = useMutation({
+    mutationFn: async ({ itemId, vendorId }: { itemId: string; vendorId: string | null }) => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('budget_items')
+        .update({ vendor_id: vendorId })
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Vendor assigned');
+    },
+    onError: (error) => {
+      console.error('Error assigning vendor:', error);
+      toast.error('Failed to assign vendor');
+    },
+  });
+
+  // Get vendor by ID helper
+  const getVendorById = (vendorId: string | null) => {
+    if (!vendorId) return null;
+    return vendors.find((v) => v.id === vendorId) || null;
+  };
+
   const handleEdit = (item: BudgetItem) => {
     setEditingItemId(item.id);
     setEditValues({
@@ -204,6 +249,7 @@ export function BudgetDetailTab({
       forecast_amount: item.forecast_amount,
       actual_amount: item.actual_amount,
       status: item.status,
+      vendor_id: item.vendor_id,
     });
   };
 
@@ -301,6 +347,7 @@ export function BudgetDetailTab({
               <tr className="table-header">
                 <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
+                <th className="text-left p-3 w-32">Vendor</th>
                 <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
@@ -346,6 +393,7 @@ export function BudgetDetailTab({
                           ({category.items.length} items)
                         </span>
                       </td>
+                      <td className="p-3"></td>
                       <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
@@ -376,6 +424,8 @@ export function BudgetDetailTab({
                       const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
 
+                      const itemVendor = getVendorById(item.vendor_id);
+
                       return (
                         <tr key={item.id} className="border-t hover:bg-muted/50">
                           <td className="p-3 sticky left-0 bg-background"></td>
@@ -386,6 +436,68 @@ export function BudgetDetailTab({
                                 <p className="text-xs text-muted-foreground">{item.description}</p>
                               )}
                             </div>
+                          </td>
+                          {/* Vendor Cell */}
+                          <td className="p-3">
+                            {vendors.length > 0 ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                      'h-8 justify-start text-left font-normal w-full max-w-[120px] truncate',
+                                      !itemVendor && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {itemVendor ? (
+                                      <span className="truncate">{itemVendor.name}</span>
+                                    ) : (
+                                      <span className="flex items-center gap-1">
+                                        <IconUser className="h-3 w-3" />
+                                        <span className="text-xs">Assign</span>
+                                      </span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-2" align="start">
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground px-2 py-1">
+                                      Select Vendor
+                                    </p>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start text-muted-foreground"
+                                      onClick={() => assignVendorMutation.mutate({ itemId: item.id, vendorId: null })}
+                                    >
+                                      <IconX className="h-3 w-3 mr-2" />
+                                      No Vendor
+                                    </Button>
+                                    {vendors
+                                      .filter((v) => v.status === 'active')
+                                      .map((vendor) => (
+                                        <Button
+                                          key={vendor.id}
+                                          variant={item.vendor_id === vendor.id ? 'secondary' : 'ghost'}
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => assignVendorMutation.mutate({ itemId: item.id, vendorId: vendor.id })}
+                                        >
+                                          <div className="truncate">
+                                            <span className="font-medium">{vendor.name}</span>
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              ({VENDOR_TRADE_LABELS[vendor.trade]})
+                                            </span>
+                                          </div>
+                                        </Button>
+                                      ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
                           </td>
                           <td className="p-3 text-right">
                             {isEditing ? (
@@ -533,6 +645,9 @@ export function BudgetDetailTab({
                             />
                           </div>
                         </td>
+                        <td className="p-3 text-xs text-muted-foreground">
+                          -
+                        </td>
                         <td className="p-3 text-right">
                           <input
                             type="number"
@@ -595,7 +710,7 @@ export function BudgetDetailTab({
                     {isExpanded && !isAddingToThis && (
                       <tr className="border-t">
                         <td className="p-2 sticky left-0 bg-background"></td>
-                        <td colSpan={8} className="p-2">
+                        <td colSpan={9} className="p-2">
                           <button
                             type="button"
                             onClick={() => handleStartAdd(category.value)}
@@ -611,7 +726,7 @@ export function BudgetDetailTab({
                     {/* Empty State */}
                     {isExpanded && category.items.length === 0 && !isAddingToThis && (
                       <tr>
-                        <td colSpan={9} className="p-4 text-center text-sm text-muted-foreground">
+                        <td colSpan={10} className="p-4 text-center text-sm text-muted-foreground">
                           No items in this category.
                         </td>
                       </tr>
@@ -626,6 +741,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-medium sticky left-8 bg-muted/50">
                   Contingency ({contingencyPercent}%)
                 </td>
+                <td></td>
                 <td colSpan={2}></td>
                 <td className="p-3 text-right font-medium">
                   {formatCurrency(contingencyAmount)}
@@ -639,6 +755,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10">
                   GRAND TOTAL
                 </td>
+                <td></td>
                 <td className="p-3 text-right font-semibold">
                   {formatCurrency(underwritingTotal)}
                 </td>
