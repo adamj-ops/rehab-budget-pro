@@ -61,6 +61,45 @@
 
 ---
 
+## ✅ Completed (Sprint 1 - Budget CRUD Completion)
+
+### Full Budget Item CRUD System
+- ✅ **Add Line Item** (`src/components/project/budget-item-form-sheet.tsx`)
+  - "Add" button per category in budget table header
+  - Full form with all budget item fields
+  - Auto-calculate amount from qty × rate
+  - Vendor assignment during creation
+  - Cost type, priority, and status selection
+
+- ✅ **Delete Line Item**
+  - Trash icon on each line item row
+  - Confirmation dialog before deletion
+  - Uses reusable ConfirmDialog component
+
+- ✅ **Bulk Operations**
+  - "Select Items" mode toggle button
+  - Checkboxes on each row
+  - Category header checkboxes (select/deselect all in category)
+  - Select all / Clear selection buttons
+  - Visual highlight on selected rows
+
+- ✅ **Bulk Status Update**
+  - Dropdown to set status on all selected items
+  - Options: Not Started, In Progress, Complete, On Hold, Cancelled
+
+- ✅ **Bulk Delete**
+  - Delete button for selected items
+  - Confirmation dialog with count
+
+### Budget Item Mutations Hook
+- ✅ **`src/hooks/use-budget-item-mutations.ts`**
+  - `createItem` - Add new budget item with auto sort_order
+  - `deleteItem` - Delete single item
+  - `bulkUpdateStatus` - Update status on multiple items
+  - `bulkDelete` - Delete multiple items
+
+---
+
 ## ✅ Completed (Phase 2 - Vendor Management)
 
 ### Full Vendor CRUD System
@@ -184,8 +223,23 @@ The following migrations should be run in Supabase SQL Editor:
    - Click edit icon to update underwriting, forecast, or actual amounts
    - Assign vendors to line items via dropdown
 
+3. **Add line items** → Click "Add" button on any category row
+   - Full form with item name, description, qty, rate
+   - Auto-calculates underwriting amount from qty × rate
+   - Assign vendor during creation
+   - Set cost type, priority, and initial status
+
+4. **Delete line items** → Click trash icon on any item
+   - Confirmation dialog before deletion
+   - Instant UI update after delete
+
+5. **Bulk operations** → Click "Select Items" button
+   - Select individual items or entire categories
+   - Bulk update status (Not Started → In Progress → Complete, etc.)
+   - Bulk delete with confirmation
+
 ### Vendor Management
-3. **Manage vendors** → Vendors tab
+6. **Manage vendors** → Vendors tab
    - Add new vendors with full details form
    - View vendor details in slide-out sheet
    - Quick edit phone/email inline
@@ -216,8 +270,8 @@ The following migrations should be run in Supabase SQL Editor:
 ## 🚧 Next Steps (Remaining Features)
 
 ### High Priority
-1. **Photo Upload** - Upload receipts and progress photos to budget items
-2. **Draw Management** - Full CRUD for payment draws
+1. **Draw Management** - Full CRUD for payment draws
+2. **Photo Upload** - Upload receipts and progress photos to budget items
 3. **Drag & Drop Reordering** - Reorder categories and line items
 
 ### Medium Priority
@@ -227,6 +281,18 @@ The following migrations should be run in Supabase SQL Editor:
 ### Low Priority
 6. **Budget Templates** - Save and reuse budget structures
 7. **Real-time Updates** - Supabase subscriptions for live sync
+
+---
+
+## 📁 Key Files - Budget CRUD
+
+### Hooks
+- `src/hooks/use-budget-item-mutations.ts` - Create, delete, bulk operations
+
+### Components
+- `src/components/project/tabs/budget-detail-tab.tsx` - Main budget table with full CRUD
+- `src/components/project/budget-item-form-sheet.tsx` - Add item form sheet
+- `src/components/ui/confirm-dialog.tsx` - Reusable confirmation dialog
 
 ---
 
@@ -275,4 +341,4 @@ npm run lint
 
 ---
 
-*Last updated: January 2026*
+*Last updated: January 7, 2026*

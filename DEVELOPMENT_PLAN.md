@@ -29,8 +29,7 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 - ✅ CSV import/export
 
 ### Partially Implemented
-- Budget item editing (edit works, add/delete UI missing)
-- Draws tab (display only)
+- Draws tab (display only, no CRUD)
 
 ### Not Started
 - Authentication
@@ -44,30 +43,38 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 
 **Goal:** Make all tabs fully interactive with add/edit/delete capabilities.
 
-### 2.1 Budget Item Management (High Priority)
+### 2.1 Budget Item Management ✅ COMPLETED
 
-**Current State:** Inline editing works for existing items, but no add/delete UI.
+**Status:** Fully implemented with all planned features plus additional enhancements.
 
-**Tasks:**
-1. **Add "New Line Item" button per category**
-   - Location: `src/components/project/tabs/budget-detail-tab.tsx`
-   - Insert inline form or slide-out sheet for new item
-   - Fields: name, description, qty, unit_type, rate, underwriting_amount
-   - Auto-calculate: `budget = qty × rate` or use manual amount
+**Completed Tasks:**
+1. ✅ **Add "New Line Item" button per category**
+   - "Add" button in each category header row
+   - Slide-out sheet form with all budget item fields
+   - Auto-calculate: `budget = qty × rate` or manual amount entry
+   - Vendor assignment during creation
+   - Cost type, priority, and status selection
 
-2. **Add delete functionality**
+2. ✅ **Delete functionality**
+   - Trash icon on each line item
    - Confirmation dialog before deletion
    - React Query mutation with cache invalidation
-   - Update: `useMutation` → `supabase.from('budget_items').delete().eq('id', itemId)`
 
-3. **Bulk operations**
-   - Select multiple items via checkbox
-   - Bulk delete selected items
-   - Bulk status update (Not Started → In Progress → Complete)
+3. ✅ **Bulk operations**
+   - "Select Items" mode toggle
+   - Checkboxes on each row and category headers
+   - Select all / deselect all buttons
+   - Select/deselect entire categories
+   - Bulk status update dropdown
+   - Bulk delete with confirmation
 
-**Files to modify:**
-- `src/components/project/tabs/budget-detail-tab.tsx`
-- `src/lib/store.ts` (ensure mutations are defined)
+**Files created:**
+- `src/hooks/use-budget-item-mutations.ts` - Create, delete, bulk operations
+- `src/components/project/budget-item-form-sheet.tsx` - Add item form
+- `src/components/ui/confirm-dialog.tsx` - Reusable confirmation dialog
+
+**Files modified:**
+- `src/components/project/tabs/budget-detail-tab.tsx` - Full CRUD UI
 
 ### 2.2 Vendor Management ✅ COMPLETED
 
@@ -309,11 +316,12 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 
 ## Recommended Sprint Plan
 
-### Sprint 1 (Budget CRUD Completion)
-- [ ] Add line item button and form
-- [ ] Delete line item with confirmation
-- [ ] Bulk selection and operations
-- [ ] Error handling and loading states
+### Sprint 1 (Budget CRUD Completion) ✅ COMPLETED
+- [x] Add line item button and form per category
+- [x] Delete line item with confirmation dialog
+- [x] Bulk selection and operations (select all, select by category)
+- [x] Bulk status update (change multiple items to any status)
+- [x] Bulk delete with confirmation
 
 ### Sprint 2 (Vendor Management) ✅ COMPLETED
 - [x] Add vendor dialog

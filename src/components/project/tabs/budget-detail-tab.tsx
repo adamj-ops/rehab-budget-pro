@@ -2,12 +2,25 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconX, IconUser } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconEdit,
+  IconX,
+  IconUser,
+  IconPlus,
+  IconTrash,
+  IconSquare,
+  IconSquareCheck,
+  IconListCheck,
+  IconLoader2,
+} from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
-import type { BudgetItem, Vendor } from '@/types';
+import type { BudgetItem, BudgetCategory, Vendor, ItemStatus } from '@/types';
 import { BUDGET_CATEGORIES, STATUS_LABELS, VENDOR_TRADE_LABELS } from '@/types';
 import {
   Select,
@@ -16,6 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { BudgetItemFormSheet } from '@/components/project/budget-item-form-sheet';
+import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
 
 interface BudgetDetailTabProps {
   projectId: string;
@@ -31,11 +49,27 @@ export function BudgetDetailTab({
   contingencyPercent,
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
+  const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
+
+  // UI State
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(BUDGET_CATEGORIES.map((c) => c.value))
   );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<BudgetItem>>({});
+
+  // Add Item State
+  const [addItemCategory, setAddItemCategory] = useState<BudgetCategory | null>(null);
+
+  // Delete Item State
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [deleteItemName, setDeleteItemName] = useState<string>('');
+
+  // Bulk Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatusMenuOpen, setBulkStatusMenuOpen] = useState(false);
 
   // Create a map for quick vendor lookup
   const vendorMap = useMemo(() => {
@@ -163,6 +197,104 @@ export function BudgetDetailTab({
     assignVendorMutation.mutate({ itemId, vendorId });
   };
 
+  // Add Item Handlers
+  const handleOpenAddItem = (category: BudgetCategory) => {
+    setAddItemCategory(category);
+  };
+
+  const handleAddItem = (item: Partial<BudgetItem>) => {
+    createItem.mutate({ projectId, item });
+  };
+
+  // Delete Item Handlers
+  const handleOpenDeleteItem = (item: BudgetItem) => {
+    setDeleteItemId(item.id);
+    setDeleteItemName(item.item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteItemId) {
+      deleteItem.mutate(deleteItemId, {
+        onSuccess: () => {
+          setDeleteItemId(null);
+          setDeleteItemName('');
+        },
+      });
+    }
+  };
+
+  // Bulk Selection Handlers
+  const toggleSelectionMode = () => {
+    setIsSelectionMode((prev) => !prev);
+    if (isSelectionMode) {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllInCategory = (categoryItems: BudgetItem[]) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      categoryItems.forEach((item) => next.add(item.id));
+      return next;
+    });
+  };
+
+  const deselectAllInCategory = (categoryItems: BudgetItem[]) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      categoryItems.forEach((item) => next.delete(item.id));
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    const allIds = budgetItems.map((item) => item.id);
+    setSelectedItems(new Set(allIds));
+  };
+
+  const deselectAll = () => {
+    setSelectedItems(new Set());
+  };
+
+  // Bulk Actions
+  const handleBulkDelete = () => {
+    const itemIds = Array.from(selectedItems);
+    bulkDelete.mutate(
+      { itemIds },
+      {
+        onSuccess: () => {
+          setSelectedItems(new Set());
+          setBulkDeleteOpen(false);
+        },
+      }
+    );
+  };
+
+  const handleBulkStatusUpdate = (status: ItemStatus) => {
+    const itemIds = Array.from(selectedItems);
+    bulkUpdateStatus.mutate(
+      { itemIds, status },
+      {
+        onSuccess: () => {
+          setSelectedItems(new Set());
+          setBulkStatusMenuOpen(false);
+        },
+      }
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary Bar - Three Columns */}
@@ -204,12 +336,80 @@ export function BudgetDetailTab({
         </div>
       </div>
 
+      {/* Selection Mode Toggle & Bulk Actions */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant={isSelectionMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={toggleSelectionMode}
+        >
+          <IconListCheck className="h-4 w-4 mr-2" />
+          {isSelectionMode ? 'Exit Selection' : 'Select Items'}
+        </Button>
+
+        {isSelectionMode && selectedItems.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+            </span>
+
+            {/* Bulk Status Update */}
+            <Select
+              value=""
+              onValueChange={(value) => handleBulkStatusUpdate(value as ItemStatus)}
+            >
+              <SelectTrigger className="h-8 w-36">
+                <SelectValue placeholder="Set Status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="not_started">Not Started</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Bulk Delete */}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <IconTrash className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+
+            {/* Select All / Deselect All */}
+            <div className="flex items-center gap-1 ml-2 border-l pl-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAll}
+                className="text-xs"
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={deselectAll}
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Budget Table */}
       <div className="rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="table-header">
+                {isSelectionMode && <th className="p-3 w-10"></th>}
                 <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
                 <th className="text-left p-3 w-36">Vendor</th>
@@ -228,7 +428,7 @@ export function BudgetDetailTab({
                 <th className="text-right p-3 w-28">Forecast Var</th>
                 <th className="text-right p-3 w-28">Actual Var</th>
                 <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-20"></th>
+                <th className="text-center p-3 w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -236,50 +436,95 @@ export function BudgetDetailTab({
                 const isExpanded = expandedCategories.has(category.value);
                 const catForecastVar = category.forecast - category.underwriting;
                 const catActualVar = category.actual - (category.forecast > 0 ? category.forecast : category.underwriting);
+                const categoryItemsSelected = category.items.filter((item) => selectedItems.has(item.id)).length;
+                const allCategorySelected = category.items.length > 0 && categoryItemsSelected === category.items.length;
 
                 return (
                   <Fragment key={category.value}>
                     {/* Category Header Row */}
                     <tr
                       className="category-header cursor-pointer hover:bg-primary/15"
-                      onClick={() => toggleCategory(category.value)}
                     >
-                      <td className="p-3 sticky left-0 bg-muted">
+                      {isSelectionMode && (
+                        <td
+                          className="p-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {category.items.length > 0 && (
+                            <Checkbox
+                              checked={allCategorySelected}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  selectAllInCategory(category.items);
+                                } else {
+                                  deselectAllInCategory(category.items);
+                                }
+                              }}
+                            />
+                          )}
+                        </td>
+                      )}
+                      <td
+                        className="p-3 sticky left-0 bg-muted"
+                        onClick={() => toggleCategory(category.value)}
+                      >
                         {isExpanded ? (
                           <IconChevronDown className="h-4 w-4" />
                         ) : (
                           <IconChevronRight className="h-4 w-4" />
                         )}
                       </td>
-                      <td className="p-3 font-medium sticky left-8 bg-muted">
+                      <td
+                        className="p-3 font-medium sticky left-8 bg-muted"
+                        onClick={() => toggleCategory(category.value)}
+                      >
                         {category.label}
                         <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
                           ({category.items.length} items)
                         </span>
+                        {isSelectionMode && categoryItemsSelected > 0 && (
+                          <span className="ml-2 text-xs font-normal text-primary">
+                            ({categoryItemsSelected} selected)
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3 bg-muted"></td>
-                      <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
+                      <td className="p-3 bg-muted" onClick={() => toggleCategory(category.value)}></td>
+                      <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums" onClick={() => toggleCategory(category.value)}>
                         {formatCurrency(category.underwriting)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-green-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium bg-green-50/50 tabular-nums" onClick={() => toggleCategory(category.value)}>
                         {formatCurrency(category.forecast)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-purple-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium bg-purple-50/50 tabular-nums" onClick={() => toggleCategory(category.value)}>
                         {formatCurrency(category.actual)}
                       </td>
                       <td className={cn(
                         'p-3 text-right font-medium tabular-nums',
                         catForecastVar >= 0 ? 'text-red-600' : 'text-green-600'
-                      )}>
+                      )} onClick={() => toggleCategory(category.value)}>
                         {catForecastVar >= 0 ? '+' : ''}{formatCurrency(catForecastVar)}
                       </td>
                       <td className={cn(
                         'p-3 text-right font-medium tabular-nums',
                         catActualVar >= 0 ? 'text-red-600' : 'text-green-600'
-                      )}>
+                      )} onClick={() => toggleCategory(category.value)}>
                         {catActualVar >= 0 ? '+' : ''}{formatCurrency(catActualVar)}
                       </td>
-                      <td colSpan={2}></td>
+                      <td onClick={() => toggleCategory(category.value)}></td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddItem(category.value);
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <IconPlus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      </td>
                     </tr>
 
                     {/* Item Rows */}
@@ -288,9 +533,24 @@ export function BudgetDetailTab({
                       const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
                       const vendor = item.vendor_id ? vendorMap.get(item.vendor_id) : null;
+                      const isSelected = selectedItems.has(item.id);
 
                       return (
-                        <tr key={item.id} className="border-t hover:bg-muted/50">
+                        <tr
+                          key={item.id}
+                          className={cn(
+                            'border-t hover:bg-muted/50',
+                            isSelected && 'bg-primary/5'
+                          )}
+                        >
+                          {isSelectionMode && (
+                            <td className="p-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleItemSelection(item.id)}
+                              />
+                            </td>
+                          )}
                           <td className="p-3 sticky left-0 bg-background"></td>
                           <td className="p-3 sticky left-8 bg-background">
                             <div>
@@ -464,25 +724,42 @@ export function BudgetDetailTab({
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(item)}
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <IconEdit className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(item)}
+                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                  title="Edit item"
+                                >
+                                  <IconEdit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenDeleteItem(item)}
+                                  className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+                                  title="Delete item"
+                                >
+                                  <IconTrash className="h-4 w-4" />
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
                       );
                     })}
 
-                    {/* Empty State */}
+                    {/* Empty State with Add Button */}
                     {isExpanded && category.items.length === 0 && (
                       <tr>
-                        <td colSpan={10} className="p-4 text-center text-sm text-muted-foreground">
+                        <td colSpan={isSelectionMode ? 12 : 11} className="p-4 text-center text-sm text-muted-foreground">
                           No items in this category.{' '}
-                          <button type="button" className="text-primary hover:underline">Add one</button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddItem(category.value)}
+                            className="text-primary hover:underline"
+                          >
+                            Add one
+                          </button>
                         </td>
                       </tr>
                     )}
@@ -492,6 +769,7 @@ export function BudgetDetailTab({
 
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
+                {isSelectionMode && <td className="p-3"></td>}
                 <td className="p-3 sticky left-0 bg-muted/50"></td>
                 <td className="p-3 font-medium sticky left-8 bg-muted/50" colSpan={2}>
                   Contingency ({contingencyPercent}%)
@@ -505,6 +783,7 @@ export function BudgetDetailTab({
 
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
+                {isSelectionMode && <td className="p-3"></td>}
                 <td className="p-3 sticky left-0 bg-primary/10"></td>
                 <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10" colSpan={2}>
                   GRAND TOTAL
@@ -552,6 +831,47 @@ export function BudgetDetailTab({
           <span>Actual: Real spend</span>
         </div>
       </div>
+
+      {/* Add Item Sheet */}
+      {addItemCategory && (
+        <BudgetItemFormSheet
+          open={!!addItemCategory}
+          onOpenChange={(open) => !open && setAddItemCategory(null)}
+          category={addItemCategory}
+          vendors={vendors}
+          onSubmit={handleAddItem}
+          isPending={createItem.isPending}
+        />
+      )}
+
+      {/* Delete Item Confirmation */}
+      <ConfirmDialog
+        open={!!deleteItemId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteItemId(null);
+            setDeleteItemName('');
+          }
+        }}
+        title="Delete Line Item"
+        description={`Are you sure you want to delete "${deleteItemName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        isPending={deleteItem.isPending}
+      />
+
+      {/* Bulk Delete Confirmation */}
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete Selected Items"
+        description={`Are you sure you want to delete ${selectedItems.size} selected item${selectedItems.size !== 1 ? 's' : ''}? This action cannot be undone.`}
+        confirmText={`Delete ${selectedItems.size} Item${selectedItems.size !== 1 ? 's' : ''}`}
+        variant="destructive"
+        onConfirm={handleBulkDelete}
+        isPending={bulkDelete.isPending}
+      />
     </div>
   );
 }
