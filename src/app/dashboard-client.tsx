@@ -1,13 +1,15 @@
 'use client';
 
-import { PortfolioHealth, KanbanPipeline, type ProjectCardData } from '@/components/dashboard';
+import { useState } from 'react';
+import { PortfolioHealth, KanbanPipeline, ProjectTimeline, type ProjectCardData, type TimelineProject } from '@/components/dashboard';
 import { Card, CardContent } from '@/components/ui/card';
-import { IconHome, IconPlus } from '@tabler/icons-react';
+import { IconHome, IconPlus, IconLayoutKanban, IconCalendarEvent } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
-  projects: ProjectCardData[];
+  projects: (ProjectCardData & TimelineProject)[];
   totalARV: number;
   capitalDeployed: number;
   averageROI: number;
@@ -21,6 +23,8 @@ interface DashboardClientProps {
   };
 }
 
+type ViewMode = 'kanban' | 'timeline';
+
 export function DashboardClient({
   projects,
   totalARV,
@@ -28,6 +32,8 @@ export function DashboardClient({
   averageROI,
   projectCounts,
 }: DashboardClientProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
+
   // Filter out sold/dead projects for the pipeline
   const pipelineProjects = projects.filter(
     (p) => p.status !== 'sold' && p.status !== 'dead'
@@ -63,8 +69,42 @@ export function DashboardClient({
         projectCounts={projectCounts}
       />
 
-      {/* Kanban Pipeline */}
-      <KanbanPipeline projects={pipelineProjects} />
+      {/* View Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setViewMode('kanban')}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              viewMode === 'kanban'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <IconLayoutKanban className="h-4 w-4" />
+            Pipeline
+          </button>
+          <button
+            onClick={() => setViewMode('timeline')}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              viewMode === 'timeline'
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <IconCalendarEvent className="h-4 w-4" />
+            Timeline
+          </button>
+        </div>
+      </div>
+
+      {/* View Content */}
+      {viewMode === 'kanban' ? (
+        <KanbanPipeline projects={pipelineProjects} />
+      ) : (
+        <ProjectTimeline projects={projects} />
+      )}
     </>
   );
 }
