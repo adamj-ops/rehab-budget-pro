@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/collapsible';
 import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 import { DealCalculator } from '@/components/project/deal-calculator';
+import { RehabEstimator } from '@/components/project/rehab-estimator';
 import {
   projectFormSchema,
   projectFormDefaults,
@@ -101,9 +102,11 @@ export function ProjectForm({
     'hold_months',
     'selling_cost_percent',
     'contingency_percent',
+    'sqft',
+    'year_built',
   ]);
 
-  const [arv, purchasePrice, closingCosts, holdingCostsMonthly, holdMonths, sellingCostPercent, contingencyPercent] = watchedValues;
+  const [arv, purchasePrice, closingCosts, holdingCostsMonthly, holdMonths, sellingCostPercent, contingencyPercent, sqft, yearBuilt] = watchedValues;
 
   // Google Places Autocomplete integration
   usePlacesAutocomplete({
@@ -360,8 +363,8 @@ export function ProjectForm({
                   />
                 </div>
 
-                {/* Mobile Deal Calculator */}
-                <div className="lg:hidden">
+                {/* Mobile Deal Calculator & Rehab Estimator */}
+                <div className="lg:hidden space-y-4">
                   <DealCalculator
                     arv={arv}
                     purchasePrice={purchasePrice}
@@ -370,6 +373,10 @@ export function ProjectForm({
                     holdMonths={holdMonths}
                     sellingCostPercent={sellingCostPercent}
                     contingencyPercent={contingencyPercent}
+                  />
+                  <RehabEstimator
+                    sqft={sqft}
+                    yearBuilt={yearBuilt}
                   />
                 </div>
 
@@ -780,9 +787,9 @@ export function ProjectForm({
             </div>
           </div>
 
-          {/* Sidebar - Deal Calculator (Desktop) */}
+          {/* Sidebar - Deal Calculator & Rehab Estimator (Desktop) */}
           <div className="hidden lg:block">
-            <div className="sticky top-24">
+            <div className="sticky top-24 space-y-4">
               <DealCalculator
                 arv={arv}
                 purchasePrice={purchasePrice}
@@ -791,6 +798,10 @@ export function ProjectForm({
                 holdMonths={holdMonths}
                 sellingCostPercent={sellingCostPercent}
                 contingencyPercent={contingencyPercent}
+              />
+              <RehabEstimator
+                sqft={sqft}
+                yearBuilt={yearBuilt}
               />
             </div>
           </div>

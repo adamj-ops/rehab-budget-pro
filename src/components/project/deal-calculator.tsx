@@ -9,8 +9,10 @@ import {
   IconPercentage,
   IconAlertCircle,
   IconCircleCheck,
+  IconChartBar,
+  IconInfoCircle,
 } from '@tabler/icons-react';
-import { formatCurrency, formatPercent } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 interface DealCalculatorProps {
@@ -51,7 +53,7 @@ export function DealCalculator({
     const grossProfit = arvValue - totalCosts;
     const roi = totalInvestment > 0 ? (grossProfit / totalInvestment) * 100 : 0;
 
-    // MAO = ARV × 70% - Rehab - Selling Costs - Closing Costs - Holding Costs
+    // MAO = ARV × 70% - Rehab - Closing Costs - Holding Costs
     const mao70 =
       arvValue * 0.7 - rehabWithContingency - closingCosts - holdingCostsTotal;
 
@@ -60,7 +62,34 @@ export function DealCalculator({
 
     // Deal quality indicators
     const isGoodDeal = purchaseValue > 0 && purchaseValue <= mao70;
-    const profitMargin = arvValue > 0 ? (grossProfit / arvValue) * 100 : 0;
+
+    // Sensitivity Analysis calculations
+    const sensitivity = {
+      // What if ARV drops?
+      arvDown5: {
+        newArv: arvValue * 0.95,
+        profit: arvValue * 0.95 - (totalCosts - sellingCosts + arvValue * 0.95 * (sellingCostPercent / 100)),
+      },
+      arvDown10: {
+        newArv: arvValue * 0.90,
+        profit: arvValue * 0.90 - (totalCosts - sellingCosts + arvValue * 0.90 * (sellingCostPercent / 100)),
+      },
+      // What if rehab goes over?
+      rehabOver10: {
+        newRehab: rehabWithContingency * 1.10,
+        profit: grossProfit - (rehabWithContingency * 0.10),
+      },
+      rehabOver20: {
+        newRehab: rehabWithContingency * 1.20,
+        profit: grossProfit - (rehabWithContingency * 0.20),
+      },
+      // Break-even ARV (what ARV do you need to break even?)
+      breakEvenArv: totalInvestment / (1 - sellingCostPercent / 100),
+      // Max purchase (what's the most you can pay and hit 20% ROI?)
+      maxPurchaseFor20ROI: arvValue > 0
+        ? (arvValue * (1 - sellingCostPercent / 100) - rehabWithContingency - closingCosts - holdingCostsTotal) / 1.20
+        : 0,
+    };
 
     return {
       totalInvestment,
@@ -71,8 +100,8 @@ export function DealCalculator({
       mao70,
       spread,
       isGoodDeal,
-      profitMargin,
       rehabWithContingency,
+      sensitivity,
     };
   }, [
     arv,
@@ -96,8 +125,9 @@ export function DealCalculator({
         )}
       >
         <IconTarget className="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p className="text-sm">
-          Enter ARV and Purchase Price to see deal analysis
+        <p className="text-sm font-medium">Deal Analysis</p>
+        <p className="text-xs mt-1">
+          Enter ARV and Purchase Price to see projected profit, ROI, and risk scenarios.
         </p>
       </div>
     );
@@ -112,6 +142,7 @@ export function DealCalculator({
     totalInvestment,
     holdingCostsTotal,
     sellingCosts,
+    sensitivity,
   } = calculations;
 
   const isProfitable = grossProfit > 0;
@@ -225,8 +256,122 @@ export function DealCalculator({
         </div>
       </div>
 
+      {/* Explanation */}
+      <div className="px-4 pb-3">
+        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+          <IconInfoCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            <strong>ROI</strong> shows your return on the cash invested.
+            <strong> MAO</strong> is the maximum you should pay using the 70% rule
+            (ARV × 70% minus all costs).
+          </span>
+        </p>
+      </div>
+
+      {/* Sensitivity Analysis */}
+      {(arv ?? 0) > 0 && (purchasePrice ?? 0) > 0 && (
+        <div className="border-t">
+          <details className="group">
+            <summary className="px-4 py-3 text-sm font-medium cursor-pointer hover:bg-muted/50 flex items-center gap-2">
+              <IconChartBar className="h-4 w-4" />
+              Sensitivity Analysis
+              <span className="text-xs text-muted-foreground font-normal ml-auto group-open:hidden">
+                Click to expand
+              </span>
+            </summary>
+            <div className="px-4 pb-4 space-y-4">
+              <p className="text-xs text-muted-foreground">
+                See how your profit changes if the deal doesn&apos;t go as planned.
+                Use this to stress-test your assumptions before making an offer.
+              </p>
+
+              {/* ARV Scenarios */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  If ARV is Lower
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 rounded bg-muted/50">
+                    <div className="text-xs text-muted-foreground">ARV -5%</div>
+                    <div className={cn(
+                      'text-sm font-semibold tabular-nums',
+                      sensitivity.arvDown5.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                    )}>
+                      {formatCurrency(sensitivity.arvDown5.profit)}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-muted/50">
+                    <div className="text-xs text-muted-foreground">ARV -10%</div>
+                    <div className={cn(
+                      'text-sm font-semibold tabular-nums',
+                      sensitivity.arvDown10.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                    )}>
+                      {formatCurrency(sensitivity.arvDown10.profit)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rehab Scenarios */}
+              {rehabBudget > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    If Rehab Goes Over
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded bg-muted/50">
+                      <div className="text-xs text-muted-foreground">+10% over</div>
+                      <div className={cn(
+                        'text-sm font-semibold tabular-nums',
+                        sensitivity.rehabOver10.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        {formatCurrency(sensitivity.rehabOver10.profit)}
+                      </div>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50">
+                      <div className="text-xs text-muted-foreground">+20% over</div>
+                      <div className={cn(
+                        'text-sm font-semibold tabular-nums',
+                        sensitivity.rehabOver20.profit >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        {formatCurrency(sensitivity.rehabOver20.profit)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Key Thresholds */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Key Numbers
+                </h4>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center p-2 rounded bg-muted/50">
+                    <span className="text-muted-foreground">Break-even ARV</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatCurrency(sensitivity.breakEvenArv)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded bg-muted/50">
+                    <span className="text-muted-foreground">Max purchase for 20% ROI</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatCurrency(sensitivity.maxPurchaseFor20ROI)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Break-even ARV</strong> is the minimum sale price to avoid a loss.
+                  <strong> Max purchase</strong> shows the highest offer that still yields 20% ROI.
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+
       {/* Cost Breakdown */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 border-t pt-3">
         <details className="group">
           <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
             <span className="group-open:rotate-90 transition-transform">▶</span>
