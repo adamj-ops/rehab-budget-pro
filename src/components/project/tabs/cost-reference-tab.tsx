@@ -112,7 +112,7 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id} className="border-t hover:bg-muted/50">
+                    <tr key={item.id} className="border-t table-row-hover">
                       <td className="p-3">
                         <p className="font-medium">{item.item}</p>
                         {item.description && (

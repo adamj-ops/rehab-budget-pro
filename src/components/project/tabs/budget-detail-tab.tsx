@@ -377,7 +377,7 @@ export function BudgetDetailTab({
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
 
                       return (
-                        <tr key={item.id} className="border-t hover:bg-muted/50">
+                        <tr key={item.id} className="border-t table-row-hover">
                           <td className="p-3 sticky left-0 bg-background"></td>
                           <td className="p-3 sticky left-8 bg-background">
                             <div>

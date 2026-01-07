@@ -125,7 +125,7 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
             </thead>
             <tbody>
               {draws.map((draw) => (
-                <tr key={draw.id} className="border-t hover:bg-muted/50">
+                <tr key={draw.id} className="border-t table-row-hover">
                   <td className="p-3 font-medium">{draw.draw_number}</td>
                   <td className="p-3">
                     {draw.milestone ? MILESTONE_LABELS[draw.milestone] : '-'}

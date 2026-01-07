@@ -642,6 +642,74 @@
   .skeleton-button {
     @apply h-9 w-24 rounded-md;
   }
+
+  /* ----------------------------------------
+   * TABLE ROW INTERACTIONS
+   * ---------------------------------------- */
+
+  .table-row-interactive {
+    @apply hover:bg-muted/50 transition-colors cursor-pointer;
+  }
+
+  .table-row-hover {
+    @apply hover:bg-muted/50 transition-colors;
+  }
+
+  .table-row-selected {
+    @apply bg-accent/10;
+  }
+
+  /* ----------------------------------------
+   * FOCUS VISIBLE STATES
+   * For keyboard navigation accessibility
+   * ---------------------------------------- */
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
+  .focus-ring-inset {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset;
+  }
+
+  /* Interactive elements should have visible focus */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* ----------------------------------------
+   * TRANSITIONS & ANIMATIONS
+   * ---------------------------------------- */
+
+  .transition-base {
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-in-out;
+  }
+
+  .transition-slow {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Card hover lift effect */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+
+  .hover-lift:hover {
+    @apply -translate-y-0.5 shadow-md;
+  }
+
+  /* Expand/collapse animation helper */
+  .collapse-transition {
+    @apply transition-all duration-200 ease-in-out overflow-hidden;
+  }
+
 }
 
 /* ============================================
@@ -682,6 +750,45 @@
  * - text-purple-600 / dark:text-purple-400
  * - bg-purple-50 / dark:bg-purple-950/30
  * - Use for: Actual spend values, secondary data highlights
+ *
+ * ============================================ */
+
+/* ============================================
+ * RESPONSIVE GRID PATTERNS
+ * ============================================
+ *
+ * Standard breakpoint patterns used throughout the app.
+ * Follow these for consistent responsive behavior.
+ *
+ * BREAKPOINTS (Tailwind defaults):
+ * - sm: 640px   (mobile landscape)
+ * - md: 768px   (tablet)
+ * - lg: 1024px  (desktop)
+ * - xl: 1280px  (large desktop)
+ * - 2xl: 1536px (extra large)
+ *
+ * GRID PATTERNS:
+ *
+ * Stats/Metrics Row:
+ *   grid-cols-1 md:grid-cols-4 gap-4
+ *   (stack on mobile, 4 columns on tablet+)
+ *
+ * Card Grid (Projects, Vendors):
+ *   grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4
+ *   (1 col mobile, 2 col tablet, 3 col desktop)
+ *
+ * Two-Column Layout (Property Info):
+ *   grid-cols-1 md:grid-cols-2 gap-6
+ *   (stack on mobile, side-by-side on tablet+)
+ *
+ * Form Filters Row:
+ *   flex flex-col sm:flex-row gap-4
+ *   (stack on mobile, inline on landscape+)
+ *
+ * SPACING SCALE:
+ * - gap-4: Standard card/item spacing
+ * - gap-6: Major section/column spacing
+ * - space-y-6: Vertical section separation
  *
  * ============================================ */
 

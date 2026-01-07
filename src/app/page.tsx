@@ -137,7 +137,7 @@ export default async function HomePage() {
                 href={`/projects/${project.id}`}
                 className="block"
               >
-                <Card className="h-full card-hover hover:border-accent/50 transition-all">
+                <Card className="h-full hover-lift hover:border-accent/50">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
