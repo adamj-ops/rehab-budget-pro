@@ -129,16 +129,16 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
 
 ### Medium Priority
 
-5. **Vendor Management**
-   - Create/edit/delete vendors
-   - Link vendors to line items
+5. ~~**Vendor Management**~~ ✅ COMPLETED
+   - ~~Create/edit/delete vendors~~
+   - ~~Link vendors to line items~~
    - Track vendor performance
    - Payment history
 
-6. **Draw Management**
-   - Create draw requests
-   - Select line items to include
-   - Track submission → approval → funded
+6. ~~**Draw Management**~~ ✅ COMPLETED
+   - ~~Create draw requests~~
+   - ~~Track submission → approval → funded~~
+   - ~~Public vendor submission form~~
 
 7. **Cost Reference Integration**
    - Quick lookup of Minneapolis metro pricing
@@ -338,7 +338,24 @@ This helps investors understand:
 
 ## ✅ Recent Changes
 
-### Deal Summary Three-Column Update (Latest - Jan 7, 2026)
+### Vendor CRUD (Latest - Jan 7, 2026)
+- **Create Vendor**: Full form modal with all vendor fields (name, trade, contact info, qualifications)
+- **Edit Vendor**: Click pencil icon on any vendor card to edit all fields
+- **Delete Vendor**: Trash icon with AlertDialog confirmation, warns if vendor is assigned to items
+- **Assign to Items**: "Assign to item" button shows list of unassigned budget items
+- **Vendor Form Fields**: Company name, trade (21 options), contact details, licensed/insured/W-9, ratings, reliability, price level, status, notes
+- **React Query Mutations**: Full CRUD with cache invalidation
+
+### Draw Management CRUD (Jan 7, 2026)
+- **Create Draw**: Form with draw number, milestone, amount, description, percent complete
+- **Edit Draw**: Inline editing of all draw fields
+- **Delete Draw**: Confirmation dialog before deletion
+- **Status Workflow**: Dropdown to change status (pending → approved → paid)
+- **Payment Modal**: When marking as paid, capture payment method, reference number, and date
+- **Vendor Request Link**: Button to copy public URL for vendors to submit draw requests
+- **Public Vendor Form**: `/draw-request/[projectId]` - Vendors can submit requests without login
+
+### Deal Summary Three-Column Update (Jan 7, 2026)
 - **Rehab Budget Comparison**: New card showing Underwriting vs Forecast vs Actual side-by-side
 - Each budget phase shows base amount + contingency breakdown
 - Variance percentages between phases (scope creep, execution variance)
