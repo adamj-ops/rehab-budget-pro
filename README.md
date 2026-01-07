@@ -4,11 +4,21 @@ Simple, focused budget tracking for fix & flip real estate projects.
 
 ## Features
 
+### Project Management
 - **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories, 180+ line items with Qty × Rate formulas
+- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual)
 - **Vendors**: Master vendor directory with trade, ratings, contact info
 - **Draws**: Payment tracking with milestones and progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
+
+### Multi-Project Dashboard (Planned)
+- **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
+- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed → Sold)
+- **Gantt Timeline**: Visual project timelines with milestones and dependencies
+- **Risk Alerts**: Automatic detection of over-budget and behind-schedule projects
+- **Budget Insights**: Category-level spending analysis across all projects
+
+See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and implementation plan.
 
 ## Tech Stack
 
@@ -17,6 +27,8 @@ Simple, focused budget tracking for fix & flip real estate projects.
 - **Database**: Supabase (PostgreSQL)
 - **State**: Zustand + React Query
 - **Icons**: Tabler Icons
+- **Animations**: Framer Motion (planned)
+- **Charts**: Recharts (planned)
 
 ## Getting Started
 
@@ -59,13 +71,29 @@ Open [http://localhost:3000](http://localhost:3000)
 rehab-budget-pro/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── page.tsx           # Home (projects list)
+│   │   ├── page.tsx           # Home / Dashboard
 │   │   ├── layout.tsx         # Root layout
 │   │   ├── globals.css        # Tailwind + custom styles
 │   │   └── projects/
+│   │       ├── new/
+│   │       │   └── page.tsx   # New project form
 │   │       └── [id]/
 │   │           └── page.tsx   # Project detail page
 │   ├── components/
+│   │   ├── dashboard/         # Dashboard components (planned)
+│   │   │   ├── portfolio-health.tsx
+│   │   │   ├── attention-needed.tsx
+│   │   │   ├── project-timeline.tsx
+│   │   │   ├── project-pipeline.tsx
+│   │   │   ├── financial-performance.tsx
+│   │   │   └── budget-insights.tsx
+│   │   ├── kanban/            # Kanban board (planned)
+│   │   │   ├── kanban-board.tsx
+│   │   │   ├── project-card.tsx
+│   │   │   └── kanban-filters.tsx
+│   │   ├── timeline/          # Gantt timeline (planned)
+│   │   │   ├── gantt-chart.tsx
+│   │   │   └── timeline-controls.tsx
 │   │   ├── project/
 │   │   │   ├── project-tabs.tsx
 │   │   │   └── tabs/
@@ -81,11 +109,16 @@ rehab-budget-pro/
 │   │   │   ├── client.ts      # Browser client
 │   │   │   └── server.ts      # Server client
 │   │   ├── store.ts           # Zustand stores
-│   │   └── utils.ts           # Helpers, formatters
+│   │   ├── utils.ts           # Helpers, formatters
+│   │   ├── timeline-utils.ts  # Timeline data transforms (planned)
+│   │   └── kanban-utils.ts    # Kanban helpers (planned)
 │   └── types/
 │       └── index.ts           # TypeScript types
+├── docs/
+│   └── DASHBOARD_PLAN.md      # Dashboard wireframes & specs
 └── supabase/
     ├── schema.sql             # Database schema
+    ├── migrations/            # Schema migrations
     └── seed.sql               # Cost reference data
 ```
 
@@ -107,14 +140,55 @@ rehab-budget-pro/
 
 ## Roadmap
 
+### Phase 1: Core Features (Current)
+- [x] Project creation with Google Places autocomplete
+- [x] Three-column budget model (Underwriting → Forecast → Actual)
+- [x] Budget category templates with auto-seeding
 - [ ] Add/edit budget items inline
+- [ ] Photo attachments for line items
 - [ ] Add/edit vendors
-- [ ] Create/update draws
-- [ ] Photo attachments
-- [ ] Project creation form
+
+### Phase 2: Dashboard - Kanban Pipeline
+- [ ] Install framer-motion, recharts dependencies
+- [ ] Portfolio health hero metrics
+- [ ] Kanban board with drag-drop status updates
+- [ ] Search, filter, sort functionality
+- [ ] Project cards with context-aware content
+
+### Phase 3: Dashboard - Gantt Timeline
+- [ ] Project timeline visualization
+- [ ] Milestone and dependency tracking
+- [ ] Zoom controls and filtering
+- [ ] Today marker and progress indicators
+
+### Phase 4: Dashboard - Risk & Alerts
+- [ ] Attention needed section
+- [ ] Over budget detection
+- [ ] Behind schedule detection
+- [ ] Contingency burn tracking
+
+### Phase 5: Financial Analytics
+- [ ] ROI distribution charts
+- [ ] Profit by project visualization
+- [ ] Time-period filtering
+- [ ] Export to PDF/Excel
+
+### Phase 6: Budget Intelligence
+- [ ] Category breakdown across portfolio
+- [ ] Cost benchmarking vs Minneapolis data
+- [ ] Trend analysis
+
+### Future
 - [ ] User authentication
-- [ ] Export to Excel/PDF
-- [ ] Multi-project dashboard
+- [ ] Real-time collaboration
+- [ ] Mobile app
+
+## Documentation
+
+- [CLAUDE.md](CLAUDE.md) - Development guidelines for AI assistants
+- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - Current implementation progress
+- [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) - Dashboard wireframes and UX specs
+- [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md) - Google Places API configuration
 
 ## License
 
