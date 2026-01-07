@@ -13,6 +13,15 @@ import {
   type ProjectFormValues,
 } from '@/lib/validations/project';
 
+/**
+ * Page component that renders the "New Project" UI and handles creating a project.
+ *
+ * The component renders a header and a project creation form, transforms submitted
+ * form values for the database, inserts a new project, seeds budget items from active
+ * templates, shows success or error toasts, and navigates to the created project's page.
+ *
+ * @returns The New Project page as a React element.
+ */
 export default function NewProjectPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
