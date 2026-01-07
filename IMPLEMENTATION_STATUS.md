@@ -100,6 +100,34 @@
 
 ---
 
+## ✅ Completed (Phase 3 - Draw Management)
+
+### Full Draw CRUD System
+- ✅ **Draw Form Sheet** (`src/components/project/draw-form-sheet.tsx`)
+  - Add and edit draws with all fields
+  - Amount, vendor, milestone, percent complete, description
+  - Status, dates, payment method, reference number, notes
+  - Auto-increment draw numbers
+
+- ✅ **Draw Mutations Hook** (`src/hooks/use-draw-mutations.ts`)
+  - `createDraw` - Add new draw with auto-numbering
+  - `updateDraw` - Update draw details
+  - `updateStatus` - Quick status changes with auto date_paid
+  - `deleteDraw` - Delete with confirmation
+
+- ✅ **Status Transitions**
+  - Clickable status badges with dropdown menu
+  - Quick change: Pending → Approved → Paid
+  - Auto-sets date_paid when marking as paid
+
+- ✅ **Draws Tab Updated** (`src/components/project/tabs/draws-tab.tsx`)
+  - Full CRUD with edit and delete buttons
+  - Status badge dropdown for quick changes
+  - Summary cards and progress bar
+  - Empty state with call-to-action
+
+---
+
 ## ✅ Completed (Phase 2 - Vendor Management)
 
 ### Full Vendor CRUD System
@@ -265,14 +293,27 @@ The following migrations should be run in Supabase SQL Editor:
    - Export all vendors to CSV
    - Import vendors from CSV
 
+### Draw Management
+8. **Create draws** → Click "Add Draw" in Draws tab
+   - Set amount, vendor, milestone, percent complete
+   - Select payment method and add reference number
+   - Auto-assigns next draw number
+
+9. **Manage draw status** → Click status badge
+   - Quick change: Pending → Approved → Paid
+   - Auto-sets paid date when marking as paid
+
+10. **Edit/Delete draws** → Action buttons on each row
+    - Edit opens form sheet with all fields
+    - Delete with confirmation dialog
+
 ---
 
 ## 🚧 Next Steps (Remaining Features)
 
 ### High Priority
-1. **Draw Management** - Full CRUD for payment draws
-2. **Photo Upload** - Upload receipts and progress photos to budget items
-3. **Drag & Drop Reordering** - Reorder categories and line items
+1. **Photo Upload** - Upload receipts and progress photos to budget items
+2. **Drag & Drop Reordering** - Reorder categories and line items
 
 ### Medium Priority
 4. **PDF Exports** - Underwriting summary and investor packets
@@ -281,6 +322,17 @@ The following migrations should be run in Supabase SQL Editor:
 ### Low Priority
 6. **Budget Templates** - Save and reuse budget structures
 7. **Real-time Updates** - Supabase subscriptions for live sync
+
+---
+
+## 📁 Key Files - Draw Management
+
+### Hooks
+- `src/hooks/use-draw-mutations.ts` - Create, update, delete, status transitions
+
+### Components
+- `src/components/project/tabs/draws-tab.tsx` - Main draws tab with full CRUD
+- `src/components/project/draw-form-sheet.tsx` - Add/edit draw form
 
 ---
 

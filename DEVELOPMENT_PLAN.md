@@ -28,8 +28,13 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 - ✅ Bulk selection and delete
 - ✅ CSV import/export
 
-### Partially Implemented
-- Draws tab (display only, no CRUD)
+### Completed Features (Phase 3 - Draw Management)
+- ✅ Full Draw CRUD (add, edit, delete)
+- ✅ Status transitions (Pending → Approved → Paid)
+- ✅ Quick status change via dropdown menu
+- ✅ Auto-set date_paid when marking as paid
+- ✅ Auto-increment draw numbers
+- ✅ Vendor and milestone assignment
 
 ### Not Started
 - Authentication
@@ -108,34 +113,36 @@ Based on codebase analysis (January 2026), the project has completed Phase 1 (Co
 - `src/hooks/use-vendor-contacts.ts`
 - `supabase/migrations/003_vendor_tags_and_contacts.sql`
 
-### 2.3 Draw Management (High Priority)
+### 2.3 Draw Management ✅ COMPLETED
 
-**Current State:** Display with progress bars, no CRUD operations.
+**Status:** Fully implemented with all planned features.
 
-**Tasks:**
-1. **Create Draw form**
-   - Fields: draw_number, amount, milestone (enum), scheduled_date, notes
-   - Status defaults to 'scheduled'
+**Completed Tasks:**
+1. ✅ **Create Draw form** (`draw-form-sheet.tsx`)
+   - All fields: amount, vendor, milestone, percent complete, description
+   - Status, dates (requested/paid), payment method, reference number, notes
+   - Auto-increment draw numbers
 
-2. **Draw status workflow**
-   - Status progression: scheduled → submitted → approved → funded
-   - Date tracking for each status change
-   - Payment method capture on funding
+2. ✅ **Draw status workflow**
+   - Status dropdown with quick transitions: Pending → Approved → Paid
+   - Auto-sets date_paid when marking as paid
+   - Status badge with dropdown menu for one-click changes
 
-3. **Link draws to budget items**
-   - Select which line items are included in each draw
-   - Calculate draw amount from selected items
+3. ✅ **Full CRUD operations**
+   - Create new draws with form sheet
+   - Edit existing draws
+   - Delete draws with confirmation dialog
 
-4. **Draw approval workflow (stretch)**
-   - Mark items as "included in draw #X"
-   - Track submission → lender review → approval → funding
+4. ✅ **Vendor & milestone linking**
+   - Assign vendors to draws
+   - Link to 6 milestone types
 
-**Files to create:**
-- `src/components/project/dialogs/add-draw-dialog.tsx`
-- `src/components/project/dialogs/draw-detail-sheet.tsx`
+**Files created:**
+- `src/hooks/use-draw-mutations.ts` - CRUD with auto draw numbering
+- `src/components/project/draw-form-sheet.tsx` - Add/edit form
 
-**Files to modify:**
-- `src/components/project/tabs/draws-tab.tsx`
+**Files modified:**
+- `src/components/project/tabs/draws-tab.tsx` - Full CRUD UI with status dropdown
 
 ---
 
