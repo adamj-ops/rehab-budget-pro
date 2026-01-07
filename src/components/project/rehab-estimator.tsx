@@ -50,7 +50,13 @@ const REHAB_COSTS_PER_SQFT: Record<RehabScope, { low: number; mid: number; high:
   },
 };
 
-// Age adjustments (older homes typically need more work)
+/**
+ * Compute a multiplier applied to rehab cost estimates based on the property's year built.
+ *
+ * @param yearBuilt - The year the property was built, or `null` if unknown. When `null`, this returns `1.0`.
+ * @returns A numeric multiplier representing expected relative rehab cost:
+ * `0.9` for age < 20 years, `1.0` for 20–39 years, `1.1` for 40–59 years, `1.2` for 60–79 years, and `1.3` for 80+ years.
+ */
 function getAgeMultiplier(yearBuilt: number | null): number {
   if (!yearBuilt) return 1.0;
   const age = new Date().getFullYear() - yearBuilt;
@@ -62,6 +68,12 @@ function getAgeMultiplier(yearBuilt: number | null): number {
   return 1.3;                     // Very old, expect surprises
 }
 
+/**
+ * Provide a short advisory message about how a property's age affects expected rehab costs.
+ *
+ * @param yearBuilt - The property's construction year; if `null` or not provided, no message is returned.
+ * @returns A brief advisory string describing cost implications based on the property's age, or an empty string when `yearBuilt` is not provided.
+ */
 function getAgeDescription(yearBuilt: number | null): string {
   if (!yearBuilt) return '';
   const age = new Date().getFullYear() - yearBuilt;
@@ -73,6 +85,20 @@ function getAgeDescription(yearBuilt: number | null): string {
   return 'Very old home - expect hidden issues and higher contingency.';
 }
 
+/**
+ * Renders an interactive rehab cost estimator UI for a property.
+ *
+ * Calculates low/mid/high totals and per-square-foot estimates based on `sqft`,
+ * selected scope of work, and an age multiplier derived from `yearBuilt`. When
+ * the user confirms an estimate via the "Use estimate" action, the component
+ * invokes `onEstimateSelect` with the chosen total.
+ *
+ * @param sqft - Total square footage used to compute estimates; if missing or <= 0 a prompt is shown instead of the full estimator
+ * @param yearBuilt - Optional year the property was built; adjusts estimate via an age multiplier and displays an age note when provided
+ * @param onEstimateSelect - Optional callback invoked with the selected total estimate (number) when the user clicks "Use estimate"
+ * @param className - Optional additional CSS classes applied to the root element
+ * @returns The estimator rendered as a JSX element
+ */
 export function RehabEstimator({
   sqft,
   yearBuilt,

@@ -21,6 +21,18 @@ interface DatePickerProps {
   className?: string;
 }
 
+/**
+ * A button-triggered popover that lets the user pick a single date.
+ *
+ * The trigger button displays a calendar icon and either the formatted selected date or a placeholder.
+ *
+ * @param value - The currently selected Date, or `null` if none is selected.
+ * @param onChange - Callback invoked with the selected `Date` when a date is chosen, or `undefined` if the selection is cleared.
+ * @param placeholder - Text to show in the trigger when no date is selected. Defaults to `"Pick a date"`.
+ * @param disabled - If `true`, disables interaction with the trigger button.
+ * @param className - Additional CSS classes applied to the trigger button.
+ * @returns The DatePicker React element.
+ */
 export function DatePicker({
   value,
   onChange,

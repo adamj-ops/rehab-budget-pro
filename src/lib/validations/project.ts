@@ -110,7 +110,14 @@ export const projectStatusOptions = [
   { value: 'dead', label: 'Dead' },
 ] as const;
 
-// Helper to transform form values for database submission
+/**
+ * Convert project form values into a shape suitable for database storage.
+ *
+ * Date fields are converted to `YYYY-MM-DD` strings; other fields are preserved.
+ *
+ * @param values - The project form values to transform
+ * @returns The transformed object with date fields as `YYYY-MM-DD` strings or `null`
+ */
 export function transformFormToDatabase(values: ProjectFormValues) {
   return {
     ...values,
@@ -124,7 +131,12 @@ export function transformFormToDatabase(values: ProjectFormValues) {
   };
 }
 
-// Helper to transform database values to form values
+/**
+ * Convert a Project database record into values suitable for the project form.
+ *
+ * @param project - The database `Project` object to convert.
+ * @returns A partial `ProjectFormValues` object with the same fields as the form; any date strings on the input are converted to `Date` objects and missing dates become `null`.
+ */
 export function transformDatabaseToForm(project: Project): Partial<ProjectFormValues> {
   return {
     name: project.name,

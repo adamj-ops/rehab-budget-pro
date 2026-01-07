@@ -8,6 +8,15 @@ interface ProjectPageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Render the project page for a given project id.
+ *
+ * Fetches the project and related data (budget items, vendors, draws, cost reference)
+ * from Supabase and renders the page header and ProjectTabs populated with that data.
+ *
+ * @param params - A promise resolving to an object with the route `id` of the project
+ * @returns The page's JSX element showing project details and tabs populated with related data
+ */
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
   const supabase = await createClient();

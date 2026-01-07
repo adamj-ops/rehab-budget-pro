@@ -9,6 +9,16 @@ import { buttonVariants } from '@/components/ui/button';
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
+/**
+ * Render a DayPicker calendar pre-styled with the project's Tailwind-based class mapping and custom chevron navigation.
+ *
+ * The component forwards all DayPicker props and merges any provided `classNames` with the built-in styling. `showOutsideDays` controls whether days from adjacent months are displayed.
+ *
+ * @param className - Additional container class names to append to the calendar root
+ * @param classNames - Partial mapping of DayPicker class names to merge with the component's default styles
+ * @param showOutsideDays - Whether to show days from adjacent months; defaults to `true`
+ * @returns A React element representing the styled calendar
+ */
 function Calendar({
   className,
   classNames,
