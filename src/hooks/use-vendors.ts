@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { Vendor, VendorPaymentSummary, VendorInput } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
+import { useVendorsRealtime } from '@/hooks/use-realtime';
+import type { Vendor, VendorTrade, VendorStatus } from '@/types';
 
 // Query keys
 export const vendorKeys = {
@@ -11,12 +13,13 @@ export const vendorKeys = {
   list: (filters: Record<string, unknown>) => [...vendorKeys.lists(), filters] as const,
   details: () => [...vendorKeys.all, 'detail'] as const,
   detail: (id: string) => [...vendorKeys.details(), id] as const,
-  summaries: () => [...vendorKeys.all, 'summary'] as const,
-  summary: (id: string) => [...vendorKeys.summaries(), id] as const,
 };
 
-// Fetch all vendors
+// Fetch all vendors with real-time updates
 export function useVendors() {
+  // Enable real-time subscription for vendors
+  useVendorsRealtime();
+
   return useQuery({
     queryKey: vendorKeys.lists(),
     queryFn: async () => {
@@ -24,27 +27,10 @@ export function useVendors() {
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
-        .order('name', { ascending: true });
+        .order('name');
 
       if (error) throw error;
       return data as Vendor[];
-    },
-  });
-}
-
-// Fetch vendors with payment summary
-export function useVendorSummaries() {
-  return useQuery({
-    queryKey: vendorKeys.summaries(),
-    queryFn: async () => {
-      const supabase = getSupabaseClient();
-      const { data, error } = await supabase
-        .from('vendor_payment_summary')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      return data as VendorPaymentSummary[];
     },
   });
 }
@@ -68,12 +54,29 @@ export function useVendor(id: string) {
   });
 }
 
-// Create vendor mutation input type
-type CreateVendorInput = Omit<VendorInput, 'user_id'>;
+// Create vendor input type
+interface CreateVendorInput {
+  name: string;
+  trade: VendorTrade;
+  contact_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  address?: string | null;
+  licensed?: boolean;
+  insured?: boolean;
+  w9_on_file?: boolean;
+  rating?: number | null;
+  reliability?: 'excellent' | 'good' | 'fair' | 'poor' | null;
+  price_level?: '$' | '$$' | '$$$' | null;
+  status?: VendorStatus;
+  notes?: string | null;
+}
 
 // Create vendor mutation
 export function useCreateVendor() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (input: CreateVendorInput) => {
@@ -82,7 +85,7 @@ export function useCreateVendor() {
         .from('vendors')
         .insert({
           ...input,
-          user_id: null, // TODO: Replace when auth is implemented
+          user_id: user?.id ?? null, // Use authenticated user's ID
         })
         .select()
         .single();
@@ -119,7 +122,6 @@ export function useUpdateVendor() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: vendorKeys.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: vendorKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: vendorKeys.summaries() });
     },
   });
 }
@@ -131,47 +133,13 @@ export function useDeleteVendor() {
   return useMutation({
     mutationFn: async (id: string) => {
       const supabase = getSupabaseClient();
-      const { error } = await supabase
-        .from('vendors')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('vendors').delete().eq('id', id);
 
       if (error) throw error;
       return id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: vendorKeys.all });
-    },
-  });
-}
-
-// Assign vendor to budget item
-export function useAssignVendorToBudgetItem() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      budgetItemId,
-      vendorId,
-    }: {
-      budgetItemId: string;
-      vendorId: string | null;
-    }) => {
-      const supabase = getSupabaseClient();
-      const { data, error } = await supabase
-        .from('budget_items')
-        .update({ vendor_id: vendorId })
-        .eq('id', budgetItemId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      // Invalidate project queries to refresh budget items
-      queryClient.invalidateQueries({ queryKey: ['project', data.project_id] });
-      queryClient.invalidateQueries({ queryKey: vendorKeys.summaries() });
     },
   });
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { IconArrowLeft } from '@tabler/icons-react';
@@ -16,6 +17,7 @@ import {
 export default function NewProjectPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const handleSubmit = async (values: ProjectFormValues) => {
     setIsSubmitting(true);
@@ -30,7 +32,7 @@ export default function NewProjectPage() {
       const projectData = {
         ...dbValues,
         name: dbValues.name || dbValues.address || 'Untitled Project',
-        user_id: null, // TODO: Replace with actual user ID when auth is implemented
+        user_id: user?.id ?? null, // Use authenticated user's ID
       };
 
       // Create project
