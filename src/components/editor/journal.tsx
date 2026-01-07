@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { IconCalendar, IconTag, IconDotsVertical, IconTrash, IconPencil, IconPin, IconPinFilled } from '@tabler/icons-react'
 import { formatDistanceToNow } from 'date-fns'
+import DOMPurify from 'dompurify'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -173,7 +174,7 @@ export function JournalNote({
           ) : (
             <div
               className='prose prose-sm dark:prose-invert max-w-none'
-              dangerouslySetInnerHTML={{ __html: entry.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.content) }}
             />
           )}
         </CardContent>

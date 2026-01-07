@@ -20,6 +20,19 @@ import { IconCheck } from '@tabler/icons-react';
 import type { ProjectStatus, PropertyType } from '@/types';
 import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 
+/**
+ * NewProjectPage Component
+ *
+ * Provides a form for creating a new fix & flip real estate project.
+ * Features include:
+ * - Google Places Autocomplete for address input with auto-fill of city, state, and ZIP
+ * - Property information fields (type, beds, baths, sqft, year built, status)
+ * - Deal financials (purchase price, ARV, closing costs, holding costs, etc.)
+ * - Automatic budget category seeding from templates on project creation
+ * - Currency input formatting with comma handling
+ *
+ * @returns JSX element containing the project creation form
+ */
 export default function NewProjectPage() {
   const router = useRouter();
   const addressInputRef = useRef<HTMLInputElement>(null);
@@ -58,27 +71,105 @@ export default function NewProjectPage() {
     },
   });
 
+  /**
+   * Handles changes to standard form fields (non-currency).
+   * Updates the form state with the new value for the specified field.
+   *
+   * @param field - The form field name to update
+   * @param value - The new value for the field
+   */
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Format currency input (remove non-numeric except decimal)
+  /**
+   * Handles changes to currency input fields.
+   * Sanitizes input by removing non-numeric characters (except decimal point),
+   * prevents multiple decimal points, and limits to 2 decimal places.
+   *
+   * @param field - The form field name to update (e.g., 'purchase_price', 'arv')
+   * @param value - The raw input value from the user
+   */
   const handleCurrencyChange = (field: string, value: string) => {
-    const numericValue = value.replace(/[^0-9.]/g, '');
+    // Remove all non-numeric characters except decimal point
+    let numericValue = value.replace(/[^0-9.]/g, '');
+    
+    // Prevent multiple decimal points - keep only the first one
+    const parts = numericValue.split('.');
+    if (parts.length > 2) {
+      numericValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Limit to 2 decimal places (re-split after fixing multiple decimals)
+    const finalParts = numericValue.split('.');
+    if (finalParts.length === 2 && finalParts[1].length > 2) {
+      numericValue = finalParts[0] + '.' + finalParts[1].slice(0, 2);
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: numericValue }));
   };
 
-  // Format currency for display
+  /**
+   * Formats a numeric string value as currency for display.
+   * Handles comma-separated values by removing commas before parsing,
+   * then formats the result with locale-appropriate thousand separators.
+   *
+   * @param value - The numeric string value to format (may include commas)
+   * @returns Formatted currency string (e.g., "150,000" or "1,234.56"), or original value if invalid
+   */
   const formatCurrencyDisplay = (value: string) => {
     if (!value) return '';
-    const numValue = parseFloat(value);
+    
+    // Remove commas and parse as number
+    const cleanValue = value.replace(/,/g, '');
+    const numValue = parseFloat(cleanValue);
+    
     if (Number.isNaN(numValue)) return value;
+    
     return numValue.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2
     });
   };
 
+  /**
+   * Parses a string value to a floating-point number.
+   * Handles comma-separated values by removing commas before parsing.
+   * Returns null for empty, whitespace-only, or invalid values.
+   *
+   * @param value - The string value to parse (may include commas)
+   * @returns Parsed number, or null if value is empty/invalid
+   */
+  const parseNumericValue = (value: string | undefined): number | null => {
+    if (!value || !value.trim()) return null;
+    const cleanValue = value.replace(/,/g, '').trim();
+    const parsed = parseFloat(cleanValue);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  /**
+   * Parses a string value to an integer.
+   * Handles comma-separated values by removing commas before parsing.
+   * Returns null for empty, whitespace-only, or invalid values.
+   *
+   * @param value - The string value to parse (may include commas)
+   * @returns Parsed integer, or null if value is empty/invalid
+   */
+  const parseIntegerValue = (value: string | undefined): number | null => {
+    if (!value || !value.trim()) return null;
+    const cleanValue = value.replace(/,/g, '').trim();
+    const parsed = parseInt(cleanValue, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  /**
+   * Handles form submission for creating a new project.
+   * Validates required fields, parses form data, creates the project in the database,
+   * and seeds budget items from category templates.
+   *
+   * @param e - Form submission event
+   * @throws Error if project creation or budget seeding fails
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -93,6 +184,13 @@ export default function NewProjectPage() {
     try {
       const supabase = getSupabaseClient();
 
+      // Parse currency values (remove commas before parsing)
+      const closingCosts = parseNumericValue(formData.closing_costs) ?? 0;
+      const holdingCostsMonthly = parseNumericValue(formData.holding_costs_monthly) ?? 0;
+      const holdMonths = parseNumericValue(formData.hold_months) ?? 0;
+      const sellingCostPercent = parseNumericValue(formData.selling_cost_percent) ?? 0;
+      const contingencyPercent = parseNumericValue(formData.contingency_percent) ?? 0;
+
       // Create project (use address as name)
       const { data: project, error: projectError } = await supabase
         .from('projects')
@@ -102,25 +200,28 @@ export default function NewProjectPage() {
           city: formData.city || null,
           state: formData.state || 'MN',
           zip: formData.zip || null,
-          beds: formData.beds ? parseFloat(formData.beds) : null,
-          baths: formData.baths ? parseFloat(formData.baths) : null,
-          sqft: formData.sqft ? parseInt(formData.sqft, 10) : null,
-          year_built: formData.year_built ? parseInt(formData.year_built, 10) : null,
+          beds: parseNumericValue(formData.beds),
+          baths: parseNumericValue(formData.baths),
+          sqft: parseIntegerValue(formData.sqft),
+          year_built: parseIntegerValue(formData.year_built),
           property_type: formData.property_type,
-          arv: formData.arv ? parseFloat(formData.arv) : null,
-          purchase_price: formData.purchase_price ? parseFloat(formData.purchase_price) : null,
-          closing_costs: parseFloat(formData.closing_costs),
-          holding_costs_monthly: parseFloat(formData.holding_costs_monthly),
-          hold_months: parseFloat(formData.hold_months),
-          selling_cost_percent: parseFloat(formData.selling_cost_percent),
-          contingency_percent: parseFloat(formData.contingency_percent),
+          arv: parseNumericValue(formData.arv),
+          purchase_price: parseNumericValue(formData.purchase_price),
+          closing_costs: closingCosts,
+          holding_costs_monthly: holdingCostsMonthly,
+          hold_months: holdMonths,
+          selling_cost_percent: sellingCostPercent,
+          contingency_percent: contingencyPercent,
           status: formData.status,
           user_id: null, // TODO: Replace with actual user ID when auth is implemented
         })
         .select()
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Project creation error:', projectError);
+        throw new Error(projectError.message || 'Failed to create project');
+      }
 
       // Seed budget categories from templates
       const { data: templates, error: templatesError } = await supabase
@@ -129,7 +230,10 @@ export default function NewProjectPage() {
         .eq('is_active', true)
         .order('sort_order');
 
-      if (templatesError) throw templatesError;
+      if (templatesError) {
+        console.error('Templates fetch error:', templatesError);
+        throw new Error(templatesError.message || 'Failed to load budget templates');
+      }
 
       // Create budget items from templates
       const budgetItemsToInsert: Array<{
@@ -187,7 +291,10 @@ export default function NewProjectPage() {
       router.push(`/projects/${project.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
-      toast.error('Failed to create project. Please try again.');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to create project. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

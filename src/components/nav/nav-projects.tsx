@@ -48,7 +48,7 @@ export function NavProjects() {
   const currentProjectId = params?.id as string | undefined;
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: projects, isLoading } = useQuery({
+  const { data: projects, isLoading, error, isError } = useQuery({
     queryKey: ["projects-nav"],
     queryFn: async () => {
       const supabase = getSupabaseClient();
@@ -129,6 +129,26 @@ export function NavProjects() {
                 {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-8 w-full" />
                 ))}
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : isError ? (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-destructive mb-2">
+                  Failed to load projects
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  {error instanceof Error ? error.message : "An error occurred"}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </Button>
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
