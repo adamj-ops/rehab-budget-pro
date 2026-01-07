@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,7 @@ import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const addressInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -115,7 +117,7 @@ export default function NewProjectPage() {
           selling_cost_percent: parseFloat(formData.selling_cost_percent),
           contingency_percent: parseFloat(formData.contingency_percent),
           status: formData.status,
-          user_id: null, // TODO: Replace with actual user ID when auth is implemented
+          user_id: user?.id,
         })
         .select()
         .single();
@@ -200,7 +202,7 @@ export default function NewProjectPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" asChild>
-              <Link href="/">
+              <Link href="/dashboard">
                 <IconArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -450,7 +452,7 @@ export default function NewProjectPage() {
           {/* Actions */}
           <div className="flex items-center justify-end gap-3">
             <Button type="button" variant="ghost" asChild disabled={isSubmitting}>
-              <Link href="/">Cancel</Link>
+              <Link href="/dashboard">Cancel</Link>
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (

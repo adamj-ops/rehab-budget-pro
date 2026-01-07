@@ -276,6 +276,29 @@ export interface BudgetCategoryTemplate {
   created_at: string;
 }
 
+export interface Profile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  company_name: string | null;
+  phone: string | null;
+
+  // Preferences
+  default_market: string;
+  default_contingency_percent: number;
+  default_holding_cost_monthly: number;
+  default_selling_cost_percent: number;
+
+  // Subscription tier
+  tier: 'free' | 'pro' | 'enterprise';
+
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProfileInput = Omit<Profile, 'id' | 'created_at' | 'updated_at'>;
+
 // ============================================================================
 // VIEW TYPES (Computed/Aggregated)
 // ============================================================================
