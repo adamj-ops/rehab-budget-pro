@@ -14,7 +14,11 @@ export const projectKeys = {
   summary: (id: string) => [...projectKeys.all, 'summary', id] as const,
 };
 
-// Fetch all projects
+/**
+ * Fetches all project summaries ordered by creation date (newest first).
+ *
+ * @returns An array of project summaries (`ProjectSummary[]`) ordered by `created_at` descending.
+ */
 export function useProjects() {
   return useQuery({
     queryKey: projectKeys.lists(),
@@ -31,7 +35,14 @@ export function useProjects() {
   });
 }
 
-// Fetch single project
+/**
+ * Fetches a single project by its ID.
+ *
+ * The query is disabled when `id` is falsy.
+ *
+ * @param id - The project ID to fetch
+ * @returns The project record matching `id`
+ */
 export function useProject(id: string) {
   return useQuery({
     queryKey: projectKeys.detail(id),
@@ -50,7 +61,14 @@ export function useProject(id: string) {
   });
 }
 
-// Fetch project summary with calculated fields
+/**
+ * Fetches the summary record for a project, including calculated fields from the `project_summary` view.
+ *
+ * The query is enabled only when `id` is truthy.
+ *
+ * @param id - The project identifier to fetch the summary for
+ * @returns The query result containing the project's summary record
+ */
 export function useProjectSummary(id: string) {
   return useQuery({
     queryKey: projectKeys.summary(id),
@@ -98,6 +116,18 @@ interface CreateProjectInput {
   notes?: string | null;
 }
 
+/**
+ * Create a new project and seed related budget items from active budget templates.
+ *
+ * Creates a project record (with `user_id` currently set to `null`), then attempts to fetch active
+ * budget category templates and insert corresponding budget items for the new project. On success,
+ * invalidates the cached project queries to refresh lists.
+ *
+ * Note: If fetching templates or inserting budget items fails, those errors are logged and do not
+ * prevent returning the created project.
+ *
+ * @returns A mutation result that, when executed, creates a `Project` and yields the created `Project` on success.
+ */
 export function useCreateProject() {
   const queryClient = useQueryClient();
 
@@ -187,7 +217,14 @@ export function useCreateProject() {
   });
 }
 
-// Update project mutation
+/**
+ * Provides a React Query mutation for updating an existing project.
+ *
+ * The mutation accepts an object with an `id` and the fields to update, performs the update
+ * in the `projects` table, and invalidates the project's detail, summary, and project list queries on success.
+ *
+ * @returns A React Query mutation result whose successful mutation returns the updated `Project`.
+ */
 export function useUpdateProject() {
   const queryClient = useQueryClient();
 
@@ -215,7 +252,13 @@ export function useUpdateProject() {
   });
 }
 
-// Delete project mutation
+/**
+ * Create a mutation hook that deletes a project by ID and invalidates the cached project list.
+ *
+ * On successful deletion the project list query key is invalidated so fresh data is fetched.
+ *
+ * @returns The deleted project's `id` string when the mutation succeeds.
+ */
 export function useDeleteProject() {
   const queryClient = useQueryClient();
 

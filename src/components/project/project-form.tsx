@@ -68,6 +68,22 @@ interface ProjectFormProps {
   mode?: 'create' | 'edit';
 }
 
+/**
+ * Renders a multi-section form for creating or editing a real estate project.
+ *
+ * The form includes address autocomplete, validated inputs for property details and deal numbers,
+ * collapsible sections for cost assumptions, timeline, and notes, and live calculators (DealCalculator
+ * and RehabEstimator) that update from watched field values. Behavior varies by `mode` (e.g., name
+ * auto-fill and default visibility of advanced/timeline/notes sections).
+ *
+ * @param defaultValues - Initial form values to prefill the form (merged with internal defaults).
+ * @param onSubmit - Callback invoked with validated form values when the form is submitted.
+ * @param onCancel - Optional callback invoked when the Cancel button is clicked.
+ * @param isSubmitting - When true, disables actions and shows the submitting state on the submit button.
+ * @param submitLabel - Text to display in the submit button.
+ * @param mode - Form mode; `'create'` configures defaults and auto-fill behavior for new projects, `'edit'` for existing projects.
+ * @returns The ProjectForm React element.
+ */
 export function ProjectForm({
   defaultValues,
   onSubmit,

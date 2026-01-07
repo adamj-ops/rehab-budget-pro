@@ -27,6 +27,22 @@ interface DealCalculatorProps {
   className?: string;
 }
 
+/**
+ * Render a real-estate deal analysis card showing estimated profit, ROI, MAO (70% rule), sensitivity scenarios, and a cost breakdown.
+ *
+ * Calculates investment metrics from provided inputs and displays status indicators, sensitivity analysis (ARV down, rehab overruns), key thresholds (break-even ARV, max purchase for 20% ROI), and an expandable cost breakdown.
+ *
+ * @param arv - After-repair value (ARV). Use `null` when unknown.
+ * @param purchasePrice - Proposed purchase price. Use `null` when unknown.
+ * @param rehabBudget - Base rehab budget (defaults to 0).
+ * @param closingCosts - Estimated closing costs.
+ * @param holdingCostsMonthly - Monthly holding cost estimate.
+ * @param holdMonths - Number of months the property will be held.
+ * @param sellingCostPercent - Selling costs as a percent of ARV.
+ * @param contingencyPercent - Contingency percentage applied to the rehab budget.
+ * @param className - Optional additional CSS class names applied to the root element.
+ * @returns A React element that presents the deal metrics UI and related analyses.
+ */
 export function DealCalculator({
   arv,
   purchasePrice,

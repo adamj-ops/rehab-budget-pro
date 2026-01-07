@@ -15,6 +15,13 @@ import {
 } from '@/lib/validations/project';
 import type { Project } from '@/types';
 
+/**
+ * Edit Project page component that provides a UI for viewing and editing a single project's details.
+ *
+ * Displays one of three states: a loading view while the project is fetched, a "not found" view if no project exists for the route ID, or an edit form populated with the project's data. Submits form changes to the backend, shows success/error toasts, and navigates to the project page on successful update.
+ *
+ * @returns The page's React element containing the header and either the loading spinner, not-found message, or the project edit form.
+ */
 export default function EditProjectPage() {
   const router = useRouter();
   const params = useParams();
