@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, FinancialPerformance, type ProjectCardData, type TimelineProject, type AlertProject, type FinancialProject } from '@/components/dashboard';
+import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, FinancialPerformance, BudgetInsights, type ProjectCardData, type TimelineProject, type AlertProject, type FinancialProject, type BudgetProject, type CategorySpend } from '@/components/dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { IconHome, IconPlus, IconLayoutKanban, IconCalendarEvent } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
-  projects: (ProjectCardData & TimelineProject & AlertProject & FinancialProject)[];
+  projects: (ProjectCardData & TimelineProject & AlertProject & FinancialProject & BudgetProject)[];
   totalARV: number;
   capitalDeployed: number;
   averageROI: number;
@@ -21,6 +21,7 @@ interface DashboardClientProps {
     listed: number;
     sold: number;
   };
+  categorySpends: CategorySpend[];
 }
 
 type ViewMode = 'kanban' | 'timeline';
@@ -31,6 +32,7 @@ export function DashboardClient({
   capitalDeployed,
   averageROI,
   projectCounts,
+  categorySpends,
 }: DashboardClientProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
 
@@ -111,6 +113,9 @@ export function DashboardClient({
 
       {/* Financial Performance Analytics */}
       <FinancialPerformance projects={projects} />
+
+      {/* Budget Insights */}
+      <BudgetInsights projects={projects} categorySpends={categorySpends} />
     </>
   );
 }

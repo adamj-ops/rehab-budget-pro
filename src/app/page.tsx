@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import type { ProjectStatus } from '@/types';
+import type { ProjectStatus, BudgetCategory } from '@/types';
 import { IconPlus, IconChartBar } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -19,10 +19,10 @@ export default async function HomePage() {
     console.error('Error fetching projects:', error);
   }
 
-  // Fetch budget totals per project
+  // Fetch budget totals per project with category
   const { data: budgetTotals } = await supabase
     .from('budget_items')
-    .select('project_id, underwriting_amount, forecast_amount, actual_amount');
+    .select('project_id, category, underwriting_amount, forecast_amount, actual_amount');
 
   // Calculate budget totals per project
   const projectBudgets = new Map<string, { budget: number; actual: number }>();
@@ -34,6 +34,25 @@ export default async function HomePage() {
       actual: existing.actual + (item.actual_amount || 0),
     });
   });
+
+  // Calculate category spends across all projects
+  const categorySpendMap = new Map<BudgetCategory, { budget: number; actual: number; projects: Set<string> }>();
+  budgetTotals?.forEach((item) => {
+    const category = item.category as BudgetCategory;
+    const existing = categorySpendMap.get(category) || { budget: 0, actual: 0, projects: new Set() };
+    const budget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
+    existing.budget += budget;
+    existing.actual += item.actual_amount || 0;
+    existing.projects.add(item.project_id);
+    categorySpendMap.set(category, existing);
+  });
+
+  const categorySpends = Array.from(categorySpendMap.entries()).map(([category, data]) => ({
+    category,
+    budget: data.budget,
+    actual: data.actual,
+    projectCount: data.projects.size,
+  }));
 
   // Transform projects for dashboard
   const dashboardProjects = (projects || []).map((project) => {
@@ -53,6 +72,7 @@ export default async function HomePage() {
       status: project.status as ProjectStatus,
       arv: project.arv || 0,
       purchase_price: project.purchase_price || 0,
+      sqft: project.sqft,
       mao: mao,
       roi: roi,
       rehab_budget: budgets.budget,
@@ -121,6 +141,7 @@ export default async function HomePage() {
           capitalDeployed={capitalDeployed}
           averageROI={averageROI}
           projectCounts={projectCounts}
+          categorySpends={categorySpends}
         />
       </main>
     </div>

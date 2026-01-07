@@ -4,3 +4,4 @@ export { ProjectCard, SortableProjectCard, type ProjectCardData } from './projec
 export { ProjectTimeline, type TimelineProject } from './project-timeline';
 export { AttentionNeeded, type AlertProject } from './attention-needed';
 export { FinancialPerformance, type FinancialProject } from './financial-performance';
+export { BudgetInsights, type BudgetProject, type CategorySpend } from './budget-insights';
