@@ -1,20 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/providers/auth-provider';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { IconCheck } from '@tabler/icons-react';
 import type { ProjectStatus, PropertyType } from '@/types';
@@ -22,69 +13,13 @@ import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const addressInputRef = useRef<HTMLInputElement>(null);
+  const { user, isLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    address: '',
-    city: '',
-    state: 'MN',
-    zip: '',
-    beds: '',
-    baths: '',
-    sqft: '',
-    year_built: '',
-    property_type: 'sfh' as PropertyType,
-    arv: '',
-    purchase_price: '',
-    closing_costs: '3000',
-    holding_costs_monthly: '1500',
-    hold_months: '4',
-    selling_cost_percent: '8.00',
-    contingency_percent: '10.00',
-    status: 'lead' as ProjectStatus,
-  });
 
-  // Google Places Autocomplete
-  usePlacesAutocomplete({
-    inputRef: addressInputRef,
-    onPlaceSelected: (place) => {
-      setFormData((prev) => ({
-        ...prev,
-        address: place.address,
-        city: place.city,
-        state: place.state,
-        zip: place.zip,
-      }));
-    },
-  });
-
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Format currency input (remove non-numeric except decimal)
-  const handleCurrencyChange = (field: string, value: string) => {
-    const numericValue = value.replace(/[^0-9.]/g, '');
-    setFormData((prev) => ({ ...prev, [field]: numericValue }));
-  };
-
-  // Format currency for display
-  const formatCurrencyDisplay = (value: string) => {
-    if (!value) return '';
-    const numValue = parseFloat(value);
-    if (Number.isNaN(numValue)) return value;
-    return numValue.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate that address is provided
-    if (!formData.address?.trim()) {
-      toast.error('Please enter a street address');
+  const handleSubmit = async (values: ProjectFormValues) => {
+    // Prevent submission while auth is still loading to avoid race conditions
+    if (isLoading) {
+      toast.error('Please wait for authentication to complete.');
       return;
     }
 
@@ -93,30 +28,20 @@ export default function NewProjectPage() {
     try {
       const supabase = getSupabaseClient();
 
-      // Create project (use address as name)
+      // Transform form values for database
+      const dbValues = transformFormToDatabase(values);
+
+      // Ensure name is set (use address if not provided)
+      const projectData = {
+        ...dbValues,
+        name: dbValues.name || dbValues.address || 'Untitled Project',
+        user_id: user?.id ?? null, // Use authenticated user's ID
+      };
+
+      // Create project
       const { data: project, error: projectError } = await supabase
         .from('projects')
-        .insert({
-          name: formData.address.trim(),
-          address: formData.address || null,
-          city: formData.city || null,
-          state: formData.state || 'MN',
-          zip: formData.zip || null,
-          beds: formData.beds ? parseFloat(formData.beds) : null,
-          baths: formData.baths ? parseFloat(formData.baths) : null,
-          sqft: formData.sqft ? parseInt(formData.sqft, 10) : null,
-          year_built: formData.year_built ? parseInt(formData.year_built, 10) : null,
-          property_type: formData.property_type,
-          arv: formData.arv ? parseFloat(formData.arv) : null,
-          purchase_price: formData.purchase_price ? parseFloat(formData.purchase_price) : null,
-          closing_costs: parseFloat(formData.closing_costs),
-          holding_costs_monthly: parseFloat(formData.holding_costs_monthly),
-          hold_months: parseFloat(formData.hold_months),
-          selling_cost_percent: parseFloat(formData.selling_cost_percent),
-          contingency_percent: parseFloat(formData.contingency_percent),
-          status: formData.status,
-          user_id: null, // TODO: Replace with actual user ID when auth is implemented
-        })
+        .insert(projectData)
         .select()
         .single();
 
@@ -166,7 +91,7 @@ export default function NewProjectPage() {
               status: 'not_started' as const,
               cost_type: 'both' as const,
               priority: 'medium' as const,
-              sort_order: (template.sort_order * 1000) + index,
+              sort_order: template.sort_order * 1000 + index,
             });
           });
         }
@@ -179,7 +104,7 @@ export default function NewProjectPage() {
 
         if (budgetItemsError) {
           console.error('Error seeding budget items:', budgetItemsError);
-          // Don't throw - project was created successfully, just log the error
+          // Don't throw - project was created successfully
         }
       }
 
@@ -456,7 +381,15 @@ export default function NewProjectPage() {
               )}
             </Button>
           </div>
-        </form>
+        ) : (
+          <ProjectForm
+            mode="create"
+            onSubmit={handleSubmit}
+            onCancel={() => router.push('/')}
+            isSubmitting={isSubmitting || isLoading}
+            submitLabel="Create Project"
+          />
+        )}
       </main>
     </div>
   );

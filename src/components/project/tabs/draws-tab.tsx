@@ -1,8 +1,10 @@
 'use client';
 
-import type { Draw, Vendor } from '@/types';
+import { useState } from 'react';
+import type { Draw, DrawStatus, Vendor } from '@/types';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { IconPlus, IconCheck, IconClock, IconAlertCircle } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
 
 interface DrawsTabProps {
   projectId: string;
@@ -20,7 +22,27 @@ const MILESTONE_LABELS: Record<string, string> = {
   final: 'Final',
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  check: 'Check',
+  zelle: 'Zelle',
+  venmo: 'Venmo',
+  wire: 'Wire',
+  cash: 'Cash',
+  credit_card: 'Credit Card',
+  other: 'Other',
+};
+
 export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabProps) {
+  const { createDraw, updateDraw, updateStatus, deleteDraw } = useDrawMutations(projectId);
+
+  // Form state
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingDraw, setEditingDraw] = useState<Draw | null>(null);
+
+  // Delete state
+  const [deleteDrawId, setDeleteDrawId] = useState<string | null>(null);
+  const [deleteDrawNumber, setDeleteDrawNumber] = useState<number | null>(null);
+
   // Calculate totals
   const totalPaid = draws
     .filter((d) => d.status === 'paid')
@@ -36,6 +58,48 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
     const vendor = vendors.find((v) => v.id === vendorId);
     return vendor?.name || 'Unknown';
   };
+
+  // Handlers
+  const handleOpenCreate = () => {
+    setEditingDraw(null);
+    setFormOpen(true);
+  };
+
+  const handleOpenEdit = (draw: Draw) => {
+    setEditingDraw(draw);
+    setFormOpen(true);
+  };
+
+  const handleSubmit = (drawData: Partial<Draw>) => {
+    if (editingDraw) {
+      updateDraw.mutate({ id: editingDraw.id, data: drawData });
+    } else {
+      createDraw.mutate({ projectId, draw: drawData });
+    }
+  };
+
+  const handleStatusChange = (draw: Draw, newStatus: DrawStatus) => {
+    updateStatus.mutate({ id: draw.id, status: newStatus });
+  };
+
+  const handleOpenDelete = (draw: Draw) => {
+    setDeleteDrawId(draw.id);
+    setDeleteDrawNumber(draw.draw_number);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDrawId) {
+      deleteDraw.mutate(deleteDrawId, {
+        onSuccess: () => {
+          setDeleteDrawId(null);
+          setDeleteDrawNumber(null);
+        },
+      });
+    }
+  };
+
+  // Sort draws by draw_number
+  const sortedDraws = [...draws].sort((a, b) => a.draw_number - b.draw_number);
 
   return (
     <div className="space-y-6">
@@ -62,10 +126,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       </div>
 
       {/* Progress Bar */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Payment Progress</span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {((totalPaid / totalBudget) * 100).toFixed(1)}% paid
           </span>
         </div>
@@ -73,25 +137,25 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           <div className="h-full flex">
             <div
               className="bg-green-500 transition-all"
-              style={{ width: `${(totalPaid / totalBudget) * 100}%` }}
+              style={{ width: totalBudget > 0 ? `${(totalPaid / totalBudget) * 100}%` : '0%' }}
             />
             <div
               className="bg-yellow-500 transition-all"
-              style={{ width: `${(totalPending / totalBudget) * 100}%` }}
+              style={{ width: totalBudget > 0 ? `${(totalPending / totalBudget) * 100}%` : '0%' }}
             />
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
+        <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
             Paid
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
             Pending
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-muted" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             Remaining
           </div>
         </div>
@@ -99,15 +163,15 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Draw Schedule</h3>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-          <IconPlus className="h-4 w-4" />
+        <h3 className="section-header mb-0">Draw Schedule</h3>
+        <Button>
+          <IconPlus className="icon-sm" />
           Add Draw
-        </button>
+        </Button>
       </div>
 
       {/* Draws Table */}
-      {draws.length > 0 ? (
+      {sortedDraws.length > 0 ? (
         <div className="rounded-lg border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -120,17 +184,20 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
                 <th className="text-center p-3 w-28">Requested</th>
                 <th className="text-center p-3 w-28">Paid</th>
                 <th className="text-center p-3 w-28">Status</th>
+                <th className="text-center p-3 w-32">Actions</th>
               </tr>
             </thead>
             <tbody>
               {draws.map((draw) => (
-                <tr key={draw.id} className="border-t hover:bg-muted/50">
+                <tr key={draw.id} className="border-t table-row-hover">
                   <td className="p-3 font-medium">{draw.draw_number}</td>
                   <td className="p-3">
-                    {draw.milestone ? MILESTONE_LABELS[draw.milestone] : '-'}
-                    {draw.description && (
-                      <p className="text-xs text-muted-foreground">{draw.description}</p>
-                    )}
+                    <div>
+                      {draw.milestone ? MILESTONE_LABELS[draw.milestone] : '-'}
+                      {draw.description && (
+                        <p className="text-xs text-muted-foreground">{draw.description}</p>
+                      )}
+                    </div>
                   </td>
                   <td className="p-3">{getVendorName(draw.vendor_id)}</td>
                   <td className="p-3 text-right">
@@ -148,10 +215,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
                   <td className="p-3 text-center">
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
-                        draw.status === 'paid' && 'bg-green-100 text-green-700',
-                        draw.status === 'approved' && 'bg-blue-100 text-blue-700',
-                        draw.status === 'pending' && 'bg-yellow-100 text-yellow-700'
+                        'status-badge',
+                        draw.status === 'paid' && 'status-paid',
+                        draw.status === 'approved' && 'status-approved',
+                        draw.status === 'pending' && 'status-pending'
                       )}
                     >
                       {draw.status === 'paid' && <IconCheck className="h-3 w-3" />}
@@ -169,24 +236,122 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
                 <td className="p-3 text-right">
                   {formatCurrency(draws.reduce((sum, d) => sum + d.amount, 0))}
                 </td>
-                <td colSpan={3}></td>
+                <td colSpan={4}></td>
               </tr>
             </tfoot>
           </table>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <IconClock className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground mb-2">No draws scheduled yet</p>
-          <p className="text-sm text-muted-foreground mb-4">
+        <div className="empty-state">
+          <IconClock className="empty-state-icon" />
+          <p className="empty-state-title">No draws scheduled yet</p>
+          <p className="empty-state-description">
             Create draws to track payments to your vendors.
           </p>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <Button>
             <IconPlus className="h-4 w-4" />
             Create First Draw
-          </button>
+          </Button>
         </div>
       )}
+
+      {/* Draw Form Sheet */}
+      <DrawFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        vendors={vendors}
+        draw={editingDraw}
+        onSubmit={handleSubmit}
+        isPending={createDraw.isPending || updateDraw.isPending}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!deleteDrawId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteDrawId(null);
+            setDeleteDrawNumber(null);
+          }
+        }}
+        title="Delete Draw"
+        description={`Are you sure you want to delete Draw #${deleteDrawNumber}? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        isPending={deleteDraw.isPending}
+      />
     </div>
+  );
+}
+
+// Status Badge with Dropdown Menu for Quick Status Changes
+interface StatusBadgeWithMenuProps {
+  draw: Draw;
+  onStatusChange: (draw: Draw, status: DrawStatus) => void;
+  isPending: boolean;
+}
+
+function StatusBadgeWithMenu({ draw, onStatusChange, isPending }: StatusBadgeWithMenuProps) {
+  const statusConfig = {
+    pending: {
+      className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+      icon: IconClock,
+      label: 'Pending',
+    },
+    approved: {
+      className: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+      icon: IconAlertCircle,
+      label: 'Approved',
+    },
+    paid: {
+      className: 'bg-green-100 text-green-700 hover:bg-green-200',
+      icon: IconCheck,
+      label: 'Paid',
+    },
+  };
+
+  const config = statusConfig[draw.status];
+  const Icon = config.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={isPending}>
+        <button
+          className={cn(
+            'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors',
+            config.className
+          )}
+        >
+          <Icon className="h-3 w-3" />
+          {config.label}
+          <IconChevronRight className="h-3 w-3 ml-0.5 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center">
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'pending')}
+          disabled={draw.status === 'pending'}
+        >
+          <IconClock className="h-4 w-4 mr-2 text-yellow-600" />
+          Mark as Pending
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'approved')}
+          disabled={draw.status === 'approved'}
+        >
+          <IconAlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+          Mark as Approved
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'paid')}
+          disabled={draw.status === 'paid'}
+        >
+          <IconCheck className="h-4 w-4 mr-2 text-green-600" />
+          Mark as Paid
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

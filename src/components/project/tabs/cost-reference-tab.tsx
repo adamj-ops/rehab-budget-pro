@@ -48,9 +48,9 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h3 className="font-medium mb-1">Minneapolis Metro Cost Reference</h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="section-title-group">
+        <h3 className="section-header">Minneapolis Metro Cost Reference</h3>
+        <p className="section-subheader">
           2025 pricing guide for common rehab items. Use these as estimates when building your budget.
         </p>
       </div>
@@ -64,14 +64,14 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
             placeholder="Search items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+            className="form-input form-input-with-icon"
           />
         </div>
-        
+
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value as BudgetCategory | 'all')}
-          className="px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          className="form-select"
         >
           <option value="all">All Categories</option>
           {BUDGET_CATEGORIES.filter((c) => c.value !== 'contingency').map((cat) => (
@@ -112,7 +112,7 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
                 </thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.id} className="border-t hover:bg-muted/50">
+                    <tr key={item.id} className="border-t table-row-hover">
                       <td className="p-3">
                         <p className="font-medium">{item.item}</p>
                         {item.description && (
@@ -142,14 +142,14 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">No items match your search.</p>
+        <div className="empty-state">
+          <p className="empty-state-title">No items match your search.</p>
         </div>
       )}
 
       {/* Legend */}
-      <div className="rounded-lg bg-muted p-4 text-sm">
-        <h4 className="font-medium mb-2">Price Guide Legend</h4>
+      <div className="rounded-lg bg-muted p-6 text-sm">
+        <h4 className="font-medium mb-3">Price Guide Legend</h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <span className="text-green-600 font-medium">Low:</span>{' '}
@@ -164,7 +164,7 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
             <span className="text-muted-foreground">Premium materials, high-end finishes</span>
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs text-muted-foreground">
           Prices are estimates for the Minneapolis metro area and may vary based on project specifics,
           vendor availability, and market conditions. Always get multiple quotes.
         </p>

@@ -75,6 +75,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 {project.state && `, ${project.state}`}
               </p>
             </div>
+
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/projects/${id}/edit`}>
+                <IconPencil className="h-4 w-4" />
+                Edit
+              </Link>
+            </Button>
           </div>
           <Badge variant={getStatusVariant(project.status as ProjectStatus)}>
             {PROJECT_STATUS_LABELS[project.status as ProjectStatus]}
