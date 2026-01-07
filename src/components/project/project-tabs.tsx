@@ -1,19 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import type { Project, BudgetItem, Vendor, Draw, CostReference } from '@/types';
+import type { Project, BudgetItem, Vendor, Draw, CostReference, ProjectSummary } from '@/types';
 import { DealSummaryTab } from './tabs/deal-summary-tab';
 import { BudgetDetailTab } from './tabs/budget-detail-tab';
 import { VendorsTab } from './tabs/vendors-tab';
 import { DrawsTab } from './tabs/draws-tab';
 import { CostReferenceTab } from './tabs/cost-reference-tab';
-import { 
-  IconReportMoney, 
-  IconListDetails, 
-  IconUsers, 
-  IconCash, 
-  IconBook 
+import { ExportDialog } from '@/components/pdf/export-dialog';
+import {
+  IconReportMoney,
+  IconListDetails,
+  IconUsers,
+  IconCash,
+  IconBook,
+  IconFileTypePdf,
 } from '@tabler/icons-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ProjectTabsProps {
@@ -51,11 +54,38 @@ export function ProjectTabs({
   const contingencyAmount = totalBudget * (project.contingency_percent / 100);
   const totalBudgetWithContingency = totalBudget + contingencyAmount;
 
+  // Construct ProjectSummary for PDF export
+  const holdingCostsTotal = project.holding_costs_monthly * project.hold_months;
+  const sellingCosts = (project.arv || 0) * (project.selling_cost_percent / 100);
+  const totalInvestment = (project.purchase_price || 0) + project.closing_costs + holdingCostsTotal + totalBudgetWithContingency;
+  const grossProfit = (project.arv || 0) - sellingCosts - totalInvestment;
+  const mao = (project.arv || 0) - sellingCosts - holdingCostsTotal - totalBudgetWithContingency - grossProfit;
+
+  const projectSummary: ProjectSummary = {
+    ...project,
+    underwriting_total: totalUnderwriting,
+    forecast_total: totalForecast,
+    actual_total: totalActual,
+    rehab_budget: totalBudget,
+    rehab_actual: totalActual,
+    contingency_amount: contingencyAmount,
+    rehab_budget_with_contingency: totalBudgetWithContingency,
+    selling_costs: sellingCosts,
+    holding_costs_total: holdingCostsTotal,
+    total_investment: totalInvestment,
+    gross_profit: grossProfit,
+    mao: mao,
+    total_items: budgetItems.length,
+    completed_items: budgetItems.filter((item) => item.status === 'complete').length,
+    in_progress_items: budgetItems.filter((item) => item.status === 'in_progress').length,
+  };
+
   return (
     <div>
       {/* Tab Navigation */}
       <div className="border-b mb-6">
-        <nav className="flex gap-1 -mb-px">
+        <div className="flex items-center justify-between">
+          <nav className="flex gap-1 -mb-px">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -76,7 +106,24 @@ export function ProjectTabs({
               </button>
             );
           })}
-        </nav>
+          </nav>
+
+          {/* Export Button */}
+          <div className="mb-px">
+            <ExportDialog
+              project={projectSummary}
+              budgetItems={budgetItems}
+              draws={draws}
+              vendors={vendors}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <IconFileTypePdf className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              }
+            />
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
