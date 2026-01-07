@@ -8,6 +8,7 @@ import {
   IconReceipt2,
   IconUsers,
   IconChartPie,
+  IconPhotoStar,
   IconLoader2,
   IconDownload,
   IconEye,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { compileToPdf, previewPdf, downloadPdf } from '@/lib/pdf/compile';
 import {
   ExecutiveSummaryReport,
@@ -30,8 +32,10 @@ import {
   DrawScheduleReport,
   VendorSummaryReport,
   InvestmentAnalysisReport,
+  PropertyShowcaseReport,
+  type PhotoWithUrl,
 } from '@/lib/pdf/templates';
-import type { ProjectSummary, BudgetItem, Draw, Vendor } from '@/types';
+import type { ProjectSummary, BudgetItem, Draw, Vendor, LineItemPhoto } from '@/types';
 
 interface ExportDialogProps {
   project: ProjectSummary;
@@ -41,7 +45,7 @@ interface ExportDialogProps {
   trigger?: React.ReactNode;
 }
 
-type ReportType = 'executive-summary' | 'detailed-budget' | 'draw-schedule' | 'vendor-summary' | 'investment-analysis';
+type ReportType = 'executive-summary' | 'detailed-budget' | 'draw-schedule' | 'vendor-summary' | 'investment-analysis' | 'property-showcase';
 
 interface ReportOption {
   id: ReportType;
@@ -52,6 +56,13 @@ interface ReportOption {
 }
 
 const REPORT_OPTIONS: ReportOption[] = [
+  {
+    id: 'property-showcase',
+    name: 'Property Showcase',
+    description: 'Marketing-ready before/after transformation with photos and financials',
+    icon: <IconPhotoStar className="h-6 w-6" />,
+    audience: 'Marketing, Listings, Investors',
+  },
   {
     id: 'executive-summary',
     name: 'Executive Summary',
@@ -97,8 +108,41 @@ export function ExportDialog({
   trigger,
 }: ExportDialogProps) {
   const [open, setOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ReportType>('executive-summary');
+  const [selectedReport, setSelectedReport] = useState<ReportType>('property-showcase');
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Fetch photos with signed URLs for the showcase report
+  const fetchPhotosWithUrls = async (): Promise<PhotoWithUrl[]> => {
+    const supabase = getSupabaseClient();
+
+    // Fetch all photos for this project
+    const { data: photos, error } = await supabase
+      .from('line_item_photos')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('created_at', { ascending: false });
+
+    if (error || !photos) {
+      console.error('Error fetching photos:', error);
+      return [];
+    }
+
+    // Get signed URLs for each photo
+    const photosWithUrls: PhotoWithUrl[] = await Promise.all(
+      photos.map(async (photo: LineItemPhoto) => {
+        const { data } = await supabase.storage
+          .from('project-photos')
+          .createSignedUrl(photo.storage_path, 3600); // 1 hour expiry
+
+        return {
+          ...photo,
+          signedUrl: data?.signedUrl || null,
+        };
+      })
+    );
+
+    return photosWithUrls;
+  };
 
   const generateReport = async (action: 'preview' | 'download') => {
     setIsGenerating(true);
@@ -107,6 +151,18 @@ export function ExportDialog({
       let component: React.ReactElement;
 
       switch (selectedReport) {
+        case 'property-showcase': {
+          // Fetch photos with signed URLs
+          const photos = await fetchPhotosWithUrls();
+          component = (
+            <PropertyShowcaseReport
+              project={project}
+              budgetItems={budgetItems}
+              photos={photos}
+            />
+          );
+          break;
+        }
         case 'executive-summary':
           component = (
             <ExecutiveSummaryReport
