@@ -1,6 +1,6 @@
 # Rehab Budget Pro - Implementation Status
 
-## ✅ Completed (Phase 1 - Core Foundation)
+## ✅ Completed (Phase 1 - Core Foundation + Calculation Settings)
 
 ### Database Schema Updates
 - ✅ **Three-Column Budget Model** implemented in [supabase/migrations/20260106040000_add_three_column_budget_model.sql](supabase/migrations/20260106040000_add_three_column_budget_model.sql)
@@ -57,6 +57,74 @@
   - Bucket name: `project-photos`
   - RLS policies for secure access
   - File constraints: 10MB max, jpg/png/webp/pdf accepted
+
+### Calculation Settings (NEW)
+- ✅ **Calculation Settings Page** at `/settings/calculations`
+  - Full database migration in [supabase/migrations/20260107000000_add_calculation_settings.sql](supabase/migrations/20260107000000_add_calculation_settings.sql)
+  - Comprehensive settings table with all configurable parameters
+  - Helper functions for calculating MAO, contingency with settings
+
+- ✅ **MAO (Maximum Allowable Offer) Settings**
+  - 5 calculation methods: 70% Rule, Custom %, ARV Minus All, Gross Margin, Net Profit Target
+  - Configurable ARV multiplier (50-90%)
+  - Toggle which costs to include (holding, selling, closing)
+
+- ✅ **ROI Calculation Settings**
+  - 4 methods: Simple, Annualized, Cash-on-Cash, IRR Simplified
+  - Option to annualize short-term returns
+  - Opportunity cost comparison with configurable rate
+  - Color thresholds for Excellent/Good/Fair/Poor indicators
+
+- ✅ **Contingency Buffer Settings**
+  - 4 methods: Flat %, Category-Weighted, Budget-Tiered, Scope-Based
+  - Category-weighted: Different rates for high/medium/low risk categories
+  - Tiered: Rates vary based on budget size
+
+- ✅ **Holding Cost Settings**
+  - 4 methods: Flat Monthly, Itemized Breakdown, Loan-Based, Hybrid
+  - Itemized breakdown: taxes, insurance, utilities, loan interest, HOA, lawn care
+  - Quick presets for common amounts
+
+- ✅ **Selling Cost Settings**
+  - Breakdown by: Agent commission, Buyer concessions, Seller closing costs
+  - Fixed additional costs option
+  - Quick presets: Conservative, Standard, Aggressive, FSBO
+
+- ✅ **Profit Threshold Settings**
+  - Fixed dollar targets: Minimum, Target, Excellent
+  - Percentage of ARV targets
+  - Investment profile presets: Volume Flipper, Balanced, Cherry Picker
+
+- ✅ **Variance Alert Settings**
+  - Warning and Critical percentage thresholds
+  - Track Forecast vs Underwriting and/or Actual vs Forecast
+
+- ✅ **Live Preview Panel**
+  - Real-time calculations with sample deal data
+  - Displays MAO, Gross Profit, ROI with current settings
+  - Full cost breakdown preview
+  - Formula preview showing current algorithm
+
+- ✅ **Configurable Calculation Functions** in [src/lib/utils.ts](src/lib/utils.ts)
+  - `calculateMAOWithSettings()`: MAO using configurable settings
+  - `calculateROIWithSettings()`: ROI with annualization and opportunity cost
+  - `calculateContingencyWithSettings()`: Contingency with category weights or tiers
+  - `calculateHoldingCostsWithSettings()`: Holding costs with multiple methods
+  - `calculateSellingCostsWithSettings()`: Selling costs with fixed + percentage
+  - `getROIColorClass()`: Get color class based on ROI thresholds
+  - `getProfitRating()`: Get profit rating (excellent/good/acceptable/poor)
+  - `getVarianceAlertLevel()`: Check if variance exceeds thresholds
+
+- ✅ **TypeScript Types** in [src/types/index.ts](src/types/index.ts)
+  - `CalculationSettings` interface with all configuration options
+  - `MaoMethod`, `RoiMethod`, `ContingencyMethod`, `HoldingCostMethod` enums
+  - `DEFAULT_CALCULATION_SETTINGS` with sensible defaults
+  - Labels and descriptions for all methods
+
+- ✅ **New UI Components**
+  - `src/components/ui/slider.tsx` - Range slider for percentages
+  - `src/components/ui/switch.tsx` - Toggle switch for boolean settings
+  - `src/components/settings/` - 8 settings section components
 
 ## 📋 Migration Applied
 
@@ -262,29 +330,48 @@ psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
 
 ### Documentation
 - `docs/DASHBOARD_PLAN.md` (NEW) - Comprehensive dashboard wireframes and UX specs
-- `README.md` (UPDATED) - Added dashboard features and phased roadmap
+- `README.md` (UPDATED) - Added dashboard features, calculation settings, and phased roadmap
+- `CLAUDE.md` (UPDATED) - Added calculation settings documentation
 
 ### Database
 - `supabase/migrations/20260106040000_add_three_column_budget_model.sql` (NEW)
+- `supabase/migrations/20260107000000_add_calculation_settings.sql` (NEW)
 - `supabase/storage-setup.md` (NEW)
 
 ### Types
-- `src/types/index.ts` (UPDATED)
+- `src/types/index.ts` (UPDATED) - Added calculation settings types, enums, and defaults
 
 ### Pages
 - `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
+- `src/app/settings/calculations/page.tsx` (NEW - calculation settings page)
 
 ### Components & Hooks
 - `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN)
 - `src/components/ui/label.tsx` (NEW)
 - `src/components/ui/select.tsx` (NEW)
+- `src/components/ui/slider.tsx` (NEW)
+- `src/components/ui/switch.tsx` (NEW)
 - `src/hooks/use-places-autocomplete.ts` (NEW - Google Places integration)
+
+### Settings Components (NEW)
+- `src/components/settings/mao-settings-section.tsx`
+- `src/components/settings/roi-settings-section.tsx`
+- `src/components/settings/contingency-settings-section.tsx`
+- `src/components/settings/holding-cost-settings-section.tsx`
+- `src/components/settings/selling-cost-settings-section.tsx`
+- `src/components/settings/profit-settings-section.tsx`
+- `src/components/settings/variance-settings-section.tsx`
+- `src/components/settings/formula-preview.tsx`
+- `src/components/settings/index.ts`
 
 ### Updated for Three-Column Model
 - `src/components/project/project-tabs.tsx` (UPDATED)
 - `src/components/project/tabs/vendors-tab.tsx` (UPDATED)
 - `src/lib/store.ts` (UPDATED)
 - `src/app/page.tsx` (UPDATED)
+
+### Updated for Configurable Calculations
+- `src/lib/utils.ts` (UPDATED) - Added configurable calculation functions
 
 ## 🎨 Three-Column Budget Model Explained
 

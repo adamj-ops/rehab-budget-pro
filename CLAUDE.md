@@ -72,6 +72,7 @@ This app follows a specific data architecture that must be maintained:
 - `vendors`: Master vendor directory with trade, ratings, licensing info
 - `draws`: Payment tracking with milestones and status
 - `cost_reference`: Minneapolis metro pricing guide (seeded data)
+- `calculation_settings`: User-configurable calculation algorithms and thresholds
 
 **Important Views** (use these for reads):
 - `project_summary`: Projects with calculated totals (rehab_budget, total_investment, mao, profit, ROI)
@@ -167,6 +168,52 @@ DO NOT calculate budget totals client-side. Always use the `project_summary` vie
 - `rehab_budget_with_contingency`: rehab_budget + contingency_amount
 - `total_investment`: purchase_price + closing_costs + holding_costs_total + rehab_budget_with_contingency
 - `mao`: Calculated per 70% rule formula
+
+### Configurable Calculations
+
+The app supports user-configurable calculation algorithms via the Calculation Settings page (`/settings/calculations`).
+
+**Calculation Settings Types** (`src/types/index.ts`):
+- `CalculationSettings`: Full interface for all configurable parameters
+- `MaoMethod`: 'seventy_rule' | 'arv_minus_all' | 'gross_margin' | 'custom_percentage' | 'net_profit_target'
+- `RoiMethod`: 'simple' | 'cash_on_cash' | 'annualized' | 'irr_simplified'
+- `ContingencyMethod`: 'flat_percent' | 'category_weighted' | 'tiered' | 'scope_based'
+- `HoldingCostMethod`: 'flat_monthly' | 'percentage_of_loan' | 'itemized' | 'hybrid'
+- `DEFAULT_CALCULATION_SETTINGS`: Sensible defaults for all settings
+
+**Configurable Calculation Functions** (`src/lib/utils.ts`):
+```typescript
+import { calculateMAOWithSettings, calculateROIWithSettings } from '@/lib/utils';
+import { DEFAULT_CALCULATION_SETTINGS } from '@/types';
+
+// Calculate MAO with user settings
+const mao = calculateMAOWithSettings(
+  { arv: 350000, purchasePrice: 200000, rehabBudget: 50000, closingCosts: 5000, holdMonths: 4 },
+  settings // CalculationSettingsInput
+);
+
+// Calculate ROI with settings
+const roi = calculateROIWithSettings(grossProfit, totalInvestment, holdMonths, settings);
+
+// Get color class based on ROI thresholds
+const colorClass = getROIColorClass(roi, settings);  // 'text-green-600', etc.
+
+// Get profit rating
+const rating = getProfitRating(profit, settings);  // 'excellent' | 'good' | 'acceptable' | 'poor'
+
+// Check variance alerts
+const alertLevel = getVarianceAlertLevel(budget, actual, settings);  // 'none' | 'warning' | 'critical'
+```
+
+**Settings Components** (`src/components/settings/`):
+- `MaoSettingsSection`: MAO method selection and configuration
+- `RoiSettingsSection`: ROI method and threshold configuration
+- `ContingencySettingsSection`: Contingency method with category rates
+- `HoldingCostSettingsSection`: Holding cost method and itemization
+- `SellingCostSettingsSection`: Selling cost breakdown
+- `ProfitSettingsSection`: Profit targets and thresholds
+- `VarianceSettingsSection`: Variance alert configuration
+- `FormulaPreview`: Shows current formula based on settings
 
 ## Common Tasks
 

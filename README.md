@@ -11,6 +11,16 @@ Simple, focused budget tracking for fix & flip real estate projects.
 - **Draws**: Payment tracking with milestones and progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
+### Calculation Settings (NEW)
+- **Customizable Algorithms**: Build your own deal analysis formulas
+- **MAO Methods**: 70% Rule, Custom %, ARV Minus All, Gross Margin, Net Profit Target
+- **ROI Methods**: Simple, Annualized, Cash-on-Cash, IRR Simplified
+- **Contingency Options**: Flat %, Category-Weighted (by risk), Budget-Tiered
+- **Holding Costs**: Flat Monthly, Itemized Breakdown, Loan-Based, Hybrid
+- **Profit Thresholds**: Configure min/target/excellent profit targets
+- **Variance Alerts**: Warning and critical thresholds for budget tracking
+- **Live Preview**: Real-time calculation preview with sample deal data
+
 ### Multi-Project Dashboard (Planned)
 - **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
 - **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed → Sold)
@@ -74,11 +84,14 @@ rehab-budget-pro/
 │   │   ├── page.tsx           # Home / Dashboard
 │   │   ├── layout.tsx         # Root layout
 │   │   ├── globals.css        # Tailwind + custom styles
-│   │   └── projects/
-│   │       ├── new/
-│   │       │   └── page.tsx   # New project form
-│   │       └── [id]/
-│   │           └── page.tsx   # Project detail page
+│   │   ├── projects/
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx   # New project form
+│   │   │   └── [id]/
+│   │   │       └── page.tsx   # Project detail page
+│   │   └── settings/
+│   │       └── calculations/
+│   │           └── page.tsx   # Calculation settings page
 │   ├── components/
 │   │   ├── dashboard/         # Dashboard components (planned)
 │   │   │   ├── portfolio-health.tsx
@@ -94,6 +107,15 @@ rehab-budget-pro/
 │   │   ├── timeline/          # Gantt timeline (planned)
 │   │   │   ├── gantt-chart.tsx
 │   │   │   └── timeline-controls.tsx
+│   │   ├── settings/          # Settings components
+│   │   │   ├── mao-settings-section.tsx
+│   │   │   ├── roi-settings-section.tsx
+│   │   │   ├── contingency-settings-section.tsx
+│   │   │   ├── holding-cost-settings-section.tsx
+│   │   │   ├── selling-cost-settings-section.tsx
+│   │   │   ├── profit-settings-section.tsx
+│   │   │   ├── variance-settings-section.tsx
+│   │   │   └── formula-preview.tsx
 │   │   ├── project/
 │   │   │   ├── project-tabs.tsx
 │   │   │   └── tabs/
@@ -109,16 +131,18 @@ rehab-budget-pro/
 │   │   │   ├── client.ts      # Browser client
 │   │   │   └── server.ts      # Server client
 │   │   ├── store.ts           # Zustand stores
-│   │   ├── utils.ts           # Helpers, formatters
+│   │   ├── utils.ts           # Helpers, formatters, configurable calculations
 │   │   ├── timeline-utils.ts  # Timeline data transforms (planned)
 │   │   └── kanban-utils.ts    # Kanban helpers (planned)
 │   └── types/
-│       └── index.ts           # TypeScript types
+│       └── index.ts           # TypeScript types + calculation settings types
 ├── docs/
 │   └── DASHBOARD_PLAN.md      # Dashboard wireframes & specs
 └── supabase/
     ├── schema.sql             # Database schema
     ├── migrations/            # Schema migrations
+    │   ├── 20260106040000_add_three_column_budget_model.sql
+    │   └── 20260107000000_add_calculation_settings.sql
     └── seed.sql               # Cost reference data
 ```
 
@@ -127,10 +151,11 @@ rehab-budget-pro/
 ### Tables
 
 1. **projects** - Property/deal information
-2. **budget_items** - Line items with qty, rate, actual
+2. **budget_items** - Line items with qty, rate, actual (three-column model)
 3. **vendors** - Master vendor directory
 4. **draws** - Payment schedule/tracking
 5. **cost_reference** - Pricing lookup table
+6. **calculation_settings** - User-configurable calculation algorithms
 
 ### Views
 
@@ -140,11 +165,12 @@ rehab-budget-pro/
 
 ## Roadmap
 
-### Phase 1: Core Features (Current)
+### Phase 1: Core Features (Complete)
 - [x] Project creation with Google Places autocomplete
 - [x] Three-column budget model (Underwriting → Forecast → Actual)
 - [x] Budget category templates with auto-seeding
-- [ ] Add/edit budget items inline
+- [x] Add/delete budget items
+- [x] Calculation settings page with customizable algorithms
 - [ ] Photo attachments for line items
 - [ ] Add/edit vendors
 
