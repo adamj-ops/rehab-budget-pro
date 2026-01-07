@@ -60,6 +60,7 @@ export default async function HomePage() {
       close_date: project.close_date,
       target_complete_date: project.target_complete_date,
       list_date: project.list_date,
+      sale_date: project.sale_date,
       rehab_progress: budgets.budget > 0 ? Math.min(100, Math.round((budgets.actual / budgets.budget) * 100)) : 0,
     };
   });

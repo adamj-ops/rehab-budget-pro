@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, type ProjectCardData, type TimelineProject, type AlertProject } from '@/components/dashboard';
+import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, FinancialPerformance, type ProjectCardData, type TimelineProject, type AlertProject, type FinancialProject } from '@/components/dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { IconHome, IconPlus, IconLayoutKanban, IconCalendarEvent } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
-  projects: (ProjectCardData & TimelineProject & AlertProject)[];
+  projects: (ProjectCardData & TimelineProject & AlertProject & FinancialProject)[];
   totalARV: number;
   capitalDeployed: number;
   averageROI: number;
@@ -108,6 +108,9 @@ export function DashboardClient({
       ) : (
         <ProjectTimeline projects={projects} />
       )}
+
+      {/* Financial Performance Analytics */}
+      <FinancialPerformance projects={projects} />
     </>
   );
 }
