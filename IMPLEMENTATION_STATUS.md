@@ -51,6 +51,18 @@
   - Color-coded variances (red = over budget, green = under)
   - Summary cards showing all three budgets + total variance
   - Legend explaining the three-column model
+  - **Add/Delete Line Items**: Inline add form per category with delete confirmation dialog
+
+### Deal Summary Tab (Three-Column Model)
+- ✅ Updated [src/components/project/tabs/deal-summary-tab.tsx](src/components/project/tabs/deal-summary-tab.tsx)
+  - **Rehab Budget Comparison**: Side-by-side Underwriting vs Forecast vs Actual
+  - Variance percentages between budget phases (scope creep, execution variance)
+  - Contingency breakdown for each budget phase
+  - Active scenario highlighting based on data availability
+  - **Profit/ROI by Scenario**: Calculations for each budget phase
+  - **MAO using Underwriting**: 70% rule calculation uses underwriting + contingency
+  - **Spread Analysis**: Shows if purchase price is under/over MAO
+  - Updated Quick Stats bar with active scenario metrics
 
 ### Storage Setup
 - ✅ Documentation for Supabase Storage bucket setup in [supabase/storage-setup.md](supabase/storage-setup.md)
@@ -99,10 +111,10 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
    - Reorder line items within category
    - Update `sort_order` field on drop
 
-2. **Add/Delete Line Items**
-   - "Add Item" button per category
-   - Inline add form or modal
-   - Delete confirmation dialog
+2. ~~**Add/Delete Line Items**~~ ✅ COMPLETED
+   - ~~"Add Item" button per category~~
+   - ~~Inline add form or modal~~
+   - ~~Delete confirmation dialog~~
 
 3. **Photo Upload**
    - Upload button per line item
@@ -110,14 +122,15 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
    - Photo type selector (receipt/progress/before/after)
    - Integration with Supabase Storage
 
-4. **Deal Summary Tab** - Update for three-column model
-   - Show underwriting vs forecast vs actual budgets
-   - Profit calculations based on actual spend
-   - MAO calculation using underwriting
+4. ~~**Deal Summary Tab** - Update for three-column model~~ ✅ COMPLETED
+   - ~~Show underwriting vs forecast vs actual budgets~~
+   - ~~Profit calculations based on actual spend~~
+   - ~~MAO calculation using underwriting~~
 
 ### Medium Priority
 
 5. **Vendor Management**
+   - Create/edit/delete vendors
    - Link vendors to line items
    - Track vendor performance
    - Payment history
@@ -275,13 +288,16 @@ psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
 - `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
 
 ### Components & Hooks
-- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN)
+- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN - with add/delete)
+- `src/components/project/tabs/deal-summary-tab.tsx` (REWRITTEN - three-column)
+- `src/components/ui/alert-dialog.tsx` (NEW - delete confirmation)
+- `src/components/ui/checkbox.tsx` (NEW)
 - `src/components/ui/label.tsx` (NEW)
 - `src/components/ui/select.tsx` (NEW)
 - `src/hooks/use-places-autocomplete.ts` (NEW - Google Places integration)
 
 ### Updated for Three-Column Model
-- `src/components/project/project-tabs.tsx` (UPDATED)
+- `src/components/project/project-tabs.tsx` (UPDATED - passes budget totals)
 - `src/components/project/tabs/vendors-tab.tsx` (UPDATED)
 - `src/lib/store.ts` (UPDATED)
 - `src/app/page.tsx` (UPDATED)
@@ -322,7 +338,24 @@ This helps investors understand:
 
 ## ✅ Recent Changes
 
-### Google Places API Integration (Latest)
+### Deal Summary Three-Column Update (Latest - Jan 7, 2026)
+- **Rehab Budget Comparison**: New card showing Underwriting vs Forecast vs Actual side-by-side
+- Each budget phase shows base amount + contingency breakdown
+- Variance percentages between phases (scope creep, execution variance)
+- **Active Scenario Detection**: Highlights most relevant phase based on data availability
+- **Profit/ROI by Scenario**: Shows calculations for each budget phase
+- **MAO Calculation Fixed**: Now correctly uses underwriting budget + contingency
+- **Spread Analysis**: New section showing if purchase price is under/over MAO
+- Updated Quick Stats bar to show active scenario metrics
+
+### Budget Item Add/Delete (Jan 7, 2026)
+- **Add Item Button**: Each category now has an inline "Add item" button
+- **Inline Add Form**: Click to reveal form with name, description, and budget fields
+- **Delete Confirmation**: AlertDialog component for safe deletion
+- **React Query Mutations**: Optimistic updates for add/delete operations
+- New UI components: `alert-dialog.tsx`, `checkbox.tsx`
+
+### Google Places API Integration
 - Added Google Places Autocomplete to address input field
 - **Removed city, state, and ZIP input fields** - they're auto-filled from address selection
 - Auto-filled location shown as green checkmark below address field

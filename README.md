@@ -5,8 +5,8 @@ Simple, focused budget tracking for fix & flip real estate projects.
 ## Features
 
 ### Project Management
-- **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual)
+- **Deal Summary**: Property info, ARV, purchase price, three-column budget comparison, profit/ROI by scenario, MAO with spread analysis
+- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual), inline add/edit/delete
 - **Vendors**: Master vendor directory with trade, ratings, contact info
 - **Draws**: Payment tracking with milestones and progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
@@ -140,11 +140,14 @@ rehab-budget-pro/
 
 ## Roadmap
 
-### Phase 1: Core Features (Current)
+### Phase 1: Core Features ✅ Complete
 - [x] Project creation with Google Places autocomplete
 - [x] Three-column budget model (Underwriting → Forecast → Actual)
 - [x] Budget category templates with auto-seeding
-- [ ] Add/edit budget items inline
+- [x] Add/edit/delete budget items inline
+- [x] Deal summary with three-column budget comparison
+- [x] MAO calculation using underwriting budget
+- [x] Profit/ROI calculations by scenario
 - [ ] Photo attachments for line items
 - [ ] Add/edit vendors
 
