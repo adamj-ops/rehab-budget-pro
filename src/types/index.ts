@@ -96,6 +96,19 @@ export type PaymentMethod =
   | 'credit_card'
   | 'other';
 
+export type ContactType =
+  | 'phone_call'
+  | 'text_message'
+  | 'email'
+  | 'in_person'
+  | 'site_visit'
+  | 'quote_request'
+  | 'quote_received'
+  | 'job_assigned'
+  | 'job_completed'
+  | 'payment'
+  | 'other';
+
 // ============================================================================
 // DATABASE TABLES
 // ============================================================================
@@ -276,6 +289,43 @@ export interface BudgetCategoryTemplate {
   created_at: string;
 }
 
+export interface VendorTag {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VendorTagAssignment {
+  id: string;
+  vendor_id: string;
+  tag_id: string;
+  created_at: string;
+}
+
+export interface VendorContact {
+  id: string;
+  vendor_id: string;
+  user_id: string;
+  project_id: string | null;
+
+  // Contact Details
+  contact_type: ContactType;
+  contact_date: string;
+  subject: string | null;
+  notes: string | null;
+
+  // Follow-up
+  follow_up_date: string | null;
+  follow_up_completed: boolean;
+
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================================================
 // VIEW TYPES (Computed/Aggregated)
 // ============================================================================
@@ -341,6 +391,8 @@ export type VendorInput = Omit<Vendor, 'id' | 'user_id' | 'created_at' | 'update
 export type BudgetItemInput = Omit<BudgetItem, 'id' | 'created_at' | 'updated_at' | 'forecast_variance' | 'actual_variance' | 'total_variance'>;
 export type DrawInput = Omit<Draw, 'id' | 'created_at' | 'updated_at'>;
 export type LineItemPhotoInput = Omit<LineItemPhoto, 'id' | 'created_at'>;
+export type VendorTagInput = Omit<VendorTag, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type VendorContactInput = Omit<VendorContact, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 // ============================================================================
 // UTILITY TYPES
@@ -431,3 +483,30 @@ export const VENDOR_TRADE_LABELS: Record<VendorTrade, string> = {
   appraiser: 'Appraiser',
   other: 'Other',
 };
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  phone_call: 'Phone Call',
+  text_message: 'Text Message',
+  email: 'Email',
+  in_person: 'In Person',
+  site_visit: 'Site Visit',
+  quote_request: 'Quote Request',
+  quote_received: 'Quote Received',
+  job_assigned: 'Job Assigned',
+  job_completed: 'Job Completed',
+  payment: 'Payment',
+  other: 'Other',
+};
+
+export const TAG_COLORS = [
+  { value: '#ef4444', label: 'Red' },
+  { value: '#f97316', label: 'Orange' },
+  { value: '#eab308', label: 'Yellow' },
+  { value: '#22c55e', label: 'Green' },
+  { value: '#06b6d4', label: 'Cyan' },
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#8b5cf6', label: 'Violet' },
+  { value: '#ec4899', label: 'Pink' },
+  { value: '#6b7280', label: 'Gray' },
+] as const;

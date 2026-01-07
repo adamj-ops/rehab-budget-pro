@@ -82,7 +82,7 @@ export function DealSummaryTab({
     <div className="space-y-6">
       {/* Property Info + Timeline */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg border bg-card p-5">
+        <div className="rounded-lg border bg-card p-6">
           <h3 className="font-medium mb-4">Property Information</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -467,8 +467,8 @@ export function DealSummaryTab({
 
       {/* Notes */}
       {project.notes && (
-        <div className="rounded-lg border bg-card p-5">
-          <h3 className="font-medium mb-3">Notes</h3>
+        <div className="rounded-lg border bg-card p-6">
+          <h3 className="font-medium mb-4">Notes</h3>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project.notes}</p>
         </div>
       )}

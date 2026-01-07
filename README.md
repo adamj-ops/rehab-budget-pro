@@ -194,10 +194,12 @@ rehab-budget-pro/
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Development guidelines for AI assistants
-- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - Current implementation progress
-- [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) - Dashboard wireframes and UX specs
-- [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md) - Google Places API configuration
+### In Progress
+- [ ] User authentication
+- [ ] Project creation form
+- [ ] Export to Excel/PDF
+- [ ] Multi-project dashboard
+- [ ] Notifications and reminders
 
 ## License
 

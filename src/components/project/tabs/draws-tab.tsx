@@ -282,8 +282,8 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       </div>
 
       {/* Progress Bar */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium">Payment Progress</span>
           <span className="text-sm text-muted-foreground">
             {totalBudget > 0 ? ((totalPaid / totalBudget) * 100).toFixed(1) : 0}% paid
@@ -301,17 +301,17 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
             />
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-green-500" />
+        <div className="flex items-center gap-6 mt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
             Paid
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
             Pending
           </div>
-          <div className="flex items-center gap-1">
-            <div className="h-2 w-2 rounded-full bg-muted" />
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             Remaining
           </div>
         </div>
@@ -435,7 +435,7 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
       )}
 
       {/* Draws Table */}
-      {draws.length > 0 ? (
+      {sortedDraws.length > 0 ? (
         <div className="rounded-lg border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -605,10 +605,10 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <IconClock className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground mb-2">No draws scheduled yet</p>
-          <p className="text-sm text-muted-foreground mb-4">
+        <div className="empty-state">
+          <IconClock className="empty-state-icon" />
+          <p className="empty-state-title">No draws scheduled yet</p>
+          <p className="empty-state-description">
             Create draws to track payments to your vendors.
           </p>
           <button
@@ -617,7 +617,7 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           >
             <IconPlus className="h-4 w-4" />
             Create First Draw
-          </button>
+          </Button>
         </div>
       )}
 
@@ -695,5 +695,76 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+// Status Badge with Dropdown Menu for Quick Status Changes
+interface StatusBadgeWithMenuProps {
+  draw: Draw;
+  onStatusChange: (draw: Draw, status: DrawStatus) => void;
+  isPending: boolean;
+}
+
+function StatusBadgeWithMenu({ draw, onStatusChange, isPending }: StatusBadgeWithMenuProps) {
+  const statusConfig = {
+    pending: {
+      className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
+      icon: IconClock,
+      label: 'Pending',
+    },
+    approved: {
+      className: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+      icon: IconAlertCircle,
+      label: 'Approved',
+    },
+    paid: {
+      className: 'bg-green-100 text-green-700 hover:bg-green-200',
+      icon: IconCheck,
+      label: 'Paid',
+    },
+  };
+
+  const config = statusConfig[draw.status];
+  const Icon = config.icon;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={isPending}>
+        <button
+          className={cn(
+            'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors',
+            config.className
+          )}
+        >
+          <Icon className="h-3 w-3" />
+          {config.label}
+          <IconChevronRight className="h-3 w-3 ml-0.5 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center">
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'pending')}
+          disabled={draw.status === 'pending'}
+        >
+          <IconClock className="h-4 w-4 mr-2 text-yellow-600" />
+          Mark as Pending
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'approved')}
+          disabled={draw.status === 'approved'}
+        >
+          <IconAlertCircle className="h-4 w-4 mr-2 text-blue-600" />
+          Mark as Approved
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onStatusChange(draw, 'paid')}
+          disabled={draw.status === 'paid'}
+        >
+          <IconCheck className="h-4 w-4 mr-2 text-green-600" />
+          Mark as Paid
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

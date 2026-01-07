@@ -5,6 +5,8 @@ import '@fontsource-variable/jetbrains-mono';
 import { Toaster } from 'sonner';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/nav';
 
 export const metadata: Metadata = {
   title: 'Rehab Budget Pro',
@@ -21,7 +23,12 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider>
           <QueryProvider>
-            {children}
+            <SidebarProvider defaultOpen={true}>
+              <AppSidebar />
+              <SidebarInset>
+                {children}
+              </SidebarInset>
+            </SidebarProvider>
             <Toaster richColors position="bottom-right" />
           </QueryProvider>
         </ThemeProvider>

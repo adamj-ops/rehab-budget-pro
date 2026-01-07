@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   IconCheck,
@@ -36,23 +36,30 @@ import { CSS } from '@dnd-kit/utilities';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
-import type { BudgetCategory, BudgetItem } from '@/types';
-import { BUDGET_CATEGORIES, STATUS_LABELS } from '@/types';
+import type { BudgetItem, BudgetCategory, Vendor, ItemStatus } from '@/types';
+import { BUDGET_CATEGORIES, STATUS_LABELS, VENDOR_TRADE_LABELS } from '@/types';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { BudgetItemFormSheet } from '@/components/project/budget-item-form-sheet';
+import { PhotoUploadSheet } from '@/components/project/photo-upload-sheet';
+import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
+import { useProjectPhotos } from '@/hooks/use-photo-mutations';
+import { useSortOrderMutations } from '@/hooks/use-sort-order';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
+  vendors: Vendor[];
   contingencyPercent: number;
+  vendors?: Vendor[];
 }
 
 interface NewItemForm {
@@ -277,21 +284,59 @@ function SortableBudgetItemRow({
 export function BudgetDetailTab({
   projectId,
   budgetItems,
+  vendors,
   contingencyPercent,
+  vendors = [],
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
+  const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
+  const { data: projectPhotos = [] } = useProjectPhotos(projectId);
+  const { reorderItems } = useSortOrderMutations(projectId);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before starting drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Create photo count map by line item
+  const photoCountByItem = useMemo(() => {
+    const counts = new Map<string, number>();
+    projectPhotos.forEach((photo) => {
+      const current = counts.get(photo.line_item_id) || 0;
+      counts.set(photo.line_item_id, current + 1);
+    });
+    return counts;
+  }, [projectPhotos]);
+
+  // UI State
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(BUDGET_CATEGORIES.map((c) => c.value))
   );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<BudgetItem>>({});
 
-  // Add item state
-  const [addingToCategory, setAddingToCategory] = useState<BudgetCategory | null>(null);
-  const [newItemForm, setNewItemForm] = useState<NewItemForm>(defaultNewItem);
+  // Add Item State
+  const [addItemCategory, setAddItemCategory] = useState<BudgetCategory | null>(null);
 
-  // Delete confirmation state
-  const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
+  // Delete Item State
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [deleteItemName, setDeleteItemName] = useState<string>('');
+
+  // Bulk Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatusMenuOpen, setBulkStatusMenuOpen] = useState(false);
+
+  // Photo Upload State
+  const [photoItem, setPhotoItem] = useState<BudgetItem | null>(null);
 
   // Photo gallery state
   const [viewingPhotosForItem, setViewingPhotosForItem] = useState<BudgetItem | null>(null);
@@ -316,12 +361,34 @@ export function BudgetDetailTab({
       return {
         ...cat,
         items,
+        itemIds: items.map((item) => item.id),
         underwriting: items.reduce((sum, item) => sum + (item.underwriting_amount || 0), 0),
         forecast: items.reduce((sum, item) => sum + (item.forecast_amount || 0), 0),
         actual: items.reduce((sum, item) => sum + (item.actual_amount || 0), 0),
       };
     });
   }, [budgetItems]);
+
+  // Handle drag end for reordering items within a category
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, categoryItems: BudgetItem[]) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        const oldIndex = categoryItems.findIndex((item) => item.id === active.id);
+        const newIndex = categoryItems.findIndex((item) => item.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(categoryItems, oldIndex, newIndex);
+          const newItemIds = newOrder.map((item) => item.id);
+
+          // Persist the new order
+          reorderItems.mutate({ itemIds: newItemIds });
+        }
+      }
+    },
+    [reorderItems]
+  );
 
   // Calculate totals
   const underwritingTotal = itemsByCategory.reduce((sum, cat) => sum + cat.underwriting, 0);
@@ -408,31 +475,10 @@ export function BudgetDetailTab({
   const createMutation = useMutation({
     mutationFn: async (newItem: { category: BudgetCategory; data: NewItemForm }) => {
       const supabase = getSupabaseClient();
-
-      // Get the max sort_order for this category
-      const categoryItems = budgetItems.filter(item => item.category === newItem.category);
-      const maxSortOrder = categoryItems.length > 0
-        ? Math.max(...categoryItems.map(item => item.sort_order || 0))
-        : 0;
-
       const { data, error } = await supabase
         .from('budget_items')
-        .insert({
-          project_id: projectId,
-          category: newItem.category,
-          item: newItem.data.item,
-          description: newItem.data.description || null,
-          qty: 1,
-          unit: 'ls',
-          rate: 0,
-          underwriting_amount: newItem.data.underwriting_amount,
-          forecast_amount: newItem.data.forecast_amount,
-          actual_amount: newItem.data.actual_amount || null,
-          cost_type: 'both',
-          status: 'not_started',
-          priority: 'medium',
-          sort_order: maxSortOrder + 1,
-        })
+        .update({ vendor_id: vendorId })
+        .eq('id', itemId)
         .select()
         .single();
 
@@ -441,35 +487,11 @@ export function BudgetDetailTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Budget item added');
-      setAddingToCategory(null);
-      setNewItemForm(defaultNewItem);
+      toast.success('Vendor assigned');
     },
     onError: (error) => {
-      console.error('Error creating budget item:', error);
-      toast.error('Failed to add budget item');
-    },
-  });
-
-  // Mutation for deleting budget items
-  const deleteMutation = useMutation({
-    mutationFn: async (itemId: string) => {
-      const supabase = getSupabaseClient();
-      const { error } = await supabase
-        .from('budget_items')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Budget item deleted');
-      setItemToDelete(null);
-    },
-    onError: (error) => {
-      console.error('Error deleting budget item:', error);
-      toast.error('Failed to delete budget item');
+      console.error('Error assigning vendor:', error);
+      toast.error('Failed to assign vendor');
     },
   });
 
@@ -480,6 +502,7 @@ export function BudgetDetailTab({
       forecast_amount: item.forecast_amount,
       actual_amount: item.actual_amount,
       status: item.status,
+      vendor_id: item.vendor_id,
     });
   };
 
@@ -492,39 +515,45 @@ export function BudgetDetailTab({
     setEditValues({});
   };
 
-  const handleInputChange = (field: keyof BudgetItem, value: number | string) => {
+  const handleInputChange = (field: keyof BudgetItem, value: number | string | null) => {
     setEditValues((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleStartAdd = (category: BudgetCategory) => {
-    setAddingToCategory(category);
-    setNewItemForm(defaultNewItem);
+  const handleQuickVendorAssign = (itemId: string, vendorId: string | null) => {
+    assignVendorMutation.mutate({ itemId, vendorId });
   };
 
-  const handleCancelAdd = () => {
-    setAddingToCategory(null);
-    setNewItemForm(defaultNewItem);
+  // Add Item Handlers
+  const handleOpenAddItem = (category: BudgetCategory) => {
+    setAddItemCategory(category);
   };
 
-  const handleSaveNewItem = () => {
-    if (!addingToCategory || !newItemForm.item.trim()) {
-      toast.error('Item name is required');
-      return;
-    }
-    createMutation.mutate({ category: addingToCategory, data: newItemForm });
+  const handleAddItem = (item: Partial<BudgetItem>) => {
+    createItem.mutate({ projectId, item });
   };
 
-  const handleNewItemChange = (field: keyof NewItemForm, value: string | number) => {
-    setNewItemForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleDeleteClick = (item: BudgetItem) => {
-    setItemToDelete(item);
+  // Delete Item Handlers
+  const handleOpenDeleteItem = (item: BudgetItem) => {
+    setDeleteItemId(item.id);
+    setDeleteItemName(item.item);
   };
 
   const handleConfirmDelete = () => {
-    if (itemToDelete) {
-      deleteMutation.mutate(itemToDelete.id);
+    if (deleteItemId) {
+      deleteItem.mutate(deleteItemId, {
+        onSuccess: () => {
+          setDeleteItemId(null);
+          setDeleteItemName('');
+        },
+      });
+    }
+  };
+
+  // Bulk Selection Handlers
+  const toggleSelectionMode = () => {
+    setIsSelectionMode((prev) => !prev);
+    if (isSelectionMode) {
+      setSelectedItems(new Set());
     }
   };
 
@@ -550,9 +579,9 @@ export function BudgetDetailTab({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Summary Bar - Three Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-lg bg-muted">
+    <div className="space-y-6">
+      {/* Summary Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-lg bg-muted">
         <div>
           <p className="text-sm text-muted-foreground">Underwriting</p>
           <p className="text-xl font-semibold tabular-nums">{formatCurrency(underwritingTotal)}</p>
@@ -590,6 +619,73 @@ export function BudgetDetailTab({
         </div>
       </div>
 
+      {/* Selection Mode Toggle & Bulk Actions */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant={isSelectionMode ? 'default' : 'outline'}
+          size="sm"
+          onClick={toggleSelectionMode}
+        >
+          <IconListCheck className="h-4 w-4 mr-2" />
+          {isSelectionMode ? 'Exit Selection' : 'Select Items'}
+        </Button>
+
+        {isSelectionMode && selectedItems.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''} selected
+            </span>
+
+            {/* Bulk Status Update */}
+            <Select
+              value=""
+              onValueChange={(value) => handleBulkStatusUpdate(value as ItemStatus)}
+            >
+              <SelectTrigger className="h-8 w-36">
+                <SelectValue placeholder="Set Status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="not_started">Not Started</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="complete">Complete</SelectItem>
+                <SelectItem value="on_hold">On Hold</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Bulk Delete */}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <IconTrash className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+
+            {/* Select All / Deselect All */}
+            <div className="flex items-center gap-1 ml-2 border-l pl-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={selectAll}
+                className="text-xs"
+              >
+                Select All
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={deselectAll}
+                className="text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Budget Table */}
       <div className="rounded-lg border overflow-hidden">
         <div className="overflow-x-auto">
@@ -602,11 +698,11 @@ export function BudgetDetailTab({
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-green-50">
+                <th className="text-right w-28 col-forecast">
                   <div className="font-semibold">Forecast</div>
                   <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
                 </th>
-                <th className="text-right p-3 w-28 bg-purple-50">
+                <th className="text-right w-28 col-actual">
                   <div className="font-semibold">Actual</div>
                   <div className="text-xs font-normal text-muted-foreground">Real spend</div>
                 </th>
@@ -621,16 +717,41 @@ export function BudgetDetailTab({
                 const isExpanded = expandedCategories.has(category.value);
                 const catForecastVar = category.forecast - category.underwriting;
                 const catActualVar = category.actual - (category.forecast > 0 ? category.forecast : category.underwriting);
-                const isAddingToThis = addingToCategory === category.value;
+                const categoryItemsSelected = category.items.filter((item) => selectedItems.has(item.id)).length;
+                const allCategorySelected = category.items.length > 0 && categoryItemsSelected === category.items.length;
 
                 return (
                   <Fragment key={category.value}>
                     {/* Category Header Row */}
                     <tr
                       className="category-header cursor-pointer hover:bg-primary/15"
-                      onClick={() => toggleCategory(category.value)}
                     >
-                      <td className="p-3 sticky left-0 bg-muted">
+                      {isSelectionMode && (
+                        <td
+                          className="p-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {category.items.length > 0 && (
+                            <Checkbox
+                              checked={allCategorySelected}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  selectAllInCategory(category.items);
+                                } else {
+                                  deselectAllInCategory(category.items);
+                                }
+                              }}
+                            />
+                          )}
+                        </td>
+                      )}
+                      {!isSelectionMode && (
+                        <td className="p-1 sticky left-0 bg-muted"></td>
+                      )}
+                      <td
+                        className="p-3 sticky left-8 bg-muted"
+                        onClick={() => toggleCategory(category.value)}
+                      >
                         {isExpanded ? (
                           <IconChevronDown className="h-4 w-4" />
                         ) : (
@@ -642,29 +763,48 @@ export function BudgetDetailTab({
                         <span className="ml-2 text-xs font-normal text-muted-foreground tabular-nums">
                           ({category.items.length} items)
                         </span>
+                        {isSelectionMode && categoryItemsSelected > 0 && (
+                          <span className="ml-2 text-xs font-normal text-primary">
+                            ({categoryItemsSelected} selected)
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-underwriting tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-green-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-forecast tabular-nums">
                         {formatCurrency(category.forecast)}
                       </td>
-                      <td className="p-3 text-right font-medium bg-purple-50/50 tabular-nums">
+                      <td className="p-3 text-right font-medium col-actual tabular-nums">
                         {formatCurrency(category.actual)}
                       </td>
                       <td className={cn(
                         'p-3 text-right font-medium tabular-nums',
                         catForecastVar >= 0 ? 'text-red-600' : 'text-green-600'
-                      )}>
+                      )} onClick={() => toggleCategory(category.value)}>
                         {catForecastVar >= 0 ? '+' : ''}{formatCurrency(catForecastVar)}
                       </td>
                       <td className={cn(
                         'p-3 text-right font-medium tabular-nums',
                         catActualVar >= 0 ? 'text-red-600' : 'text-green-600'
-                      )}>
+                      )} onClick={() => toggleCategory(category.value)}>
                         {catActualVar >= 0 ? '+' : ''}{formatCurrency(catActualVar)}
                       </td>
-                      <td colSpan={2}></td>
+                      <td onClick={() => toggleCategory(category.value)}></td>
+                      <td className="p-3 text-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddItem(category.value);
+                          }}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <IconPlus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      </td>
                     </tr>
 
                     {/* Sortable Item Rows */}
@@ -708,7 +848,7 @@ export function BudgetDetailTab({
                               value={newItemForm.item}
                               onChange={(e) => handleNewItemChange('item', e.target.value)}
                               placeholder="Item name *"
-                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                              className="w-full px-2 py-1.5 rounded border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                               autoFocus
                             />
                             <input
@@ -716,7 +856,7 @@ export function BudgetDetailTab({
                               value={newItemForm.description}
                               onChange={(e) => handleNewItemChange('description', e.target.value)}
                               placeholder="Description (optional)"
-                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+                              className="w-full px-2 py-1 rounded border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                             />
                           </div>
                         </td>
@@ -727,7 +867,7 @@ export function BudgetDetailTab({
                             value={newItemForm.underwriting_amount || ''}
                             onChange={(e) => handleNewItemChange('underwriting_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3 text-right">
@@ -737,7 +877,7 @@ export function BudgetDetailTab({
                             value={newItemForm.forecast_amount || ''}
                             onChange={(e) => handleNewItemChange('forecast_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3 text-right">
@@ -747,7 +887,7 @@ export function BudgetDetailTab({
                             value={newItemForm.actual_amount || ''}
                             onChange={(e) => handleNewItemChange('actual_amount', parseFloat(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                            className="inline-input"
                           />
                         </td>
                         <td className="p-3"></td>
@@ -758,7 +898,7 @@ export function BudgetDetailTab({
                             <button
                               type="button"
                               onClick={handleSaveNewItem}
-                              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+                              className="action-btn action-btn-save"
                               disabled={createMutation.isPending}
                               title="Save item"
                             >
@@ -767,7 +907,7 @@ export function BudgetDetailTab({
                             <button
                               type="button"
                               onClick={handleCancelAdd}
-                              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                              className="action-btn action-btn-cancel"
                               disabled={createMutation.isPending}
                               title="Cancel"
                             >
@@ -778,28 +918,18 @@ export function BudgetDetailTab({
                       </tr>
                     )}
 
-                    {/* Add Item Button Row */}
-                    {isExpanded && !isAddingToThis && (
-                      <tr className="border-t">
-                        <td className="p-2 sticky left-0 bg-background"></td>
-                        <td colSpan={8} className="p-2">
+                    {/* Empty State with Add Button */}
+                    {isExpanded && category.items.length === 0 && (
+                      <tr>
+                        <td colSpan={isSelectionMode ? 12 : 12} className="p-4 text-center text-sm text-muted-foreground">
+                          No items in this category.{' '}
                           <button
                             type="button"
-                            onClick={() => handleStartAdd(category.value)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                            onClick={() => handleOpenAddItem(category.value)}
+                            className="text-primary hover:underline"
                           >
-                            <IconPlus className="h-3 w-3" />
-                            Add item to {category.label}
+                            Add one
                           </button>
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Empty State */}
-                    {isExpanded && category.items.length === 0 && !isAddingToThis && (
-                      <tr>
-                        <td colSpan={9} className="p-4 text-center text-sm text-muted-foreground">
-                          No items in this category.
                         </td>
                       </tr>
                     )}
@@ -813,6 +943,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-medium sticky left-12 bg-muted/50">
                   Contingency ({contingencyPercent}%)
                 </td>
+                <td></td>
                 <td colSpan={2}></td>
                 <td className="p-3 text-right font-medium">
                   {formatCurrency(contingencyAmount)}
@@ -826,6 +957,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-semibold text-primary sticky left-12 bg-primary/10">
                   GRAND TOTAL
                 </td>
+                <td></td>
                 <td className="p-3 text-right font-semibold">
                   {formatCurrency(underwritingTotal)}
                 </td>
@@ -861,15 +993,15 @@ export function BudgetDetailTab({
           <span>Drag to reorder</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-blue-100"></div>
+          <div className="w-3 h-3 rounded col-underwriting border"></div>
           <span>Underwriting: Pre-deal estimate</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-green-100"></div>
+          <div className="w-3 h-3 rounded col-forecast border"></div>
           <span>Forecast: Post-walkthrough/bid</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-purple-100"></div>
+          <div className="w-3 h-3 rounded col-actual border"></div>
           <span>Actual: Real spend</span>
         </div>
       </div>
