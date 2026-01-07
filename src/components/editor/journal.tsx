@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { RichTextEditor } from './rich-text-editor'
 
-interface JournalEntry {
+export interface JournalEntry {
   id: string
   title: string
   content: string
