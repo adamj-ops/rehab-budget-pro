@@ -5,9 +5,20 @@ Simple, focused budget tracking for fix & flip real estate projects.
 ## Features
 
 - **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories, 180+ line items with Qty × Rate formulas
-- **Vendors**: Master vendor directory with trade, ratings, contact info
-- **Draws**: Payment tracking with milestones and progress visualization
+- **Budget Detail**: 18 categories with three-column budget model (Underwriting → Forecast → Actual)
+  - Inline editing of amounts and status
+  - Drag & drop reordering of line items within categories
+  - Photo/receipt uploads per line item
+  - Bulk selection and status updates
+- **Vendors**: Master vendor directory with full CRUD
+  - Trade classification and ratings
+  - Tags and contact history tracking
+  - CSV import/export
+- **Draws**: Full payment schedule management
+  - Create, edit, delete draws
+  - Status transitions (Pending → Approved → Paid)
+  - Payment method and milestone tracking
+  - Progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
 ## Tech Stack
@@ -107,14 +118,21 @@ rehab-budget-pro/
 
 ## Roadmap
 
-- [ ] Add/edit budget items inline
-- [ ] Add/edit vendors
-- [ ] Create/update draws
-- [ ] Photo attachments
-- [ ] Project creation form
+### Completed
+- [x] Add/edit budget items inline
+- [x] Drag & drop reorder line items
+- [x] Add/edit/delete vendors with tags
+- [x] CSV import/export for vendors
+- [x] Create/update/delete draws with status transitions
+- [x] Photo/receipt attachments for line items
+- [x] Bulk selection and status updates
+
+### In Progress
 - [ ] User authentication
+- [ ] Project creation form
 - [ ] Export to Excel/PDF
 - [ ] Multi-project dashboard
+- [ ] Notifications and reminders
 
 ## License
 

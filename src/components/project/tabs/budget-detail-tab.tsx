@@ -1,7 +1,24 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   IconCheck,
   IconChevronDown,
@@ -16,6 +33,7 @@ import {
   IconListCheck,
   IconLoader2,
   IconCamera,
+  IconGripVertical,
 } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
@@ -37,6 +55,7 @@ import { BudgetItemFormSheet } from '@/components/project/budget-item-form-sheet
 import { PhotoUploadSheet } from '@/components/project/photo-upload-sheet';
 import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
 import { useProjectPhotos } from '@/hooks/use-photo-mutations';
+import { useSortOrderMutations } from '@/hooks/use-sort-order';
 
 interface BudgetDetailTabProps {
   projectId: string;
@@ -54,6 +73,19 @@ export function BudgetDetailTab({
   const queryClient = useQueryClient();
   const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
   const { data: projectPhotos = [] } = useProjectPhotos(projectId);
+  const { reorderItems } = useSortOrderMutations(projectId);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before starting drag
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Create photo count map by line item
   const photoCountByItem = useMemo(() => {
@@ -95,20 +127,42 @@ export function BudgetDetailTab({
     return map;
   }, [vendors]);
 
-  // Group items by category
+  // Group items by category (sorted by sort_order)
   const itemsByCategory = useMemo(() => {
     const grouped = groupBy(budgetItems, 'category');
     return BUDGET_CATEGORIES.map((cat) => {
-      const items = grouped[cat.value] || [];
+      const items = (grouped[cat.value] || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       return {
         ...cat,
         items,
+        itemIds: items.map((item) => item.id),
         underwriting: items.reduce((sum, item) => sum + (item.underwriting_amount || 0), 0),
         forecast: items.reduce((sum, item) => sum + (item.forecast_amount || 0), 0),
         actual: items.reduce((sum, item) => sum + (item.actual_amount || 0), 0),
       };
     });
   }, [budgetItems]);
+
+  // Handle drag end for reordering items within a category
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, categoryItems: BudgetItem[]) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        const oldIndex = categoryItems.findIndex((item) => item.id === active.id);
+        const newIndex = categoryItems.findIndex((item) => item.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(categoryItems, oldIndex, newIndex);
+          const newItemIds = newOrder.map((item) => item.id);
+
+          // Persist the new order
+          reorderItems.mutate({ itemIds: newItemIds });
+        }
+      }
+    },
+    [reorderItems]
+  );
 
   // Calculate totals
   const underwritingTotal = itemsByCategory.reduce((sum, cat) => sum + cat.underwriting, 0);
@@ -312,6 +366,68 @@ export function BudgetDetailTab({
     );
   };
 
+  // Sortable Row Component
+  const SortableRow = ({
+    item,
+    children,
+    isSelected,
+    disabled,
+  }: {
+    item: BudgetItem;
+    children: React.ReactNode;
+    isSelected: boolean;
+    disabled: boolean;
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id, disabled });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          'border-t hover:bg-muted/50 group',
+          isSelected && 'bg-primary/5',
+          isDragging && 'opacity-50 bg-muted shadow-lg relative z-50'
+        )}
+        {...attributes}
+      >
+        {/* Drag Handle Cell */}
+        {!isSelectionMode && (
+          <td className="p-1 w-8 sticky left-0 bg-background">
+            {!disabled && (
+              <button
+                type="button"
+                {...listeners}
+                className={cn(
+                  'p-1 rounded cursor-grab active:cursor-grabbing',
+                  'text-muted-foreground/40 hover:text-muted-foreground',
+                  'opacity-0 group-hover:opacity-100 transition-opacity',
+                  isDragging && 'opacity-100 cursor-grabbing'
+                )}
+                title="Drag to reorder"
+              >
+                <IconGripVertical className="h-4 w-4" />
+              </button>
+            )}
+          </td>
+        )}
+        {children}
+      </tr>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary Bar - Three Columns */}
@@ -427,8 +543,9 @@ export function BudgetDetailTab({
             <thead>
               <tr className="table-header">
                 {isSelectionMode && <th className="p-3 w-10"></th>}
-                <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
-                <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
+                {!isSelectionMode && <th className="p-1 w-8 sticky left-0 bg-muted"></th>}
+                <th className="text-left p-3 w-8 sticky left-8 bg-muted"></th>
+                <th className="text-left p-3 min-w-[200px] sticky left-16 bg-muted">Item</th>
                 <th className="text-left p-3 w-36">Vendor</th>
                 <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
@@ -481,8 +598,11 @@ export function BudgetDetailTab({
                           )}
                         </td>
                       )}
+                      {!isSelectionMode && (
+                        <td className="p-1 sticky left-0 bg-muted"></td>
+                      )}
                       <td
-                        className="p-3 sticky left-0 bg-muted"
+                        className="p-3 sticky left-8 bg-muted"
                         onClick={() => toggleCategory(category.value)}
                       >
                         {isExpanded ? (
@@ -492,7 +612,7 @@ export function BudgetDetailTab({
                         )}
                       </td>
                       <td
-                        className="p-3 font-medium sticky left-8 bg-muted"
+                        className="p-3 font-medium sticky left-16 bg-muted"
                         onClick={() => toggleCategory(category.value)}
                       >
                         {category.label}
@@ -544,32 +664,40 @@ export function BudgetDetailTab({
                       </td>
                     </tr>
 
-                    {/* Item Rows */}
-                    {isExpanded && category.items.map((item) => {
-                      const isEditing = editingItemId === item.id;
-                      const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
-                      const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
-                      const vendor = item.vendor_id ? vendorMap.get(item.vendor_id) : null;
-                      const isSelected = selectedItems.has(item.id);
-
-                      return (
-                        <tr
-                          key={item.id}
-                          className={cn(
-                            'border-t hover:bg-muted/50',
-                            isSelected && 'bg-primary/5'
-                          )}
+                    {/* Item Rows - Wrapped in DndContext for drag & drop */}
+                    {isExpanded && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, category.items)}
+                      >
+                        <SortableContext
+                          items={category.itemIds}
+                          strategy={verticalListSortingStrategy}
                         >
-                          {isSelectionMode && (
-                            <td className="p-3">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleItemSelection(item.id)}
-                              />
-                            </td>
-                          )}
-                          <td className="p-3 sticky left-0 bg-background"></td>
-                          <td className="p-3 sticky left-8 bg-background">
+                          {category.items.map((item) => {
+                            const isEditing = editingItemId === item.id;
+                            const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
+                            const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
+                            const vendor = item.vendor_id ? vendorMap.get(item.vendor_id) : null;
+                            const isSelected = selectedItems.has(item.id);
+
+                            return (
+                              <SortableRow
+                                key={item.id}
+                                item={item}
+                                isSelected={isSelected}
+                                disabled={isEditing || isSelectionMode}
+                              >
+                                {isSelectionMode && (
+                                  <td className="p-3">
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleItemSelection(item.id)}
+                                    />
+                                  </td>
+                                )}
+                                <td className="p-3 sticky left-8 bg-background">
                             <div>
                               <p className="font-medium">{item.item}</p>
                               {item.description && (
@@ -779,14 +907,17 @@ export function BudgetDetailTab({
                               </div>
                             )}
                           </td>
-                        </tr>
-                      );
-                    })}
+                              </SortableRow>
+                            );
+                          })}
+                        </SortableContext>
+                      </DndContext>
+                    )}
 
                     {/* Empty State with Add Button */}
                     {isExpanded && category.items.length === 0 && (
                       <tr>
-                        <td colSpan={isSelectionMode ? 12 : 11} className="p-4 text-center text-sm text-muted-foreground">
+                        <td colSpan={isSelectionMode ? 12 : 12} className="p-4 text-center text-sm text-muted-foreground">
                           No items in this category.{' '}
                           <button
                             type="button"
@@ -805,8 +936,9 @@ export function BudgetDetailTab({
               {/* Contingency Row */}
               <tr className="border-t-2 bg-muted/50">
                 {isSelectionMode && <td className="p-3"></td>}
-                <td className="p-3 sticky left-0 bg-muted/50"></td>
-                <td className="p-3 font-medium sticky left-8 bg-muted/50" colSpan={2}>
+                {!isSelectionMode && <td className="p-1 bg-muted/50"></td>}
+                <td className="p-3 bg-muted/50"></td>
+                <td className="p-3 font-medium bg-muted/50" colSpan={2}>
                   Contingency ({contingencyPercent}%)
                 </td>
                 <td colSpan={2}></td>
@@ -819,8 +951,9 @@ export function BudgetDetailTab({
               {/* Grand Total Row */}
               <tr className="border-t-2 bg-primary/10">
                 {isSelectionMode && <td className="p-3"></td>}
-                <td className="p-3 sticky left-0 bg-primary/10"></td>
-                <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10" colSpan={2}>
+                {!isSelectionMode && <td className="p-1 bg-primary/10"></td>}
+                <td className="p-3 bg-primary/10"></td>
+                <td className="p-3 font-semibold text-primary bg-primary/10" colSpan={2}>
                   GRAND TOTAL
                 </td>
                 <td className="p-3 text-right font-semibold">
