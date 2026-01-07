@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PortfolioHealth, KanbanPipeline, ProjectTimeline, type ProjectCardData, type TimelineProject } from '@/components/dashboard';
+import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, type ProjectCardData, type TimelineProject, type AlertProject } from '@/components/dashboard';
 import { Card, CardContent } from '@/components/ui/card';
 import { IconHome, IconPlus, IconLayoutKanban, IconCalendarEvent } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
-  projects: (ProjectCardData & TimelineProject)[];
+  projects: (ProjectCardData & TimelineProject & AlertProject)[];
   totalARV: number;
   capitalDeployed: number;
   averageROI: number;
@@ -68,6 +68,9 @@ export function DashboardClient({
         averageROI={averageROI}
         projectCounts={projectCounts}
       />
+
+      {/* Attention Needed / Risk Alerts */}
+      <AttentionNeeded projects={projects} />
 
       {/* View Toggle */}
       <div className="flex items-center justify-between">
