@@ -431,3 +431,302 @@ export const VENDOR_TRADE_LABELS: Record<VendorTrade, string> = {
   appraiser: 'Appraiser',
   other: 'Other',
 };
+
+// ============================================================================
+// CALCULATION SETTINGS TYPES
+// ============================================================================
+
+export type MaoMethod =
+  | 'seventy_rule'
+  | 'arv_minus_all'
+  | 'gross_margin'
+  | 'custom_percentage'
+  | 'net_profit_target';
+
+export type RoiMethod =
+  | 'simple'
+  | 'cash_on_cash'
+  | 'annualized'
+  | 'irr_simplified';
+
+export type ContingencyMethod =
+  | 'flat_percent'
+  | 'category_weighted'
+  | 'tiered'
+  | 'scope_based';
+
+export type HoldingCostMethod =
+  | 'flat_monthly'
+  | 'percentage_of_loan'
+  | 'itemized'
+  | 'hybrid';
+
+export interface ContingencyCategoryRates {
+  soft_costs: number;
+  demo: number;
+  structural: number;
+  plumbing: number;
+  hvac: number;
+  electrical: number;
+  insulation_drywall: number;
+  interior_paint: number;
+  flooring: number;
+  tile: number;
+  kitchen: number;
+  bathrooms: number;
+  doors_windows: number;
+  interior_trim: number;
+  exterior: number;
+  landscaping: number;
+  finishing: number;
+  contingency: number;
+}
+
+export interface ContingencyTier {
+  max_budget: number | null;
+  percent: number;
+}
+
+export interface HoldingCostItems {
+  taxes: number;
+  insurance: number;
+  utilities: number;
+  loan_interest: number;
+  hoa: number;
+  lawn_care: number;
+  other: number;
+}
+
+export interface CalculationSettings {
+  id: string;
+  user_id: string;
+
+  // Profile Info
+  name: string;
+  description: string | null;
+  is_default: boolean;
+
+  // MAO Settings
+  mao_method: MaoMethod;
+  mao_arv_multiplier: number;
+  mao_target_profit: number;
+  mao_target_profit_percent: number;
+  mao_include_holding_costs: boolean;
+  mao_include_selling_costs: boolean;
+  mao_include_closing_costs: boolean;
+
+  // ROI Settings
+  roi_method: RoiMethod;
+  roi_annualize: boolean;
+  roi_include_opportunity_cost: boolean;
+  roi_opportunity_rate: number;
+  roi_threshold_excellent: number;
+  roi_threshold_good: number;
+  roi_threshold_fair: number;
+  roi_threshold_poor: number;
+
+  // Contingency Settings
+  contingency_method: ContingencyMethod;
+  contingency_default_percent: number;
+  contingency_category_rates: ContingencyCategoryRates;
+  contingency_tiers: ContingencyTier[];
+
+  // Holding Cost Settings
+  holding_cost_method: HoldingCostMethod;
+  holding_cost_default_monthly: number;
+  holding_cost_loan_rate_annual: number;
+  holding_cost_include_taxes: boolean;
+  holding_cost_include_insurance: boolean;
+  holding_cost_include_utilities: boolean;
+  holding_cost_include_hoa: boolean;
+  holding_cost_items: HoldingCostItems;
+
+  // Selling Cost Settings
+  selling_cost_default_percent: number;
+  selling_cost_agent_commission: number;
+  selling_cost_buyer_concessions: number;
+  selling_cost_closing_percent: number;
+  selling_cost_fixed_amount: number;
+
+  // Profit Thresholds
+  profit_min_acceptable: number;
+  profit_target: number;
+  profit_excellent: number;
+  profit_min_percent: number;
+  profit_target_percent: number;
+  profit_excellent_percent: number;
+
+  // Variance Alerts
+  variance_alert_enabled: boolean;
+  variance_warning_percent: number;
+  variance_critical_percent: number;
+  variance_alert_on_forecast: boolean;
+  variance_alert_on_actual: boolean;
+
+  // Custom Formulas
+  custom_formulas: Record<string, string>;
+
+  // Meta
+  created_at: string;
+  updated_at: string;
+}
+
+export type CalculationSettingsInput = Omit<CalculationSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+
+// Default calculation settings
+export const DEFAULT_CALCULATION_SETTINGS: CalculationSettingsInput = {
+  name: 'Default',
+  description: null,
+  is_default: true,
+
+  // MAO defaults
+  mao_method: 'seventy_rule',
+  mao_arv_multiplier: 0.70,
+  mao_target_profit: 30000,
+  mao_target_profit_percent: 15,
+  mao_include_holding_costs: true,
+  mao_include_selling_costs: true,
+  mao_include_closing_costs: true,
+
+  // ROI defaults
+  roi_method: 'simple',
+  roi_annualize: false,
+  roi_include_opportunity_cost: false,
+  roi_opportunity_rate: 5,
+  roi_threshold_excellent: 25,
+  roi_threshold_good: 15,
+  roi_threshold_fair: 10,
+  roi_threshold_poor: 5,
+
+  // Contingency defaults
+  contingency_method: 'flat_percent',
+  contingency_default_percent: 10,
+  contingency_category_rates: {
+    soft_costs: 5,
+    demo: 10,
+    structural: 15,
+    plumbing: 12,
+    hvac: 12,
+    electrical: 12,
+    insulation_drywall: 10,
+    interior_paint: 8,
+    flooring: 8,
+    tile: 10,
+    kitchen: 10,
+    bathrooms: 12,
+    doors_windows: 8,
+    interior_trim: 8,
+    exterior: 12,
+    landscaping: 8,
+    finishing: 5,
+    contingency: 0,
+  },
+  contingency_tiers: [
+    { max_budget: 25000, percent: 15 },
+    { max_budget: 50000, percent: 12 },
+    { max_budget: 100000, percent: 10 },
+    { max_budget: null, percent: 8 },
+  ],
+
+  // Holding cost defaults
+  holding_cost_method: 'flat_monthly',
+  holding_cost_default_monthly: 1500,
+  holding_cost_loan_rate_annual: 12,
+  holding_cost_include_taxes: true,
+  holding_cost_include_insurance: true,
+  holding_cost_include_utilities: true,
+  holding_cost_include_hoa: false,
+  holding_cost_items: {
+    taxes: 250,
+    insurance: 150,
+    utilities: 200,
+    loan_interest: 800,
+    hoa: 0,
+    lawn_care: 100,
+    other: 0,
+  },
+
+  // Selling cost defaults
+  selling_cost_default_percent: 8,
+  selling_cost_agent_commission: 5,
+  selling_cost_buyer_concessions: 2,
+  selling_cost_closing_percent: 1,
+  selling_cost_fixed_amount: 0,
+
+  // Profit thresholds
+  profit_min_acceptable: 20000,
+  profit_target: 35000,
+  profit_excellent: 50000,
+  profit_min_percent: 10,
+  profit_target_percent: 15,
+  profit_excellent_percent: 20,
+
+  // Variance alerts
+  variance_alert_enabled: true,
+  variance_warning_percent: 5,
+  variance_critical_percent: 10,
+  variance_alert_on_forecast: true,
+  variance_alert_on_actual: true,
+
+  // Custom formulas
+  custom_formulas: {},
+};
+
+// Labels for calculation methods
+export const MAO_METHOD_LABELS: Record<MaoMethod, string> = {
+  seventy_rule: '70% Rule',
+  arv_minus_all: 'ARV Minus All Costs',
+  gross_margin: 'Gross Margin Target',
+  custom_percentage: 'Custom Percentage',
+  net_profit_target: 'Net Profit Target',
+};
+
+export const MAO_METHOD_DESCRIPTIONS: Record<MaoMethod, string> = {
+  seventy_rule: 'Classic formula: ARV × 70% - Rehab Budget',
+  arv_minus_all: 'ARV - All Costs - Target Profit',
+  gross_margin: 'ARV × (1 - Target Margin%) - Costs',
+  custom_percentage: 'ARV × Custom% - Rehab Budget',
+  net_profit_target: 'Work backward from desired profit',
+};
+
+export const ROI_METHOD_LABELS: Record<RoiMethod, string> = {
+  simple: 'Simple ROI',
+  cash_on_cash: 'Cash-on-Cash Return',
+  annualized: 'Annualized ROI',
+  irr_simplified: 'IRR (Simplified)',
+};
+
+export const ROI_METHOD_DESCRIPTIONS: Record<RoiMethod, string> = {
+  simple: 'Profit ÷ Total Investment × 100',
+  cash_on_cash: 'Annual Cash Flow ÷ Cash Invested × 100',
+  annualized: '(Profit ÷ Investment) × (12 ÷ Hold Months)',
+  irr_simplified: 'Approximated Internal Rate of Return',
+};
+
+export const CONTINGENCY_METHOD_LABELS: Record<ContingencyMethod, string> = {
+  flat_percent: 'Flat Percentage',
+  category_weighted: 'Category-Weighted',
+  tiered: 'Budget-Tiered',
+  scope_based: 'Scope-Based',
+};
+
+export const CONTINGENCY_METHOD_DESCRIPTIONS: Record<ContingencyMethod, string> = {
+  flat_percent: 'Single percentage applied to entire budget',
+  category_weighted: 'Different rates for each category based on risk',
+  tiered: 'Percentage varies based on total budget size',
+  scope_based: 'Percentage based on project scope and type',
+};
+
+export const HOLDING_COST_METHOD_LABELS: Record<HoldingCostMethod, string> = {
+  flat_monthly: 'Flat Monthly Rate',
+  percentage_of_loan: 'Percentage of Loan',
+  itemized: 'Itemized Breakdown',
+  hybrid: 'Hybrid (Base + Variable)',
+};
+
+export const HOLDING_COST_METHOD_DESCRIPTIONS: Record<HoldingCostMethod, string> = {
+  flat_monthly: 'Fixed monthly amount for all holding costs',
+  percentage_of_loan: 'Monthly cost as percentage of purchase price',
+  itemized: 'Sum of individual cost items',
+  hybrid: 'Base rate plus variable components',
+};
