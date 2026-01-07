@@ -143,6 +143,105 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
    - Bulk edit operations
    - Export to Excel
 
+---
+
+## 🎯 Phase 4: Multi-Project Dashboard (Planned)
+
+Full specification available in [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md)
+
+### Dashboard Sections
+
+1. **Portfolio Health** (Hero Metrics)
+   - Total ARV across active projects
+   - Capital deployed (total investment)
+   - Portfolio-wide ROI
+   - Active project count by status
+
+2. **Attention Needed** (Risk Alerts)
+   - Projects over budget
+   - Projects behind schedule
+   - Low ROI warnings
+   - Contingency burn alerts
+
+3. **Project Pipeline** (Kanban Board)
+   - Columns: Lead → Analyzing → Under Contract → In Rehab → Listed → Sold
+   - Drag-drop to change project status
+   - Context-aware card content per stage
+   - Search, filter, sort controls
+
+4. **Project Timeline** (Gantt Chart)
+   - Visual timeline of all projects
+   - Milestone markers (contract, close, rehab, list, sale)
+   - Progress bars for active rehabs
+   - Dependency lines
+   - Zoom controls (0.5x - 2x)
+
+5. **Financial Performance**
+   - Gross profit summary
+   - ROI distribution chart
+   - Profit by project ranking
+
+6. **Budget Insights**
+   - Top spending categories
+   - Budget vs actual variance
+   - Cost benchmarking vs Minneapolis metro
+
+### New Dependencies Required
+
+```bash
+npm install framer-motion recharts
+```
+
+### New Database Views Required
+
+```sql
+-- Portfolio-level aggregates
+CREATE VIEW portfolio_summary AS
+SELECT
+  COUNT(*) as total_projects,
+  COUNT(*) FILTER (WHERE status NOT IN ('sold', 'dead')) as active_projects,
+  SUM(arv) FILTER (WHERE status NOT IN ('sold', 'dead')) as total_arv,
+  SUM(total_investment) FILTER (WHERE status NOT IN ('sold', 'dead')) as capital_deployed,
+  SUM(gross_profit) FILTER (WHERE status = 'sold') as total_profit,
+  AVG(roi) FILTER (WHERE status = 'sold') as avg_roi
+FROM project_summary
+WHERE user_id = auth.uid();
+
+-- Category totals across portfolio
+CREATE VIEW category_totals AS
+SELECT
+  category,
+  SUM(budget) as total_budget,
+  SUM(actual) as total_actual,
+  SUM(actual) - SUM(budget) as variance
+FROM budget_items bi
+JOIN projects p ON bi.project_id = p.id
+WHERE p.status NOT IN ('sold', 'dead')
+GROUP BY category
+ORDER BY total_actual DESC;
+```
+
+### UI/UX Enhancements Planned
+
+- Micro-interactions (card hover, number animations)
+- Skeleton loading states
+- Keyboard shortcuts (N, G, K, /, ?)
+- Command palette (Cmd+K)
+- Mobile-optimized views (swipeable tabs, bottom nav)
+- Accessibility (WCAG AA, reduced motion support)
+- Optimistic updates with rollback
+
+### Implementation Phases
+
+| Phase | Focus | Key Deliverables |
+|-------|-------|------------------|
+| 4.1 | Core Dashboard | Hero metrics, basic project grid |
+| 4.2 | Kanban Pipeline | Drag-drop board, filters, search |
+| 4.3 | Gantt Timeline | Timeline view, zoom, dependencies |
+| 4.4 | Risk & Alerts | Attention section, thresholds |
+| 4.5 | Analytics | Charts, ROI distribution |
+| 4.6 | Budget Intelligence | Category analysis, benchmarking |
+
 ## 🔧 Development Commands
 
 ```bash
@@ -160,6 +259,10 @@ psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
 ```
 
 ## 📁 Key Files Modified/Created
+
+### Documentation
+- `docs/DASHBOARD_PLAN.md` (NEW) - Comprehensive dashboard wireframes and UX specs
+- `README.md` (UPDATED) - Added dashboard features and phased roadmap
 
 ### Database
 - `supabase/migrations/20260106040000_add_three_column_budget_model.sql` (NEW)
