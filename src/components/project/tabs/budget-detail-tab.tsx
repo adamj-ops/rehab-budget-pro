@@ -2,7 +2,8 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPhoto, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { PhotoGallery } from '@/components/project/photo-gallery';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -60,6 +61,9 @@ export function BudgetDetailTab({
 
   // Delete confirmation state
   const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
+
+  // Photo gallery state
+  const [viewingPhotosForItem, setViewingPhotosForItem] = useState<BudgetItem | null>(null);
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
@@ -489,6 +493,14 @@ export function BudgetDetailTab({
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   type="button"
+                                  onClick={() => setViewingPhotosForItem(item)}
+                                  className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
+                                  title="View photos"
+                                >
+                                  <IconPhoto className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleEdit(item)}
                                   className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
                                   title="Edit item"
@@ -704,6 +716,15 @@ export function BudgetDetailTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Photo Gallery Modal */}
+      {viewingPhotosForItem && (
+        <PhotoGallery
+          projectId={projectId}
+          budgetItem={viewingPhotosForItem}
+          onClose={() => setViewingPhotosForItem(null)}
+        />
+      )}
     </div>
   );
 }

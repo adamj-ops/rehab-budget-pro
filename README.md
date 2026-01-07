@@ -6,7 +6,7 @@ Simple, focused budget tracking for fix & flip real estate projects.
 
 ### Project Management
 - **Deal Summary**: Property info, ARV, purchase price, three-column budget comparison, profit/ROI by scenario, MAO with spread analysis
-- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual), inline add/edit/delete
+- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual), inline add/edit/delete, photo attachments
 - **Vendors**: Full CRUD vendor directory with trade, ratings, contact info, assign vendors to budget items
 - **Draws**: Full CRUD draw management with status workflow (pending → approved → paid), public vendor submission form
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
@@ -151,7 +151,7 @@ rehab-budget-pro/
 - [x] Vendor CRUD (create, edit, delete, assign to items)
 - [x] Draw management with CRUD operations
 - [x] Public vendor draw request form (shareable link)
-- [ ] Photo attachments for line items
+- [x] Photo attachments for line items (receipts, progress, before/after)
 
 ### Phase 2: Dashboard - Kanban Pipeline
 - [ ] Install framer-motion, recharts dependencies

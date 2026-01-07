@@ -116,11 +116,11 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
    - ~~Inline add form or modal~~
    - ~~Delete confirmation dialog~~
 
-3. **Photo Upload**
-   - Upload button per line item
-   - Photo gallery modal
-   - Photo type selector (receipt/progress/before/after)
-   - Integration with Supabase Storage
+3. ~~**Photo Upload**~~ ✅ COMPLETED
+   - ~~Upload button per line item~~
+   - ~~Photo gallery modal~~
+   - ~~Photo type selector (receipt/progress/before/after)~~
+   - ~~Integration with Supabase Storage~~
 
 4. ~~**Deal Summary Tab** - Update for three-column model~~ ✅ COMPLETED
    - ~~Show underwriting vs forecast vs actual budgets~~
@@ -288,8 +288,9 @@ psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
 - `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
 
 ### Components & Hooks
-- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN - with add/delete)
+- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN - with add/delete/photos)
 - `src/components/project/tabs/deal-summary-tab.tsx` (REWRITTEN - three-column)
+- `src/components/project/photo-gallery.tsx` (NEW - photo upload/gallery modal)
 - `src/components/ui/alert-dialog.tsx` (NEW - delete confirmation)
 - `src/components/ui/checkbox.tsx` (NEW)
 - `src/components/ui/label.tsx` (NEW)
@@ -338,7 +339,17 @@ This helps investors understand:
 
 ## ✅ Recent Changes
 
-### Vendor CRUD (Latest - Jan 7, 2026)
+### Photo Upload (Latest - Jan 7, 2026)
+- **Photo Button**: Camera icon in Actions column for each budget item
+- **Photo Gallery Modal**: View, upload, and delete photos per line item
+- **Photo Types**: Receipt, Progress, Before, After, Other - selectable when uploading
+- **Drag & Drop Upload**: Uses react-dropzone for easy file uploads
+- **File Support**: JPEG, PNG, WebP, and PDF (max 10MB)
+- **Supabase Storage**: Photos stored in `project-photos` bucket with path `{projectId}/{itemId}/{uuid}.{ext}`
+- **Photo Preview**: Full-screen preview with download option
+- **Delete Confirmation**: AlertDialog to prevent accidental deletions
+
+### Vendor CRUD (Jan 7, 2026)
 - **Create Vendor**: Full form modal with all vendor fields (name, trade, contact info, qualifications)
 - **Edit Vendor**: Click pencil icon on any vendor card to edit all fields
 - **Delete Vendor**: Trash icon with AlertDialog confirmation, warns if vendor is assigned to items
