@@ -724,6 +724,431 @@ To keep the dashboard focused and not overwhelming:
 
 ---
 
+## UI/UX Polish & Enhancements
+
+### 1. Micro-interactions & Animations
+
+**Card Hover States**
+```
+┌───────────────┐      ┌───────────────┐
+│ 123 Oak St    │  →   │ 123 Oak St    │  ← subtle lift + shadow
+│ $285K | 22%   │      │ $285K | 22%   │  ← border glow (status color)
+└───────────────┘      │ [View] [→]    │  ← actions fade in
+                       └───────────────┘
+```
+- Cards lift 2px on hover with soft shadow transition (150ms ease-out)
+- Status-colored border glow on focus/hover
+- Action buttons fade in from 0 → 1 opacity
+- Progress bars animate on first render (0% → actual%)
+
+**Number Transitions**
+```typescript
+// Animate numbers when data changes
+<AnimatedNumber
+  value={portfolioROI}
+  format={formatPercent}
+  duration={400}
+/>
+```
+- Hero metrics count up on initial load
+- Values smoothly transition when filters change
+- Use `framer-motion` for spring animations
+
+**View Transitions**
+- Kanban ↔ Gantt toggle with crossfade (200ms)
+- Cards entering/exiting columns with stagger animation
+- Smooth scroll-into-view when clicking alerts
+
+---
+
+### 2. Loading & Empty States
+
+**Skeleton Loading**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PORTFOLIO HEALTH                                               │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐
+│  │ ░░░░░░░░░░░░ │ │ ░░░░░░░░░░░░ │ │ ░░░░░░░░░░░░ │ │ ░░░░░░░░ │
+│  │ ░░░░░░░      │ │ ░░░░░░░      │ │ ░░░░░░░      │ │ ░░░░░░░  │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘
+└─────────────────────────────────────────────────────────────────┘
+
+Uses shimmer animation (gradient sweep left-to-right)
+```
+
+**Empty States by Context**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│                    🏠                                           │
+│                                                                 │
+│            No projects yet                                      │
+│                                                                 │
+│     Add your first deal to start tracking                       │
+│     your rehab portfolio.                                       │
+│                                                                 │
+│              [+ Add First Project]                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─ ATTENTION NEEDED ────────────────────────────────────────────┐
+│                                                                │
+│  ✓ All clear! No projects need immediate attention.           │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Error States**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚠ Couldn't load portfolio data                                │
+│                                                                 │
+│  Check your connection and try again.                          │
+│                                                                 │
+│  [Retry]  [View Offline Data]                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 3. Contextual Quick Actions
+
+**Keyboard Shortcuts**
+| Shortcut | Action |
+|----------|--------|
+| `N` | New project |
+| `G` | Toggle Gantt view |
+| `K` | Toggle Kanban view |
+| `/` | Focus search |
+| `1-5` | Jump to section |
+| `?` | Show shortcuts modal |
+| `Esc` | Close modal/deselect |
+
+**Command Palette** (Cmd+K / Ctrl+K)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  🔍 Search projects, actions, or settings...                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Recent                                                         │
+│  ├─ 🏠 123 Oak Street                                          │
+│  └─ 🏠 456 Elm Avenue                                          │
+│                                                                 │
+│  Actions                                                        │
+│  ├─ + Add new project                                          │
+│  ├─ 📊 Export portfolio report                                 │
+│  └─ ⚙ Dashboard settings                                       │
+│                                                                 │
+│  Views                                                          │
+│  ├─ 📋 Kanban pipeline                                         │
+│  └─ 📅 Gantt timeline                                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Right-Click Context Menus**
+```
+On project card right-click:
+┌────────────────────────┐
+│ View Project      ↵    │
+│ Edit Details      E    │
+│ ──────────────────────│
+│ Move to →         >    │
+│   ├─ Analyzing         │
+│   ├─ Under Contract    │
+│   └─ In Rehab          │
+│ ──────────────────────│
+│ Duplicate              │
+│ Archive           ⌫    │
+└────────────────────────┘
+```
+
+---
+
+### 4. Smart Tooltips & Progressive Disclosure
+
+**Metric Tooltips**
+```
+                    ┌─────────────────────────────────────────┐
+  ┌──────────────┐  │  Portfolio ROI                          │
+  │   18.2%      │  │  ─────────────────────────────────────  │
+  │   ROI ⓘ     │──│  Weighted average return across all     │
+  └──────────────┘  │  sold projects this year.               │
+                    │                                         │
+                    │  Calculation:                           │
+                    │  Total Profit / Total Investment        │
+                    │  $142,500 / $780,000 = 18.2%            │
+                    │                                         │
+                    │  ─────────────────────────────────────  │
+                    │  Target: 15%+ │ You're exceeding ✓      │
+                    └─────────────────────────────────────────┘
+```
+
+**Expandable Detail Rows**
+```
+┌─ Budget by Category (collapsed) ─────────────────────────────┐
+│  Kitchen           $52,000    $56,200    +$4,200  [▼]        │
+└──────────────────────────────────────────────────────────────┘
+                              ↓ click to expand
+┌─ Budget by Category (expanded) ──────────────────────────────┐
+│  Kitchen           $52,000    $56,200    +$4,200  [▲]        │
+│  ├─ 123 Oak St     $18,000    $19,500    +$1,500             │
+│  ├─ 456 Elm Ave    $15,000    $17,200    +$2,200             │
+│  └─ 789 Pine Rd    $19,000    $19,500    +$500               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 5. Visual Hierarchy Refinements
+
+**Hero Metrics Emphasis**
+```css
+/* Primary metric (largest, most important) */
+.hero-metric-primary {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Secondary context */
+.hero-metric-label {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Trend indicator */
+.hero-metric-trend {
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+```
+
+**Status Indicator System**
+```
+Health Indicators (dot + background tint):
+
+●  On Track      → Green dot, light green bg    (success)
+●  Needs Review  → Yellow dot, light yellow bg  (warning)
+●  At Risk       → Red dot, light red bg        (destructive)
+◐  In Progress   → Blue dot, light blue bg      (primary)
+○  Not Started   → Gray dot, transparent bg     (muted)
+```
+
+**Card Depth Hierarchy**
+```
+Level 0: Page background       → --background
+Level 1: Section cards         → --card (subtle shadow)
+Level 2: Interactive elements  → --card (hover lift + shadow)
+Level 3: Modals/Dropdowns      → --popover (prominent shadow)
+```
+
+---
+
+### 6. Mobile-First Optimizations
+
+**Touch Targets**
+- Minimum 44x44px for all interactive elements
+- Cards have full-surface tap (not just buttons)
+- Swipe gestures for pipeline cards
+
+**Mobile Kanban**
+```
+┌─────────────────────────────────┐
+│  ← ANALYZING (2)    ●○○○ →     │  ← swipeable tabs
+├─────────────────────────────────┤
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │ 123 Oak Street            │  │
+│  │ Minneapolis               │  │
+│  │                           │  │
+│  │ ARV         MAO      ROI  │  │
+│  │ $285,000   $178,000  22%  │  │
+│  │                           │  │
+│  │ ← Swipe to move stage →   │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  ┌───────────────────────────┐  │
+│  │ 555 Walnut Ave            │  │
+│  │ ...                       │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  [+ Add Lead]                   │
+└─────────────────────────────────┘
+```
+
+**Bottom Navigation (Mobile)**
+```
+┌─────────────────────────────────┐
+│                                 │
+│        (Dashboard content)      │
+│                                 │
+├─────────────────────────────────┤
+│  🏠       📋       📅      ⚙   │
+│ Home   Pipeline  Timeline  More │
+└─────────────────────────────────┘
+```
+
+**Pull-to-Refresh**
+- Native-feeling refresh animation
+- Shows "Last updated: 2 min ago" timestamp
+
+---
+
+### 7. Personalization & Preferences
+
+**Dashboard Layout Customization**
+```
+┌─ Customize Dashboard ───────────────────────────────────────┐
+│                                                              │
+│  Visible Sections           Order (drag to reorder)         │
+│  ─────────────────          ─────────────────────           │
+│  ☑ Portfolio Health         ≡ Portfolio Health              │
+│  ☑ Attention Needed         ≡ Pipeline                      │
+│  ☑ Pipeline                 ≡ Timeline                      │
+│  ☑ Timeline                 ≡ Financial Performance         │
+│  ☑ Financial Performance    ≡ Budget Insights               │
+│  ☐ Budget Insights          ≡ Attention Needed              │
+│                                                              │
+│  Default View: [Kanban ▼]                                   │
+│                                                              │
+│  [Reset to Default]                    [Save Preferences]   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Saved Filters**
+```
+My Filters: [All Projects ▼] [+ Save Current]
+
+Dropdown:
+┌──────────────────────────┐
+│ All Projects             │
+│ ─────────────────────────│
+│ ★ High ROI (>20%)        │
+│ ★ Minneapolis Only       │
+│ ★ Active Rehabs          │
+│ ─────────────────────────│
+│ + Create New Filter      │
+└──────────────────────────┘
+```
+
+---
+
+### 8. Accessibility (a11y)
+
+**Focus Management**
+- Visible focus rings (2px solid, offset)
+- Skip-to-content link
+- Focus trap in modals
+- Logical tab order
+
+**Screen Reader Support**
+```html
+<!-- Announce dynamic updates -->
+<div role="status" aria-live="polite">
+  Portfolio ROI updated to 18.2%
+</div>
+
+<!-- Descriptive labels -->
+<div
+  role="progressbar"
+  aria-valuenow="80"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-label="789 Pine Rd rehab progress: 80% complete"
+>
+```
+
+**Color Contrast**
+- All text meets WCAG AA (4.5:1 ratio)
+- Status indicators have icon + color (not color alone)
+- High contrast mode support
+
+**Reduced Motion**
+```css
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+---
+
+### 9. Delight & Polish Details
+
+**Celebration Moments**
+```
+When a project is marked "Sold":
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│                    🎉                                       │
+│                                                             │
+│           Congratulations!                                  │
+│                                                             │
+│     123 Oak Street sold for $285,000                        │
+│     Profit: $48,500 (18.2% ROI)                             │
+│                                                             │
+│     [View Summary]        [Add to Portfolio History]        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+Subtle confetti animation (3 seconds, respects reduced motion)
+```
+
+**Subtle Sound Feedback** (optional, off by default)
+- Soft "pop" when moving cards between columns
+- Success chime on project sold
+- Gentle alert tone for attention items
+
+**Seasonal/Contextual Touches**
+- Show YTD performance prominently in Q4
+- "Great month!" badge when above-average performance
+- Subtle theme variations (not seasonal decorations)
+
+---
+
+### 10. Performance Perception
+
+**Optimistic Updates**
+```typescript
+// Card moves immediately, syncs in background
+const moveProject = async (projectId, newStatus) => {
+  // 1. Update UI immediately
+  updateLocalState(projectId, newStatus);
+
+  // 2. Sync to server
+  try {
+    await api.updateProject(projectId, { status: newStatus });
+  } catch {
+    // 3. Rollback on failure
+    rollbackState(projectId);
+    toast.error("Couldn't update status. Please try again.");
+  }
+};
+```
+
+**Perceived Speed**
+- Show skeleton immediately (< 100ms)
+- Load above-the-fold content first
+- Defer analytics charts until scrolled into view
+- Use `startTransition` for non-urgent updates
+
+**Offline Indicator**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ⚡ You're offline. Changes will sync when reconnected.     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Success Metrics
 
 The dashboard is successful if users can:
@@ -732,3 +1157,10 @@ The dashboard is successful if users can:
 3. ✅ Understand where they're making/losing money
 4. ✅ Navigate to any project in ≤ 2 clicks
 5. ✅ Trust the numbers (calculations match project details)
+
+### UX Quality Metrics
+6. ✅ First Contentful Paint < 1.5s
+7. ✅ Time to Interactive < 3s
+8. ✅ Zero layout shifts after initial render
+9. ✅ All interactions respond < 100ms
+10. ✅ Lighthouse Accessibility score > 95
