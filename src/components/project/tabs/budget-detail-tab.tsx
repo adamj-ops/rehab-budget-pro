@@ -2,24 +2,65 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconX } from '@tabler/icons-react';
+import { IconCheck, IconChevronDown, IconChevronRight, IconEdit, IconPlus, IconTrash, IconX, IconUser } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn, formatCurrency, groupBy } from '@/lib/utils';
-import type { BudgetItem } from '@/types';
-import { BUDGET_CATEGORIES, STATUS_LABELS } from '@/types';
+import type { BudgetCategory, BudgetItem, Vendor } from '@/types';
+import { BUDGET_CATEGORIES, STATUS_LABELS, VENDOR_TRADE_LABELS } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
   contingencyPercent: number;
+  vendors?: Vendor[];
 }
+
+interface NewItemForm {
+  item: string;
+  description: string;
+  underwriting_amount: number;
+  forecast_amount: number;
+  actual_amount: number;
+}
+
+const defaultNewItem: NewItemForm = {
+  item: '',
+  description: '',
+  underwriting_amount: 0,
+  forecast_amount: 0,
+  actual_amount: 0,
+};
 
 export function BudgetDetailTab({
   projectId,
   budgetItems,
   contingencyPercent,
+  vendors = [],
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
@@ -27,6 +68,13 @@ export function BudgetDetailTab({
   );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<BudgetItem>>({});
+
+  // Add item state
+  const [addingToCategory, setAddingToCategory] = useState<BudgetCategory | null>(null);
+  const [newItemForm, setNewItemForm] = useState<NewItemForm>(defaultNewItem);
+
+  // Delete confirmation state
+  const [itemToDelete, setItemToDelete] = useState<BudgetItem | null>(null);
 
   // Group items by category
   const itemsByCategory = useMemo(() => {
@@ -95,6 +143,105 @@ export function BudgetDetailTab({
     },
   });
 
+  // Mutation for creating budget items
+  const createMutation = useMutation({
+    mutationFn: async (newItem: { category: BudgetCategory; data: NewItemForm }) => {
+      const supabase = getSupabaseClient();
+
+      // Get the max sort_order for this category
+      const categoryItems = budgetItems.filter(item => item.category === newItem.category);
+      const maxSortOrder = categoryItems.length > 0
+        ? Math.max(...categoryItems.map(item => item.sort_order || 0))
+        : 0;
+
+      const { data, error } = await supabase
+        .from('budget_items')
+        .insert({
+          project_id: projectId,
+          category: newItem.category,
+          item: newItem.data.item,
+          description: newItem.data.description || null,
+          qty: 1,
+          unit: 'ls',
+          rate: 0,
+          underwriting_amount: newItem.data.underwriting_amount,
+          forecast_amount: newItem.data.forecast_amount,
+          actual_amount: newItem.data.actual_amount || null,
+          cost_type: 'both',
+          status: 'not_started',
+          priority: 'medium',
+          sort_order: maxSortOrder + 1,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Budget item added');
+      setAddingToCategory(null);
+      setNewItemForm(defaultNewItem);
+    },
+    onError: (error) => {
+      console.error('Error creating budget item:', error);
+      toast.error('Failed to add budget item');
+    },
+  });
+
+  // Mutation for deleting budget items
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from('budget_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Budget item deleted');
+      setItemToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Error deleting budget item:', error);
+      toast.error('Failed to delete budget item');
+    },
+  });
+
+  // Mutation for assigning vendor to budget item (quick assign without full edit mode)
+  const assignVendorMutation = useMutation({
+    mutationFn: async ({ itemId, vendorId }: { itemId: string; vendorId: string | null }) => {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('budget_items')
+        .update({ vendor_id: vendorId })
+        .eq('id', itemId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Vendor assigned');
+    },
+    onError: (error) => {
+      console.error('Error assigning vendor:', error);
+      toast.error('Failed to assign vendor');
+    },
+  });
+
+  // Get vendor by ID helper
+  const getVendorById = (vendorId: string | null) => {
+    if (!vendorId) return null;
+    return vendors.find((v) => v.id === vendorId) || null;
+  };
+
   const handleEdit = (item: BudgetItem) => {
     setEditingItemId(item.id);
     setEditValues({
@@ -102,6 +249,7 @@ export function BudgetDetailTab({
       forecast_amount: item.forecast_amount,
       actual_amount: item.actual_amount,
       status: item.status,
+      vendor_id: item.vendor_id,
     });
   };
 
@@ -116,6 +264,38 @@ export function BudgetDetailTab({
 
   const handleInputChange = (field: keyof BudgetItem, value: number | string) => {
     setEditValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleStartAdd = (category: BudgetCategory) => {
+    setAddingToCategory(category);
+    setNewItemForm(defaultNewItem);
+  };
+
+  const handleCancelAdd = () => {
+    setAddingToCategory(null);
+    setNewItemForm(defaultNewItem);
+  };
+
+  const handleSaveNewItem = () => {
+    if (!addingToCategory || !newItemForm.item.trim()) {
+      toast.error('Item name is required');
+      return;
+    }
+    createMutation.mutate({ category: addingToCategory, data: newItemForm });
+  };
+
+  const handleNewItemChange = (field: keyof NewItemForm, value: string | number) => {
+    setNewItemForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDeleteClick = (item: BudgetItem) => {
+    setItemToDelete(item);
+  };
+
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      deleteMutation.mutate(itemToDelete.id);
+    }
   };
 
   return (
@@ -167,6 +347,7 @@ export function BudgetDetailTab({
               <tr className="table-header">
                 <th className="text-left p-3 w-8 sticky left-0 bg-muted"></th>
                 <th className="text-left p-3 min-w-[200px] sticky left-8 bg-muted">Item</th>
+                <th className="text-left p-3 w-32">Vendor</th>
                 <th className="text-right p-3 w-28 bg-blue-50">
                   <div className="font-semibold">Underwriting</div>
                   <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
@@ -182,7 +363,7 @@ export function BudgetDetailTab({
                 <th className="text-right p-3 w-28">Forecast Var</th>
                 <th className="text-right p-3 w-28">Actual Var</th>
                 <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-20"></th>
+                <th className="text-center p-3 w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -190,6 +371,7 @@ export function BudgetDetailTab({
                 const isExpanded = expandedCategories.has(category.value);
                 const catForecastVar = category.forecast - category.underwriting;
                 const catActualVar = category.actual - (category.forecast > 0 ? category.forecast : category.underwriting);
+                const isAddingToThis = addingToCategory === category.value;
 
                 return (
                   <Fragment key={category.value}>
@@ -211,6 +393,7 @@ export function BudgetDetailTab({
                           ({category.items.length} items)
                         </span>
                       </td>
+                      <td className="p-3"></td>
                       <td className="p-3 text-right font-medium bg-blue-50/50 tabular-nums">
                         {formatCurrency(category.underwriting)}
                       </td>
@@ -241,6 +424,8 @@ export function BudgetDetailTab({
                       const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
                       const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
 
+                      const itemVendor = getVendorById(item.vendor_id);
+
                       return (
                         <tr key={item.id} className="border-t hover:bg-muted/50">
                           <td className="p-3 sticky left-0 bg-background"></td>
@@ -251,6 +436,68 @@ export function BudgetDetailTab({
                                 <p className="text-xs text-muted-foreground">{item.description}</p>
                               )}
                             </div>
+                          </td>
+                          {/* Vendor Cell */}
+                          <td className="p-3">
+                            {vendors.length > 0 ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                      'h-8 justify-start text-left font-normal w-full max-w-[120px] truncate',
+                                      !itemVendor && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {itemVendor ? (
+                                      <span className="truncate">{itemVendor.name}</span>
+                                    ) : (
+                                      <span className="flex items-center gap-1">
+                                        <IconUser className="h-3 w-3" />
+                                        <span className="text-xs">Assign</span>
+                                      </span>
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-2" align="start">
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground px-2 py-1">
+                                      Select Vendor
+                                    </p>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full justify-start text-muted-foreground"
+                                      onClick={() => assignVendorMutation.mutate({ itemId: item.id, vendorId: null })}
+                                    >
+                                      <IconX className="h-3 w-3 mr-2" />
+                                      No Vendor
+                                    </Button>
+                                    {vendors
+                                      .filter((v) => v.status === 'active')
+                                      .map((vendor) => (
+                                        <Button
+                                          key={vendor.id}
+                                          variant={item.vendor_id === vendor.id ? 'secondary' : 'ghost'}
+                                          size="sm"
+                                          className="w-full justify-start"
+                                          onClick={() => assignVendorMutation.mutate({ itemId: item.id, vendorId: vendor.id })}
+                                        >
+                                          <div className="truncate">
+                                            <span className="font-medium">{vendor.name}</span>
+                                            <span className="text-xs text-muted-foreground ml-1">
+                                              ({VENDOR_TRADE_LABELS[vendor.trade]})
+                                            </span>
+                                          </div>
+                                        </Button>
+                                      ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
                           </td>
                           <td className="p-3 text-right">
                             {isEditing ? (
@@ -351,25 +598,136 @@ export function BudgetDetailTab({
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(item)}
-                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
-                              >
-                                <IconEdit className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(item)}
+                                  className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                                  title="Edit item"
+                                >
+                                  <IconEdit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteClick(item)}
+                                  className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+                                  title="Delete item"
+                                >
+                                  <IconTrash className="h-4 w-4" />
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
                       );
                     })}
 
+                    {/* Add Item Row (when adding to this category) */}
+                    {isExpanded && isAddingToThis && (
+                      <tr className="border-t bg-green-50/30">
+                        <td className="p-3 sticky left-0 bg-green-50/30"></td>
+                        <td className="p-3 sticky left-8 bg-green-50/30">
+                          <div className="space-y-1">
+                            <input
+                              type="text"
+                              value={newItemForm.item}
+                              onChange={(e) => handleNewItemChange('item', e.target.value)}
+                              placeholder="Item name *"
+                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                              autoFocus
+                            />
+                            <input
+                              type="text"
+                              value={newItemForm.description}
+                              onChange={(e) => handleNewItemChange('description', e.target.value)}
+                              placeholder="Description (optional)"
+                              className="w-full p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary text-xs"
+                            />
+                          </div>
+                        </td>
+                        <td className="p-3 text-xs text-muted-foreground">
+                          -
+                        </td>
+                        <td className="p-3 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newItemForm.underwriting_amount || ''}
+                            onChange={(e) => handleNewItemChange('underwriting_amount', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                          />
+                        </td>
+                        <td className="p-3 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newItemForm.forecast_amount || ''}
+                            onChange={(e) => handleNewItemChange('forecast_amount', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                          />
+                        </td>
+                        <td className="p-3 text-right">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newItemForm.actual_amount || ''}
+                            onChange={(e) => handleNewItemChange('actual_amount', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+                          />
+                        </td>
+                        <td className="p-3"></td>
+                        <td className="p-3"></td>
+                        <td className="p-3"></td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={handleSaveNewItem}
+                              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+                              disabled={createMutation.isPending}
+                              title="Save item"
+                            >
+                              <IconCheck className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelAdd}
+                              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+                              disabled={createMutation.isPending}
+                              title="Cancel"
+                            >
+                              <IconX className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {/* Add Item Button Row */}
+                    {isExpanded && !isAddingToThis && (
+                      <tr className="border-t">
+                        <td className="p-2 sticky left-0 bg-background"></td>
+                        <td colSpan={9} className="p-2">
+                          <button
+                            type="button"
+                            onClick={() => handleStartAdd(category.value)}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <IconPlus className="h-3 w-3" />
+                            Add item to {category.label}
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+
                     {/* Empty State */}
-                    {isExpanded && category.items.length === 0 && (
+                    {isExpanded && category.items.length === 0 && !isAddingToThis && (
                       <tr>
-                        <td colSpan={9} className="p-4 text-center text-sm text-muted-foreground">
-                          No items in this category.{' '}
-                          <button type="button" className="text-primary hover:underline">Add one</button>
+                        <td colSpan={10} className="p-4 text-center text-sm text-muted-foreground">
+                          No items in this category.
                         </td>
                       </tr>
                     )}
@@ -383,6 +741,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-medium sticky left-8 bg-muted/50">
                   Contingency ({contingencyPercent}%)
                 </td>
+                <td></td>
                 <td colSpan={2}></td>
                 <td className="p-3 text-right font-medium">
                   {formatCurrency(contingencyAmount)}
@@ -396,6 +755,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-semibold text-primary sticky left-8 bg-primary/10">
                   GRAND TOTAL
                 </td>
+                <td></td>
                 <td className="p-3 text-right font-semibold">
                   {formatCurrency(underwritingTotal)}
                 </td>
@@ -439,6 +799,28 @@ export function BudgetDetailTab({
           <span>Actual: Real spend</span>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Budget Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{itemToDelete?.item}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

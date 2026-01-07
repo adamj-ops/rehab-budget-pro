@@ -1,9 +1,38 @@
 'use client';
 
-import type { Vendor, BudgetItem } from '@/types';
+import { useState, useMemo } from 'react';
+import type { Vendor, BudgetItem, VendorTrade } from '@/types';
 import { VENDOR_TRADE_LABELS } from '@/types';
 import { formatCurrency, cn } from '@/lib/utils';
-import { IconPlus, IconStar, IconPhone, IconMail, IconCheck, IconX } from '@tabler/icons-react';
+import {
+  IconPlus,
+  IconStar,
+  IconPhone,
+  IconMail,
+  IconCheck,
+  IconX,
+  IconEdit,
+  IconTrash,
+  IconSearch,
+  IconFilter,
+} from '@tabler/icons-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { VendorDialog, DeleteVendorDialog } from '@/components/vendor';
 
 interface VendorsTabProps {
   projectId: string;
@@ -12,39 +41,131 @@ interface VendorsTabProps {
 }
 
 export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps) {
+  // Dialog states
+  const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tradeFilter, setTradeFilter] = useState<VendorTrade | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'do_not_use'>('all');
+
   // Get vendors used in this project
   const projectVendorIds = new Set(
     budgetItems.filter((item) => item.vendor_id).map((item) => item.vendor_id)
   );
-  
-  const projectVendors = vendors.filter((v) => projectVendorIds.has(v.id));
-  const otherVendors = vendors.filter((v) => !projectVendorIds.has(v.id));
 
   // Calculate totals per vendor (using forecast if available, otherwise underwriting)
-  const vendorTotals = new Map<string, { budget: number; actual: number; items: number }>();
-  budgetItems.forEach((item) => {
-    if (item.vendor_id) {
-      const existing = vendorTotals.get(item.vendor_id) || { budget: 0, actual: 0, items: 0 };
-      const itemBudget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
-      vendorTotals.set(item.vendor_id, {
-        budget: existing.budget + itemBudget,
-        actual: existing.actual + (item.actual_amount || 0),
-        items: existing.items + 1,
-      });
-    }
-  });
+  const vendorTotals = useMemo(() => {
+    const totals = new Map<string, { budget: number; actual: number; items: number }>();
+    budgetItems.forEach((item) => {
+      if (item.vendor_id) {
+        const existing = totals.get(item.vendor_id) || { budget: 0, actual: 0, items: 0 };
+        const itemBudget = item.forecast_amount > 0 ? item.forecast_amount : item.underwriting_amount;
+        totals.set(item.vendor_id, {
+          budget: existing.budget + itemBudget,
+          actual: existing.actual + (item.actual_amount || 0),
+          items: existing.items + 1,
+        });
+      }
+    });
+    return totals;
+  }, [budgetItems]);
+
+  // Filter vendors
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((vendor) => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = vendor.name.toLowerCase().includes(query);
+        const matchesContact = vendor.contact_name?.toLowerCase().includes(query);
+        const matchesTrade = VENDOR_TRADE_LABELS[vendor.trade].toLowerCase().includes(query);
+        if (!matchesName && !matchesContact && !matchesTrade) {
+          return false;
+        }
+      }
+
+      // Trade filter
+      if (tradeFilter !== 'all' && vendor.trade !== tradeFilter) {
+        return false;
+      }
+
+      // Status filter
+      if (statusFilter !== 'all' && vendor.status !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [vendors, searchQuery, tradeFilter, statusFilter]);
+
+  // Separate project vendors and directory vendors
+  const projectVendors = filteredVendors.filter((v) => projectVendorIds.has(v.id));
+  const otherVendors = filteredVendors.filter((v) => !projectVendorIds.has(v.id));
+
+  // Get unique trades for filter
+  const uniqueTrades = useMemo(() => {
+    const trades = new Set<VendorTrade>();
+    vendors.forEach((v) => trades.add(v.trade));
+    return Array.from(trades).sort((a, b) =>
+      VENDOR_TRADE_LABELS[a].localeCompare(VENDOR_TRADE_LABELS[b])
+    );
+  }, [vendors]);
+
+  const handleAddVendor = () => {
+    setSelectedVendor(null);
+    setVendorDialogOpen(true);
+  };
+
+  const handleEditVendor = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setVendorDialogOpen(true);
+  };
+
+  const handleDeleteVendor = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setDeleteDialogOpen(true);
+  };
 
   const renderVendorCard = (vendor: Vendor, isProjectVendor: boolean) => {
     const totals = vendorTotals.get(vendor.id);
-    
+
     return (
       <div
         key={vendor.id}
         className={cn(
-          'rounded-lg border bg-card p-4',
+          'rounded-lg border bg-card p-4 group relative',
           isProjectVendor && 'border-primary/30'
         )}
       >
+        {/* Action buttons (top right) */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Actions</span>
+                <IconEdit className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditVendor(vendor)}>
+                <IconEdit className="h-4 w-4 mr-2" />
+                Edit Vendor
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleDeleteVendor(vendor)}
+                className="text-destructive focus:text-destructive"
+              >
+                <IconTrash className="h-4 w-4 mr-2" />
+                Delete Vendor
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div className="flex items-start justify-between mb-3">
           <div>
             <h4 className="font-medium">{vendor.name}</h4>
@@ -147,12 +268,6 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
           >
             {vendor.status === 'do_not_use' ? 'Do Not Use' : vendor.status}
           </span>
-          
-          {!isProjectVendor && (
-            <button className="text-xs text-primary hover:underline">
-              Add to project
-            </button>
-          )}
         </div>
       </div>
     );
@@ -161,29 +276,75 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-medium">Project Vendors</h3>
+          <h3 className="font-medium">Vendor Management</h3>
           <p className="text-sm text-muted-foreground">
-            {projectVendors.length} vendors assigned to this project
+            {vendors.length} vendors in directory, {projectVendors.length} assigned to this project
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <Button onClick={handleAddVendor} className="gap-2">
           <IconPlus className="h-4 w-4" />
           Add Vendor
-        </button>
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search vendors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={tradeFilter} onValueChange={(v) => setTradeFilter(v as VendorTrade | 'all')}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <IconFilter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="All Trades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Trades</SelectItem>
+            {uniqueTrades.map((trade) => (
+              <SelectItem key={trade} value={trade}>
+                {VENDOR_TRADE_LABELS[trade]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="do_not_use">Do Not Use</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Project Vendors */}
-      {projectVendors.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
+      {projectVendors.length > 0 && (
+        <div>
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
+            Project Vendors ({projectVendors.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
+          </div>
         </div>
-      ) : (
+      )}
+
+      {/* Empty State for Project Vendors */}
+      {projectVendors.length === 0 && (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground mb-2">No vendors assigned yet</p>
           <p className="text-sm text-muted-foreground">
-            Assign vendors to budget items or add new vendors to your directory.
+            Assign vendors to budget items in the Budget Detail tab.
           </p>
         </div>
       )}
@@ -191,12 +352,56 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
       {/* All Vendors Directory */}
       {otherVendors.length > 0 && (
         <div>
-          <h3 className="font-medium mb-4">Vendor Directory</h3>
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
+            Vendor Directory ({otherVendors.length})
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {otherVendors.map((vendor) => renderVendorCard(vendor, false))}
           </div>
         </div>
       )}
+
+      {/* No Results */}
+      {filteredVendors.length === 0 && vendors.length > 0 && (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-muted-foreground mb-2">No vendors match your filters</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSearchQuery('');
+              setTradeFilter('all');
+              setStatusFilter('all');
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      )}
+
+      {/* Empty Directory */}
+      {vendors.length === 0 && (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <p className="text-muted-foreground mb-4">Your vendor directory is empty</p>
+          <Button onClick={handleAddVendor} className="gap-2">
+            <IconPlus className="h-4 w-4" />
+            Add Your First Vendor
+          </Button>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <VendorDialog
+        open={vendorDialogOpen}
+        onOpenChange={setVendorDialogOpen}
+        vendor={selectedVendor}
+      />
+
+      <DeleteVendorDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        vendor={selectedVendor}
+      />
     </div>
   );
 }

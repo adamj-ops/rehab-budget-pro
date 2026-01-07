@@ -94,6 +94,7 @@ export function ProjectTabs({
             projectId={project.id}
             budgetItems={budgetItems}
             contingencyPercent={project.contingency_percent}
+            vendors={vendors}
           />
         )}
         
