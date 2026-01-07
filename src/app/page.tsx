@@ -112,7 +112,7 @@ export default async function HomePage() {
 
         {/* Projects Grid */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4">Projects</h2>
+          <h2 className="section-header-lg mb-0">Projects</h2>
         </div>
 
         {!projects || projects.length === 0 ? (

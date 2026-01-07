@@ -163,14 +163,14 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-medium">Project Vendors</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className="section-title-group">
+          <h3 className="section-header">Project Vendors</h3>
+          <p className="section-subheader">
             {projectVendors.length} vendors assigned to this project
           </p>
         </div>
         <Button>
-          <IconPlus className="h-4 w-4" />
+          <IconPlus className="icon-sm" />
           Add Vendor
         </Button>
       </div>
@@ -192,7 +192,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
       {/* All Vendors Directory */}
       {otherVendors.length > 0 && (
         <div>
-          <h3 className="font-medium mb-4">Vendor Directory</h3>
+          <h3 className="section-header">Vendor Directory</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {otherVendors.map((vendor) => renderVendorCard(vendor, false))}
           </div>

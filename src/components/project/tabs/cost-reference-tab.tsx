@@ -48,9 +48,9 @@ export function CostReferenceTab({ costReference }: CostReferenceTabProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h3 className="font-medium mb-1">Minneapolis Metro Cost Reference</h3>
-        <p className="text-sm text-muted-foreground">
+      <div className="section-title-group">
+        <h3 className="section-header">Minneapolis Metro Cost Reference</h3>
+        <p className="section-subheader">
           2025 pricing guide for common rehab items. Use these as estimates when building your budget.
         </p>
       </div>

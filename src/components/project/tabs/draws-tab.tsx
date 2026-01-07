@@ -100,9 +100,9 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Draw Schedule</h3>
+        <h3 className="section-header mb-0">Draw Schedule</h3>
         <Button>
-          <IconPlus className="h-4 w-4" />
+          <IconPlus className="icon-sm" />
           Add Draw
         </Button>
       </div>
