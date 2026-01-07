@@ -4,11 +4,23 @@ Simple, focused budget tracking for fix & flip real estate projects.
 
 ## Features
 
-- **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories, 180+ line items with Qty × Rate formulas
-- **Vendors**: Master vendor directory with trade, ratings, contact info
-- **Draws**: Payment tracking with milestones and progress visualization
+### Project Management
+- **Deal Summary**: Property info, ARV, purchase price, three-column budget comparison, profit/ROI by scenario, MAO with spread analysis
+- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual), inline add/edit/delete, photo attachments, drag & drop reordering
+- **Vendors**: Full CRUD vendor directory with trade, ratings, contact info, assign vendors to budget items
+- **Draws**: Full CRUD draw management with status workflow (pending → approved → paid), public vendor submission form
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
+
+### Multi-Project Dashboard
+- **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
+- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed)
+- **Smart Project Cards**: Context-aware content based on project status
+- **Search**: Filter projects across the pipeline
+- **Gantt Timeline**: Visual project timelines (planned)
+- **Risk Alerts**: Over-budget/behind-schedule detection (planned)
+- **Budget Insights**: Category-level spending analysis (planned)
+
+See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and implementation plan.
 
 ## Tech Stack
 
@@ -17,6 +29,9 @@ Simple, focused budget tracking for fix & flip real estate projects.
 - **Database**: Supabase (PostgreSQL)
 - **State**: Zustand + React Query
 - **Icons**: Tabler Icons
+- **Animations**: Framer Motion
+- **Charts**: Recharts
+- **Drag & Drop**: @dnd-kit
 
 ## Getting Started
 
@@ -59,13 +74,29 @@ Open [http://localhost:3000](http://localhost:3000)
 rehab-budget-pro/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── page.tsx           # Home (projects list)
+│   │   ├── page.tsx           # Home / Dashboard
 │   │   ├── layout.tsx         # Root layout
 │   │   ├── globals.css        # Tailwind + custom styles
 │   │   └── projects/
+│   │       ├── new/
+│   │       │   └── page.tsx   # New project form
 │   │       └── [id]/
 │   │           └── page.tsx   # Project detail page
 │   ├── components/
+│   │   ├── dashboard/         # Dashboard components (planned)
+│   │   │   ├── portfolio-health.tsx
+│   │   │   ├── attention-needed.tsx
+│   │   │   ├── project-timeline.tsx
+│   │   │   ├── project-pipeline.tsx
+│   │   │   ├── financial-performance.tsx
+│   │   │   └── budget-insights.tsx
+│   │   ├── kanban/            # Kanban board (planned)
+│   │   │   ├── kanban-board.tsx
+│   │   │   ├── project-card.tsx
+│   │   │   └── kanban-filters.tsx
+│   │   ├── timeline/          # Gantt timeline (planned)
+│   │   │   ├── gantt-chart.tsx
+│   │   │   └── timeline-controls.tsx
 │   │   ├── project/
 │   │   │   ├── project-tabs.tsx
 │   │   │   └── tabs/
@@ -81,11 +112,16 @@ rehab-budget-pro/
 │   │   │   ├── client.ts      # Browser client
 │   │   │   └── server.ts      # Server client
 │   │   ├── store.ts           # Zustand stores
-│   │   └── utils.ts           # Helpers, formatters
+│   │   ├── utils.ts           # Helpers, formatters
+│   │   ├── timeline-utils.ts  # Timeline data transforms (planned)
+│   │   └── kanban-utils.ts    # Kanban helpers (planned)
 │   └── types/
 │       └── index.ts           # TypeScript types
+├── docs/
+│   └── DASHBOARD_PLAN.md      # Dashboard wireframes & specs
 └── supabase/
     ├── schema.sql             # Database schema
+    ├── migrations/            # Schema migrations
     └── seed.sql               # Cost reference data
 ```
 
@@ -107,14 +143,63 @@ rehab-budget-pro/
 
 ## Roadmap
 
-- [ ] Add/edit budget items inline
-- [ ] Add/edit vendors
-- [ ] Create/update draws
-- [ ] Photo attachments
-- [ ] Project creation form
+### Phase 1: Core Features ✅ Complete
+- [x] Project creation with Google Places autocomplete
+- [x] Three-column budget model (Underwriting → Forecast → Actual)
+- [x] Budget category templates with auto-seeding
+- [x] Add/edit/delete budget items inline
+- [x] Deal summary with three-column budget comparison
+- [x] MAO calculation using underwriting budget
+- [x] Profit/ROI calculations by scenario
+- [x] Vendor CRUD (create, edit, delete, assign to items)
+- [x] Draw management with CRUD operations
+- [x] Public vendor draw request form (shareable link)
+- [x] Photo attachments for line items (receipts, progress, before/after)
+- [x] Drag & drop reordering of budget items within categories
+
+### Phase 2: Dashboard - Kanban Pipeline ✅ Complete
+- [x] Install framer-motion, recharts dependencies
+- [x] Portfolio health hero metrics (Total ARV, Capital Deployed, ROI, Active Projects)
+- [x] Kanban board with drag-drop status updates
+- [x] Search projects across pipeline
+- [x] Project cards with context-aware content per status
+
+### Phase 3: Dashboard - Gantt Timeline
+- [ ] Project timeline visualization
+- [ ] Milestone and dependency tracking
+- [ ] Zoom controls and filtering
+- [ ] Today marker and progress indicators
+
+### Phase 4: Dashboard - Risk & Alerts
+- [ ] Attention needed section
+- [ ] Over budget detection
+- [ ] Behind schedule detection
+- [ ] Contingency burn tracking
+
+### Phase 5: Financial Analytics
+- [ ] ROI distribution charts
+- [ ] Profit by project visualization
+- [ ] Time-period filtering
+- [ ] Export to PDF/Excel
+
+### Phase 6: Budget Intelligence
+- [ ] Category breakdown across portfolio
+- [ ] Cost benchmarking vs Minneapolis data
+- [ ] Trend analysis
+
+### Future
 - [ ] User authentication
+- [ ] Real-time collaboration
+- [ ] Mobile app
+
+## Documentation
+
+### In Progress
+- [ ] User authentication
+- [ ] Project creation form
 - [ ] Export to Excel/PDF
 - [ ] Multi-project dashboard
+- [ ] Notifications and reminders
 
 ## License
 

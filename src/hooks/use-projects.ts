@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import { useProjectsListRealtime, useProjectRealtime } from '@/hooks/use-realtime';
 import type { Project, ProjectSummary } from '@/types';
 
 // Query keys
@@ -20,6 +22,9 @@ export const projectKeys = {
  * @returns An array of project summaries (`ProjectSummary[]`) ordered by `created_at` descending.
  */
 export function useProjects() {
+  // Enable real-time subscription for projects list
+  useProjectsListRealtime();
+
   return useQuery({
     queryKey: projectKeys.lists(),
     queryFn: async () => {
@@ -44,6 +49,9 @@ export function useProjects() {
  * @returns The project record matching `id`
  */
 export function useProject(id: string) {
+  // Enable real-time subscription for this project
+  useProjectRealtime(id, !!id);
+
   return useQuery({
     queryKey: projectKeys.detail(id),
     queryFn: async () => {
@@ -70,6 +78,9 @@ export function useProject(id: string) {
  * @returns The query result containing the project's summary record
  */
 export function useProjectSummary(id: string) {
+  // Enable real-time subscription for this project
+  useProjectRealtime(id, !!id);
+
   return useQuery({
     queryKey: projectKeys.summary(id),
     queryFn: async () => {
@@ -130,17 +141,18 @@ interface CreateProjectInput {
  */
 export function useCreateProject() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (input: CreateProjectInput) => {
       const supabase = getSupabaseClient();
 
-      // Create the project
+      // Create the project with authenticated user's ID
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
           ...input,
-          user_id: null, // TODO: Replace when auth is implemented
+          user_id: user?.id ?? null, // Use authenticated user's ID
         })
         .select()
         .single();

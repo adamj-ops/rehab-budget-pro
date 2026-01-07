@@ -16,7 +16,7 @@ declare module '@tanstack/react-table' {
   }
 }
 
-interface EditableCellProps<TData, TValue> extends CellContext<TData, TValue> {
+interface EditableCellProps<TData, TValue> extends Pick<CellContext<TData, TValue>, 'getValue' | 'row' | 'column' | 'table'> {
   type?: 'text' | 'number' | 'select' | 'date' | 'email' | 'phone' | 'currency'
   options?: { label: string; value: string }[]
   editable?: boolean
@@ -291,6 +291,8 @@ export function CurrencyCell<TData, TValue>({
   row,
   column,
   table,
+  cell,
+  renderValue,
   editable = true,
   showVariance = false,
   compareValue,
@@ -329,6 +331,8 @@ export function CurrencyCell<TData, TValue>({
       row={row}
       column={column}
       table={table}
+      cell={cell}
+      renderValue={renderValue}
       type='currency'
       editable={editable}
       onSave={onSave as any}
