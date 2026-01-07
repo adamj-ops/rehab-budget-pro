@@ -291,6 +291,8 @@ export function CurrencyCell<TData, TValue>({
   row,
   column,
   table,
+  cell,
+  renderValue,
   editable = true,
   showVariance = false,
   compareValue,
@@ -329,6 +331,8 @@ export function CurrencyCell<TData, TValue>({
       row={row}
       column={column}
       table={table}
+      cell={cell}
+      renderValue={renderValue}
       type='currency'
       editable={editable}
       onSave={onSave as any}

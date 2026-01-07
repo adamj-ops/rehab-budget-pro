@@ -62,13 +62,31 @@ interface BudgetDetailTabProps {
   budgetItems: BudgetItem[];
   vendors: Vendor[];
   contingencyPercent: number;
+  vendors?: Vendor[];
 }
+
+interface NewItemForm {
+  item: string;
+  description: string;
+  underwriting_amount: number;
+  forecast_amount: number;
+  actual_amount: number;
+}
+
+const defaultNewItem: NewItemForm = {
+  item: '',
+  description: '',
+  underwriting_amount: 0,
+  forecast_amount: 0,
+  actual_amount: 0,
+};
 
 export function BudgetDetailTab({
   projectId,
   budgetItems,
   vendors,
   contingencyPercent,
+  vendors = [],
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
   const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
@@ -941,6 +959,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-medium bg-muted/50" colSpan={2}>
                   Contingency ({contingencyPercent}%)
                 </td>
+                <td></td>
                 <td colSpan={2}></td>
                 <td className="p-3 text-right font-medium">
                   {formatCurrency(contingencyAmount)}
@@ -956,6 +975,7 @@ export function BudgetDetailTab({
                 <td className="p-3 font-semibold text-primary bg-primary/10" colSpan={2}>
                   GRAND TOTAL
                 </td>
+                <td></td>
                 <td className="p-3 text-right font-semibold">
                   {formatCurrency(underwritingTotal)}
                 </td>

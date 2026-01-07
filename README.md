@@ -4,6 +4,7 @@ Simple, focused budget tracking for fix & flip real estate projects.
 
 ## Features
 
+### Project Management
 - **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
 - **Budget Detail**: 18 categories with three-column budget model (Underwriting → Forecast → Actual)
   - Inline editing of amounts and status
@@ -21,6 +22,15 @@ Simple, focused budget tracking for fix & flip real estate projects.
   - Progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
+### Multi-Project Dashboard (Planned)
+- **Portfolio Health**: Total ARV, capital deployed, average ROI at a glance
+- **Kanban Pipeline**: Drag-drop projects through stages (Lead → Analyzing → Contract → Rehab → Listed → Sold)
+- **Gantt Timeline**: Visual project timelines with milestones and dependencies
+- **Risk Alerts**: Automatic detection of over-budget and behind-schedule projects
+- **Budget Insights**: Category-level spending analysis across all projects
+
+See [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) for detailed wireframes and implementation plan.
+
 ## Tech Stack
 
 - **Framework**: Next.js 15 + React 19
@@ -28,6 +38,8 @@ Simple, focused budget tracking for fix & flip real estate projects.
 - **Database**: Supabase (PostgreSQL)
 - **State**: Zustand + React Query
 - **Icons**: Tabler Icons
+- **Animations**: Framer Motion (planned)
+- **Charts**: Recharts (planned)
 
 ## Getting Started
 
@@ -70,13 +82,29 @@ Open [http://localhost:3000](http://localhost:3000)
 rehab-budget-pro/
 ├── src/
 │   ├── app/                    # Next.js App Router
-│   │   ├── page.tsx           # Home (projects list)
+│   │   ├── page.tsx           # Home / Dashboard
 │   │   ├── layout.tsx         # Root layout
 │   │   ├── globals.css        # Tailwind + custom styles
 │   │   └── projects/
+│   │       ├── new/
+│   │       │   └── page.tsx   # New project form
 │   │       └── [id]/
 │   │           └── page.tsx   # Project detail page
 │   ├── components/
+│   │   ├── dashboard/         # Dashboard components (planned)
+│   │   │   ├── portfolio-health.tsx
+│   │   │   ├── attention-needed.tsx
+│   │   │   ├── project-timeline.tsx
+│   │   │   ├── project-pipeline.tsx
+│   │   │   ├── financial-performance.tsx
+│   │   │   └── budget-insights.tsx
+│   │   ├── kanban/            # Kanban board (planned)
+│   │   │   ├── kanban-board.tsx
+│   │   │   ├── project-card.tsx
+│   │   │   └── kanban-filters.tsx
+│   │   ├── timeline/          # Gantt timeline (planned)
+│   │   │   ├── gantt-chart.tsx
+│   │   │   └── timeline-controls.tsx
 │   │   ├── project/
 │   │   │   ├── project-tabs.tsx
 │   │   │   └── tabs/
@@ -92,11 +120,16 @@ rehab-budget-pro/
 │   │   │   ├── client.ts      # Browser client
 │   │   │   └── server.ts      # Server client
 │   │   ├── store.ts           # Zustand stores
-│   │   └── utils.ts           # Helpers, formatters
+│   │   ├── utils.ts           # Helpers, formatters
+│   │   ├── timeline-utils.ts  # Timeline data transforms (planned)
+│   │   └── kanban-utils.ts    # Kanban helpers (planned)
 │   └── types/
 │       └── index.ts           # TypeScript types
+├── docs/
+│   └── DASHBOARD_PLAN.md      # Dashboard wireframes & specs
 └── supabase/
     ├── schema.sql             # Database schema
+    ├── migrations/            # Schema migrations
     └── seed.sql               # Cost reference data
 ```
 

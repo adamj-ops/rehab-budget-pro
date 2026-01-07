@@ -479,6 +479,32 @@ export function VendorsTab({
           isSelected && 'ring-2 ring-primary border-primary'
         )}
       >
+        {/* Action buttons (top right) */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Actions</span>
+                <IconEdit className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditVendor(vendor)}>
+                <IconEdit className="h-4 w-4 mr-2" />
+                Edit Vendor
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleDeleteVendor(vendor)}
+                className="text-destructive focus:text-destructive"
+              >
+                <IconTrash className="h-4 w-4 mr-2" />
+                Delete Vendor
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div className="flex items-start justify-between mb-3">
           {isSelectionMode && (
             <div className="mr-3 mt-0.5">
@@ -692,7 +718,7 @@ export function VendorsTab({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-medium">Project Vendors</h3>
+          <h3 className="font-medium">Vendor Management</h3>
           <p className="text-sm text-muted-foreground">
             {projectVendors.length} vendor{projectVendors.length !== 1 && 's'}{' '}
             assigned to this project
@@ -842,9 +868,14 @@ export function VendorsTab({
       </div>
 
       {/* Project Vendors */}
-      {projectVendors.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
+      {projectVendors.length > 0 && (
+        <div>
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
+            Project Vendors ({projectVendors.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projectVendors.map((vendor) => renderVendorCard(vendor, true))}
+          </div>
         </div>
       ) : filteredVendors.length === 0 && vendors.length > 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
@@ -864,7 +895,7 @@ export function VendorsTab({
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground mb-2">No vendors assigned yet</p>
           <p className="text-sm text-muted-foreground">
-            Assign vendors to budget items or add new vendors to your directory.
+            Assign vendors to budget items in the Budget Detail tab.
           </p>
         </div>
       )}
@@ -872,7 +903,9 @@ export function VendorsTab({
       {/* All Vendors Directory */}
       {otherVendors.length > 0 && (
         <div>
-          <h3 className="font-medium mb-4">Vendor Directory</h3>
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
+            Vendor Directory ({otherVendors.length})
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {otherVendors.map((vendor) => renderVendorCard(vendor, false))}
           </div>
