@@ -6,6 +6,8 @@ import {
   IconReportAnalytics,
   IconListDetails,
   IconReceipt2,
+  IconUsers,
+  IconChartPie,
   IconLoader2,
   IconDownload,
   IconEye,
@@ -26,6 +28,8 @@ import {
   ExecutiveSummaryReport,
   DetailedBudgetReport,
   DrawScheduleReport,
+  VendorSummaryReport,
+  InvestmentAnalysisReport,
 } from '@/lib/pdf/templates';
 import type { ProjectSummary, BudgetItem, Draw, Vendor } from '@/types';
 
@@ -37,7 +41,7 @@ interface ExportDialogProps {
   trigger?: React.ReactNode;
 }
 
-type ReportType = 'executive-summary' | 'detailed-budget' | 'draw-schedule';
+type ReportType = 'executive-summary' | 'detailed-budget' | 'draw-schedule' | 'vendor-summary' | 'investment-analysis';
 
 interface ReportOption {
   id: ReportType;
@@ -56,11 +60,25 @@ const REPORT_OPTIONS: ReportOption[] = [
     audience: 'Investors, Leadership',
   },
   {
+    id: 'investment-analysis',
+    name: 'Investment Analysis',
+    description: 'MAO calculations, profit projections, and risk assessment',
+    icon: <IconChartPie className="h-6 w-6" />,
+    audience: 'Investors, Acquisition Team',
+  },
+  {
     id: 'detailed-budget',
     name: 'Detailed Budget',
     description: 'Full breakdown of all categories and line items with variances',
     icon: <IconListDetails className="h-6 w-6" />,
     audience: 'Project Managers, Contractors',
+  },
+  {
+    id: 'vendor-summary',
+    name: 'Vendor Summary',
+    description: 'Vendor assignments, payments, and contact details by trade',
+    icon: <IconUsers className="h-6 w-6" />,
+    audience: 'Project Managers, Accounting',
   },
   {
     id: 'draw-schedule',
@@ -99,11 +117,29 @@ export function ExportDialog({
             />
           );
           break;
+        case 'investment-analysis':
+          component = (
+            <InvestmentAnalysisReport
+              project={project}
+              budgetItems={budgetItems}
+            />
+          );
+          break;
         case 'detailed-budget':
           component = (
             <DetailedBudgetReport
               project={project}
               budgetItems={budgetItems}
+              vendors={vendors}
+            />
+          );
+          break;
+        case 'vendor-summary':
+          component = (
+            <VendorSummaryReport
+              project={project}
+              budgetItems={budgetItems}
+              draws={draws}
               vendors={vendors}
             />
           );
@@ -147,7 +183,7 @@ export function ExportDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Export Report</DialogTitle>
           <DialogDescription>
@@ -155,7 +191,7 @@ export function ExportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-4">
+        <div className="space-y-3 py-4 overflow-y-auto flex-1">
           {REPORT_OPTIONS.map((report) => (
             <button
               key={report.id}
