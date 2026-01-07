@@ -51,6 +51,7 @@
   - Color-coded variances (red = over budget, green = under)
   - Summary cards showing all three budgets + total variance
   - Legend explaining the three-column model
+  - **Vendor assignment column** - assign vendors to budget line items inline
 
 ### Storage Setup
 - ✅ Documentation for Supabase Storage bucket setup in [supabase/storage-setup.md](supabase/storage-setup.md)
@@ -58,90 +59,197 @@
   - RLS policies for secure access
   - File constraints: 10MB max, jpg/png/webp/pdf accepted
 
-## 📋 Migration Applied
+---
 
-Run this to verify:
-```bash
-supabase db push
-```
+## ✅ Completed (Phase 2 - Vendor Management)
 
-The migration `20260106040000_add_three_column_budget_model.sql` has been applied, which:
-1. Adds three-column budget fields to `budget_items`
-2. Creates `line_item_photos` table
-3. Creates `budget_category_templates` table with seed data
-4. Updates database views for three-column support
+### Full Vendor CRUD System
+- ✅ **Vendor Form Sheet** (`src/components/project/vendor-form-sheet.tsx`)
+  - Add and edit vendors with comprehensive fields
+  - 14 fields across 5 sections (Basic Info, Contact, Qualifications, Ratings, Notes)
+  - Trade type dropdown with 21 options
+  - Status selector (Active, Inactive, Do Not Use)
+  - Duplicate vendor detection with warnings
+
+- ✅ **Vendor Detail Sheet** (`src/components/project/vendor-detail-sheet.tsx`)
+  - Read-only detailed view of vendor information
+  - Shows all vendor details, qualifications, and ratings
+  - Displays project budget items assigned to vendor
+  - Integrated tags section
+  - Integrated contact history timeline
+
+- ✅ **Vendor Mutations Hook** (`src/hooks/use-vendor-mutations.ts`)
+  - Create, update, delete operations with React Query
+  - **Optimistic updates** for instant UI feedback
+  - Dependency checking before delete (warns if vendor is assigned to budget items)
+  - Automatic cache invalidation
+
+### Vendor UX Improvements
+- ✅ **Vendor Assignment to Budget Items**
+  - Added vendor dropdown column to budget detail table
+  - Quick vendor assignment without entering full edit mode
+
+- ✅ **Sort Options** (5 modes)
+  - Name A-Z / Name Z-A
+  - Highest Rated
+  - Recently Added
+  - Most Used (by budget item count)
+
+- ✅ **Clear Rating Button**
+  - Click same star to toggle off
+  - X button to clear rating
+  - Works in both standalone and form contexts
+
+- ✅ **Inline Quick Edit**
+  - Edit phone/email directly on vendor cards
+  - No need to open full form for common updates
+  - Cancel/Save buttons inline
+
+- ✅ **Duplicate Detection**
+  - Warns when adding vendors with similar names
+  - Warns when phone number matches existing vendor
+  - Non-blocking - user can still proceed
+
+### Vendor Tags/Categories
+- ✅ **Database Schema** (`supabase/migrations/003_vendor_tags_and_contacts.sql`)
+  - `vendor_tags` table with name, color, description
+  - `vendor_tag_assignments` junction table
+  - RLS policies for user-scoped data
+
+- ✅ **Tag Management UI** (`src/components/project/vendor-tag-selector.tsx`)
+  - 10 color options for tags
+  - Create new tags inline
+  - Assign/unassign tags with single click
+  - Tags display on vendor cards and detail sheet
+
+- ✅ **Tag Badge Component** (`src/components/ui/tag-badge.tsx`)
+  - Colored badges with remove button
+  - Size variants (sm/md)
+
+### Contact History
+- ✅ **Database Schema** (in `003_vendor_tags_and_contacts.sql`)
+  - `vendor_contacts` table with 11 contact types
+  - Support for follow-up reminders
+  - Optional project linking
+
+- ✅ **Contact History UI** (`src/components/project/vendor-contact-history.tsx`)
+  - Timeline view grouped by date
+  - Contact type icons
+  - Log calls, emails, site visits, quotes, payments
+  - Follow-up reminders with pending alerts
+  - Mark follow-ups as complete
+
+### Bulk Operations & Import/Export
+- ✅ **Bulk Selection Mode**
+  - Toggle selection mode with checkbox on vendor cards
+  - Select all / deselect all
+  - Visual highlight for selected vendors
+
+- ✅ **Bulk Actions**
+  - Bulk delete with confirmation
+  - Bulk export to CSV
+
+- ✅ **CSV Export**
+  - Export all vendors or selected only
+  - Proper escaping for commas, quotes, newlines
+  - All vendor fields included
+
+- ✅ **CSV Import**
+  - Upload CSV with validation
+  - Required columns: name, trade
+  - Supports all vendor fields
+  - Error reporting with success/failure counts
+
+---
+
+## 📋 Migrations Applied
+
+The following migrations should be run in Supabase SQL Editor:
+
+1. `supabase/migrations/20260106040000_add_three_column_budget_model.sql` - Three-column budget
+2. `supabase/migrations/003_vendor_tags_and_contacts.sql` - Vendor tags and contact history
+
+---
 
 ## 🎯 What Works Now
 
-1. **Create a new project** → Go to [http://localhost:3000](http://localhost:3000) → Click "New Project"
-   - Fill in street address (required - this becomes the project name)
-   - Fill in property details and financials
-   - On save, project is created with **18 pre-seeded budget categories**
+### Project Management
+1. **Create a new project** → Click "New Project"
+   - Enter street address (becomes project name)
+   - Auto-fills city, state, ZIP from Google Places
+   - Creates project with 18 pre-seeded budget categories
 
 2. **View project budget** → Click on a project → Budget Detail tab
-   - See all categories and line items
-   - Click edit icon (pencil) on any line item
-   - Update underwriting, forecast, or actual amounts
-   - Change item status (Not Started → In Progress → Complete)
-   - Click checkmark to save, X to cancel
+   - See all categories and line items in three-column view
+   - Click edit icon to update underwriting, forecast, or actual amounts
+   - Assign vendors to line items via dropdown
 
-3. **Three-column workflow**:
-   - **Underwriting**: Fill in during deal analysis (pre-contract)
-   - **Forecast**: Update after walkthrough and getting contractor bids
-   - **Actual**: Track real spend as invoices come in
+### Vendor Management
+3. **Manage vendors** → Vendors tab
+   - Add new vendors with full details form
+   - View vendor details in slide-out sheet
+   - Quick edit phone/email inline
+   - Search and filter by trade
+   - Sort by name, rating, recent, or most used
 
-## 🚧 Next Steps (Phase 2 - Enhanced UX)
+4. **Organize with tags**
+   - Create custom colored tags
+   - Assign tags to vendors
+   - View tags on vendor cards
+
+5. **Track contact history**
+   - Log calls, emails, meetings, site visits
+   - Set follow-up reminders
+   - View timeline in vendor detail
+
+6. **Bulk operations**
+   - Enable selection mode
+   - Select multiple vendors
+   - Bulk delete or export
+
+7. **Import/Export**
+   - Export all vendors to CSV
+   - Import vendors from CSV
+
+---
+
+## 🚧 Next Steps (Remaining Features)
 
 ### High Priority
-
-1. **Drag & Drop Reordering** (@dnd-kit already installed)
-   - Reorder categories within project
-   - Reorder line items within category
-   - Update `sort_order` field on drop
-
-2. **Add/Delete Line Items**
-   - "Add Item" button per category
-   - Inline add form or modal
-   - Delete confirmation dialog
-
-3. **Photo Upload**
-   - Upload button per line item
-   - Photo gallery modal
-   - Photo type selector (receipt/progress/before/after)
-   - Integration with Supabase Storage
-
-4. **Deal Summary Tab** - Update for three-column model
-   - Show underwriting vs forecast vs actual budgets
-   - Profit calculations based on actual spend
-   - MAO calculation using underwriting
+1. **Photo Upload** - Upload receipts and progress photos to budget items
+2. **Draw Management** - Full CRUD for payment draws
+3. **Drag & Drop Reordering** - Reorder categories and line items
 
 ### Medium Priority
+4. **PDF Exports** - Underwriting summary and investor packets
+5. **Authentication** - User login and protected routes
 
-5. **Vendor Management**
-   - Link vendors to line items
-   - Track vendor performance
-   - Payment history
+### Low Priority
+6. **Budget Templates** - Save and reuse budget structures
+7. **Real-time Updates** - Supabase subscriptions for live sync
 
-6. **Draw Management**
-   - Create draw requests
-   - Select line items to include
-   - Track submission → approval → funded
+---
 
-7. **Cost Reference Integration**
-   - Quick lookup of Minneapolis metro pricing
-   - "Apply to budget" button to copy reference costs
+## 📁 Key Files - Vendor Management
 
-### Low Priority (Phase 3)
+### Hooks
+- `src/hooks/use-vendor-mutations.ts` - CRUD with optimistic updates
+- `src/hooks/use-vendor-tags.ts` - Tag management
+- `src/hooks/use-vendor-contacts.ts` - Contact history
 
-8. **PDF Exports** (@react-pdf/renderer already installed)
-   - Underwriting Summary PDF (for lender/investor)
-   - Full Investor Packet PDF (comprehensive report)
+### Components
+- `src/components/project/tabs/vendors-tab.tsx` - Main vendors tab
+- `src/components/project/vendor-form-sheet.tsx` - Add/Edit form
+- `src/components/project/vendor-detail-sheet.tsx` - Detail view
+- `src/components/project/vendor-tag-selector.tsx` - Tag popover
+- `src/components/project/vendor-contact-history.tsx` - Contact timeline
+- `src/components/ui/tag-badge.tsx` - Tag display
+- `src/components/ui/star-rating.tsx` - Rating input with clear
 
-9. **Advanced Features**
-   - Budget version history
-   - Budget templates (save and reuse category structures)
-   - Bulk edit operations
-   - Export to Excel
+### Database
+- `supabase/migrations/003_vendor_tags_and_contacts.sql` - Tags and contacts schema
+
+---
 
 ## 🔧 Development Commands
 
@@ -149,89 +257,22 @@ The migration `20260106040000_add_three_column_budget_model.sql` has been applie
 # Run dev server
 npm run dev
 
-# Apply migrations
-supabase db push
+# Build for production
+npm run build
 
-# Reset database (CAUTION: deletes all data)
-psql $SUPABASE_CONNECTION_STRING < supabase/reset.sql
-
-# Seed cost reference data
-psql $SUPABASE_CONNECTION_STRING < supabase/seed.sql
+# Lint code
+npm run lint
 ```
 
-## 📁 Key Files Modified/Created
-
-### Database
-- `supabase/migrations/20260106040000_add_three_column_budget_model.sql` (NEW)
-- `supabase/storage-setup.md` (NEW)
-
-### Types
-- `src/types/index.ts` (UPDATED)
-
-### Pages
-- `src/app/projects/new/page.tsx` (NEW - simplified form with Google Places)
-
-### Components & Hooks
-- `src/components/project/tabs/budget-detail-tab.tsx` (REWRITTEN)
-- `src/components/ui/label.tsx` (NEW)
-- `src/components/ui/select.tsx` (NEW)
-- `src/hooks/use-places-autocomplete.ts` (NEW - Google Places integration)
-
-### Updated for Three-Column Model
-- `src/components/project/project-tabs.tsx` (UPDATED)
-- `src/components/project/tabs/vendors-tab.tsx` (UPDATED)
-- `src/lib/store.ts` (UPDATED)
-- `src/app/page.tsx` (UPDATED)
-
-## 🎨 Three-Column Budget Model Explained
-
-| Column | Usage | Example |
-|--------|-------|---------|
-| **Underwriting** | Initial deal analysis before going under contract | Kitchen: $15,000 based on rough estimates |
-| **Forecast** | Updated after walkthrough and getting contractor bids | Kitchen: $18,500 after getting cabinet quote |
-| **Actual** | Real spend as invoices come in | Kitchen: $19,200 after final payment |
-
-**Variances**:
-- **Forecast Variance**: $18,500 - $15,000 = +$3,500 (scope creep)
-- **Actual Variance**: $19,200 - $18,500 = +$700 (execution variance)
-- **Total Variance**: $19,200 - $15,000 = +$4,200 (total overrun from original estimate)
-
-This helps investors understand:
-- Did we miss costs during underwriting?
-- Did we stick to our post-walkthrough budget?
-- How accurate are we at estimating deals?
+---
 
 ## 🐛 Known Issues / Tech Debt
 
 1. **Authentication not implemented** - `user_id` is currently null in all inserts
 2. **No RLS enforcement yet** - Need to implement auth first
-3. **No real-time updates** - Budget changes require manual refresh
+3. **No real-time updates** - Changes require manual refresh
 4. **Mobile responsive** - Budget table needs horizontal scroll optimization
-5. **Error boundaries** - Add error handling for failed mutations
 
-## 📝 Notes
+---
 
-- All dependencies already installed (dnd-kit, react-pdf, react-dropzone, etc.)
-- Database schema supports all planned features
-- Three-column model is fully functional and ready to use
-- Category seeding works automatically on project creation
-- Form simplified: Street address is used as project name (no redundant field)
-
-## ✅ Recent Changes
-
-### Google Places API Integration (Latest)
-- Added Google Places Autocomplete to address input field
-- **Removed city, state, and ZIP input fields** - they're auto-filled from address selection
-- Auto-filled location shown as green checkmark below address field
-- Custom React hook (`use-places-autocomplete`) handles API integration
-- Updated `.env` to use `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY`
-- Loads Google Maps API directly (no npm dependencies needed)
-- Added TypeScript type definitions for Google Maps API
-- Added comprehensive documentation in [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md)
-
-### Form Simplification
-- Removed separate "Project Name" field from new project form
-- Street address is now the required field and becomes the project name
-- Added validation to prevent empty/whitespace-only addresses
-- Updated placeholder and help text to clarify this behavior
-- Form submission uses `formData.address.trim()` as the project name
+*Last updated: January 2026*
