@@ -423,16 +423,304 @@ src/
 
 ---
 
+## Library Integration: event-timeline-roadmap
+
+We'll use the [event-timeline-roadmap](https://github.com/aliezzahn/event-timeline-roadmap) library for timeline visualizations. This shadcn/ui-compatible library provides:
+
+- **Gantt Chart** - Project timeline visualization with dependencies
+- **Kanban Board** - Pipeline view with drag-drop (enhanced)
+- **Vertical Timeline** - Milestone tracking
+
+### Installation
+
+```bash
+npm install framer-motion lucide-react recharts
+# shadcn/ui components (if not already installed)
+npx shadcn@latest add badge tooltip dialog select progress separator scroll-area
+```
+
+### Dependencies Already Present
+- ✅ React 19
+- ✅ Next.js 15
+- ✅ Tailwind CSS v4
+- ✅ shadcn/ui (Mira theme)
+- ✅ next-themes
+- ➕ Need: framer-motion, recharts
+
+---
+
+## Section 6: Project Timeline (Gantt Chart)
+
+This section provides a timeline view of all active projects, showing overlapping rehabs and key milestones.
+
+### Wireframe
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PROJECT TIMELINE                               [Zoom: 1x ▼] [Filter ▼]     │
+│                                                                             │
+│  2024                           2025                                        │
+│  ──────────────────────────────────────────────────────────────────────────│
+│  Nov    Dec    Jan    Feb    Mar    Apr    May    Jun    Jul    Aug        │
+│                                                                             │
+│  123 Oak St ──────────────────────────────────                              │
+│  ├─ Contract ●                                                              │
+│  ├─ Close ●───────[████████ REHAB ████████]───● List                       │
+│  └─ Target Sale ─────────────────────────────────────● Sold                │
+│                                                                             │
+│  456 Elm Ave         ────────────────────────────                           │
+│  ├─ Contract ●                                                              │
+│  ├─ Close ●──────[██████ REHAB ██░░░░]                                     │
+│  └─                                    ● Today (In Progress)               │
+│                                                                             │
+│  789 Pine Rd                    ─────────────────────                       │
+│  └─ Analyzing... ○─────────────● Expected Close                            │
+│                                                                             │
+│  ──────────────────────────────────────────────────────────────────────────│
+│  Legend: ● Completed  ○ Planned  [████] Rehab Duration  ░░ Remaining       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Gantt Chart Data Mapping
+
+Map our `ProjectSummary` to the library's `EnhancedEvent` format:
+
+```typescript
+// Our project dates → Timeline events
+type ProjectTimelineEvent = {
+  id: string;                    // project.id
+  title: string;                 // project.name
+  isChecked: boolean;            // status === 'sold'
+  type: 'acquisition' | 'rehab' | 'sale';
+  description: string;           // project.address
+  assignee: string;              // project.city
+  dependencies: string[];        // Previous milestone IDs
+
+  // Extended for our use case
+  startDate: Date;               // contract_date | close_date | list_date
+  endDate: Date;                 // close_date | target_complete_date | sale_date
+  progress: number;              // completed_items / total_items * 100
+  status: ProjectStatus;         // For color coding
+  financials: {
+    arv: number;
+    budget: number;
+    actual: number;
+    roi: number;
+  };
+};
+
+// Transform function
+function projectToTimelineEvents(project: ProjectSummary): ProjectTimelineEvent[] {
+  return [
+    {
+      id: `${project.id}-acquisition`,
+      title: project.name,
+      type: 'acquisition',
+      startDate: project.contract_date,
+      endDate: project.close_date,
+      isChecked: !!project.close_date && new Date(project.close_date) < new Date(),
+      // ...
+    },
+    {
+      id: `${project.id}-rehab`,
+      title: project.name,
+      type: 'rehab',
+      startDate: project.rehab_start_date || project.close_date,
+      endDate: project.target_complete_date,
+      progress: (project.completed_items / project.total_items) * 100,
+      dependencies: [`${project.id}-acquisition`],
+      // ...
+    },
+    {
+      id: `${project.id}-sale`,
+      title: project.name,
+      type: 'sale',
+      startDate: project.list_date,
+      endDate: project.sale_date,
+      dependencies: [`${project.id}-rehab`],
+      // ...
+    },
+  ];
+}
+```
+
+### Gantt Features
+- **Zoom controls**: 0.5x to 2x for different time scales
+- **Color by status**: Green (completed), Yellow (in progress), Gray (planned)
+- **Dependency lines**: Show acquisition → rehab → sale flow
+- **Click to expand**: Opens project detail dialog
+- **Today marker**: Vertical line showing current date
+
+---
+
+## Section 7: Enhanced Kanban Pipeline
+
+Using the library's Kanban component with our project data.
+
+### Wireframe
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PIPELINE                        [Search...] [Filter by: All ▼] [Sort ▼]    │
+│                                                                             │
+│  ┌─ ANALYZING (2) ───┐  ┌─ CONTRACTED (2) ──┐  ┌─ IN REHAB (3) ───┐  ┌─ LISTED (1) ────┐
+│  │                   │  │                   │  │                   │  │                  │
+│  │ ┌───────────────┐ │  │ ┌───────────────┐ │  │ ┌───────────────┐ │  │ ┌──────────────┐│
+│  │ │ 123 Oak St    │ │  │ │ 456 Elm Ave   │ │  │ │ 789 Pine Rd   │ │  │ │ 321 Birch    ││
+│  │ │               │ │  │ │               │ │  │ │               │ │  │ │              ││
+│  │ │ 🏠 SFH 3/2    │ │  │ │ 🏠 SFH 4/2    │ │  │ │ 🏠 Duplex     │ │  │ │ $310,000     ││
+│  │ │ ARV: $285K    │ │  │ │ Close: Jan 20 │ │  │ │               │ │  │ │              ││
+│  │ │ MAO: $178K    │ │  │ │ ARV: $195K    │ │  │ │ ████████░░ 80%│ │  │ │ DOM: 12      ││
+│  │ │               │ │  │ │               │ │  │ │ On schedule ✓ │ │  │ │ 3 showings   ││
+│  │ │ ROI: 22% ✓    │ │  │ │ ROI: 18% ✓    │ │  │ │ ROI: 16% ✓    │ │  │ │              ││
+│  │ │ ────────────  │ │  │ │ ────────────  │ │  │ │ ────────────  │ │  │ │ ROI: 19% ✓   ││
+│  │ │ [Analyze] [→] │ │  │ │ [View] [→]    │ │  │ │ [View] [→]    │ │  │ │ [View]       ││
+│  │ └───────────────┘ │  │ └───────────────┘ │  │ └───────────────┘ │  │ └──────────────┘│
+│  │                   │  │                   │  │                   │  │                  │
+│  │ ┌───────────────┐ │  │ ┌───────────────┐ │  │ ┌───────────────┐ │  │                  │
+│  │ │ 555 Walnut    │ │  │ │ 654 Maple     │ │  │ │ 987 Cedar     │ │  │                  │
+│  │ │ ...           │ │  │ │ ...           │ │  │ │ ██████████ ✓  │ │  │                  │
+│  │ └───────────────┘ │  │ └───────────────┘ │  │ │ Ready to list │ │  │                  │
+│  │                   │  │                   │  │ └───────────────┘ │  │                  │
+│  │ + Add Lead       │  │                   │  │                   │  │                  │
+│  └───────────────────┘  └───────────────────┘  └───────────────────┘  └──────────────────┘
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Kanban Data Mapping
+
+```typescript
+type KanbanColumn = {
+  id: ProjectStatus;
+  title: string;
+  projects: ProjectSummary[];
+};
+
+const PIPELINE_COLUMNS: KanbanColumn[] = [
+  { id: 'lead', title: 'Leads', projects: [] },
+  { id: 'analyzing', title: 'Analyzing', projects: [] },
+  { id: 'under_contract', title: 'Under Contract', projects: [] },
+  { id: 'in_rehab', title: 'In Rehab', projects: [] },
+  { id: 'listed', title: 'Listed', projects: [] },
+];
+
+// Card content varies by column
+function getCardContent(project: ProjectSummary, column: ProjectStatus) {
+  switch (column) {
+    case 'lead':
+    case 'analyzing':
+      return { arv: project.arv, mao: project.mao, roi: project.roi };
+    case 'under_contract':
+      return { closeDate: project.close_date, arv: project.arv, roi: project.roi };
+    case 'in_rehab':
+      return {
+        progress: project.completed_items / project.total_items,
+        scheduleStatus: getScheduleStatus(project),
+        roi: project.roi
+      };
+    case 'listed':
+      return {
+        listPrice: project.arv,
+        dom: getDaysOnMarket(project),
+        roi: project.roi
+      };
+  }
+}
+```
+
+### Kanban Features
+- **Drag-drop** between columns (updates project status)
+- **Search** across all projects
+- **Filter** by property type, ROI threshold, location
+- **Sort** by ARV, ROI, date
+- **Quick actions** per card (View, Move to next stage)
+
+---
+
+## Updated Component Architecture
+
+```
+src/
+  app/
+    page.tsx                        # Dashboard (main entry)
+    projects/
+      page.tsx                      # Projects list view
+      [id]/page.tsx                 # Project detail (existing)
+
+  components/
+    dashboard/
+      portfolio-health.tsx          # Hero metrics section
+      attention-needed.tsx          # Risk alerts
+      project-timeline.tsx          # Gantt chart (NEW - uses library)
+      project-pipeline.tsx          # Kanban view (NEW - uses library)
+      financial-performance.tsx     # ROI and profit section
+      budget-insights.tsx           # Category breakdown
+
+    timeline/
+      gantt-chart.tsx               # Wrapper around library component
+      timeline-event-card.tsx       # Custom event card for our data
+      timeline-controls.tsx         # Zoom, filter controls
+
+    kanban/
+      kanban-board.tsx              # Wrapper around library component
+      project-card.tsx              # Custom project card
+      kanban-column.tsx             # Column with header stats
+      kanban-filters.tsx            # Search, filter, sort controls
+
+  lib/
+    timeline-utils.ts               # Data transformation helpers
+    kanban-utils.ts                 # Drag-drop handlers, status updates
+```
+
+---
+
+## Updated Implementation Phases
+
+### Phase 1: Core Dashboard
+- Portfolio Health hero metrics
+- Basic project cards grid
+- Replace current home page
+
+### Phase 2: Kanban Pipeline (with library)
+- Install framer-motion, recharts dependencies
+- Implement Kanban board with project cards
+- Add search/filter/sort functionality
+- Drag-drop status updates
+
+### Phase 3: Gantt Timeline (with library)
+- Implement project timeline view
+- Map project dates to timeline events
+- Add zoom and filter controls
+- Dependency visualization
+
+### Phase 4: Risk & Alerts
+- Attention Needed section
+- Over budget / behind schedule detection
+- Contingency tracking
+
+### Phase 5: Financial Analytics
+- ROI distribution chart (using Recharts)
+- Profit by project visualization
+- Time-period filtering
+
+### Phase 6: Budget Intelligence
+- Category breakdown
+- Cost benchmarking against Minneapolis data
+- Trend analysis
+
+---
+
 ## What We're NOT Including (Intentionally)
 
 To keep the dashboard focused and not overwhelming:
 
 1. **No vendor performance section** - Valuable but secondary; accessible from Vendors tab
 2. **No detailed draw/payment tracking** - Project-level concern, not portfolio
-3. **No timeline/Gantt charts** - Complex, better as separate feature
-4. **No market data/trends** - Out of scope for MVP dashboard
-5. **No comparison to previous periods** - Add later based on user feedback
-6. **No export/reporting** - Future enhancement
+3. **No market data/trends** - Out of scope for MVP dashboard
+4. **No comparison to previous periods** - Add later based on user feedback
+5. **No export/reporting** - Future enhancement (library supports JSON/CSV export)
 
 ---
 
