@@ -3,11 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { ProjectStatus } from '@/types';
 import { PROJECT_STATUS_LABELS } from '@/types';
-import { IconPlus, IconHome, IconChartBar } from '@tabler/icons-react';
+import { IconPlus, IconHome } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -32,34 +31,22 @@ export default async function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center">
-              <IconChartBar className="h-6 w-6 text-accent-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold">Rehab Budget Pro</h1>
-              <p className="text-sm text-muted-foreground">Fix & Flip Budget Tracking</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button asChild>
-              <Link href="/projects/new">
-                <IconPlus className="h-4 w-4" />
-                New Project
-              </Link>
-            </Button>
-          </div>
+    <div className="flex-1 overflow-auto">
+      {/* Page Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <div className="flex h-14 items-center justify-between px-6">
+          <h1 className="text-lg font-semibold">Dashboard</h1>
+          <Button asChild>
+            <Link href="/projects/new">
+              <IconPlus className="h-4 w-4" />
+              New Project
+            </Link>
+          </Button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="p-6">
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card className="card-hover">
@@ -178,3 +165,4 @@ export default async function HomePage() {
     </div>
   );
 }
+

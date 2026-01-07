@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { IconArrowLeft, IconCheck } from '@tabler/icons-react';
+import { IconCheck } from '@tabler/icons-react';
 import type { ProjectStatus, PropertyType } from '@/types';
 import { usePlacesAutocomplete } from '@/hooks/use-places-autocomplete';
 
@@ -194,26 +194,19 @@ export default function NewProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/">
-                <IconArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-xl font-semibold">New Project</h1>
-              <p className="text-sm text-muted-foreground">Create a new fix & flip project</p>
-            </div>
+    <div className="flex-1 overflow-auto">
+      {/* Page Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <div className="flex h-14 items-center px-6">
+          <div>
+            <h1 className="text-lg font-semibold">New Project</h1>
+            <p className="text-xs text-muted-foreground">Create a new fix & flip project</p>
           </div>
         </div>
       </header>
 
       {/* Form */}
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="p-6 max-w-4xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Property Info */}
           <Card>
