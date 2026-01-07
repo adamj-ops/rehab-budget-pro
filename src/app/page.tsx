@@ -1,13 +1,4 @@
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import { formatCurrency, formatDate } from '@/lib/utils';
-import type { ProjectStatus } from '@/types';
-import { PROJECT_STATUS_LABELS } from '@/types';
-import { IconPlus, IconHome, IconChartBar } from '@tabler/icons-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { redirect } from 'next/navigation';
 
 export default async function HomePage() {
   const supabase = await createClient();

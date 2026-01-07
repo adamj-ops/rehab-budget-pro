@@ -6,9 +6,20 @@ Simple, focused budget tracking for fix & flip real estate projects.
 
 ### Project Management
 - **Deal Summary**: Property info, ARV, purchase price, profit/ROI calculations, MAO
-- **Budget Detail**: 18 categories with three-column model (Underwriting → Forecast → Actual)
-- **Vendors**: Master vendor directory with trade, ratings, contact info
-- **Draws**: Payment tracking with milestones and progress visualization
+- **Budget Detail**: 18 categories with three-column budget model (Underwriting → Forecast → Actual)
+  - Inline editing of amounts and status
+  - Drag & drop reordering of line items within categories
+  - Photo/receipt uploads per line item
+  - Bulk selection and status updates
+- **Vendors**: Master vendor directory with full CRUD
+  - Trade classification and ratings
+  - Tags and contact history tracking
+  - CSV import/export
+- **Draws**: Full payment schedule management
+  - Create, edit, delete draws
+  - Status transitions (Pending → Approved → Paid)
+  - Payment method and milestone tracking
+  - Progress visualization
 - **Cost Reference**: Minneapolis metro pricing guide for estimates
 
 ### Multi-Project Dashboard (Planned)
@@ -140,55 +151,21 @@ rehab-budget-pro/
 
 ## Roadmap
 
-### Phase 1: Core Features (Current)
-- [x] Project creation with Google Places autocomplete
-- [x] Three-column budget model (Underwriting → Forecast → Actual)
-- [x] Budget category templates with auto-seeding
-- [ ] Add/edit budget items inline
-- [ ] Photo attachments for line items
-- [ ] Add/edit vendors
+### Completed
+- [x] Add/edit budget items inline
+- [x] Drag & drop reorder line items
+- [x] Add/edit/delete vendors with tags
+- [x] CSV import/export for vendors
+- [x] Create/update/delete draws with status transitions
+- [x] Photo/receipt attachments for line items
+- [x] Bulk selection and status updates
 
-### Phase 2: Dashboard - Kanban Pipeline
-- [ ] Install framer-motion, recharts dependencies
-- [ ] Portfolio health hero metrics
-- [ ] Kanban board with drag-drop status updates
-- [ ] Search, filter, sort functionality
-- [ ] Project cards with context-aware content
-
-### Phase 3: Dashboard - Gantt Timeline
-- [ ] Project timeline visualization
-- [ ] Milestone and dependency tracking
-- [ ] Zoom controls and filtering
-- [ ] Today marker and progress indicators
-
-### Phase 4: Dashboard - Risk & Alerts
-- [ ] Attention needed section
-- [ ] Over budget detection
-- [ ] Behind schedule detection
-- [ ] Contingency burn tracking
-
-### Phase 5: Financial Analytics
-- [ ] ROI distribution charts
-- [ ] Profit by project visualization
-- [ ] Time-period filtering
-- [ ] Export to PDF/Excel
-
-### Phase 6: Budget Intelligence
-- [ ] Category breakdown across portfolio
-- [ ] Cost benchmarking vs Minneapolis data
-- [ ] Trend analysis
-
-### Future
+### In Progress
 - [ ] User authentication
-- [ ] Real-time collaboration
-- [ ] Mobile app
-
-## Documentation
-
-- [CLAUDE.md](CLAUDE.md) - Development guidelines for AI assistants
-- [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - Current implementation progress
-- [docs/DASHBOARD_PLAN.md](docs/DASHBOARD_PLAN.md) - Dashboard wireframes and UX specs
-- [GOOGLE_PLACES_SETUP.md](GOOGLE_PLACES_SETUP.md) - Google Places API configuration
+- [ ] Project creation form
+- [ ] Export to Excel/PDF
+- [ ] Multi-project dashboard
+- [ ] Notifications and reminders
 
 ## License
 
