@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   IconArrowLeft,
@@ -11,14 +11,15 @@ import {
   IconAlertTriangle,
   IconChartLine,
   IconSettings,
-  IconCode,
   IconPlayerPlay,
   IconDeviceFloppy,
   IconRefresh,
+  IconLoader2,
 } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MaoSettingsSection } from '@/components/settings/mao-settings-section';
 import { RoiSettingsSection } from '@/components/settings/roi-settings-section';
 import { ContingencySettingsSection } from '@/components/settings/contingency-settings-section';
@@ -28,13 +29,24 @@ import { ProfitSettingsSection } from '@/components/settings/profit-settings-sec
 import { VarianceSettingsSection } from '@/components/settings/variance-settings-section';
 import { FormulaPreview } from '@/components/settings/formula-preview';
 import { DEFAULT_CALCULATION_SETTINGS, type CalculationSettingsInput } from '@/types';
-import { formatCurrency, formatPercent } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useDefaultCalculationSettings, useSaveCalculationSettings } from '@/hooks/use-calculation-settings';
+import { formatCurrency } from '@/lib/utils';
 
 export default function CalculationsSettingsPage() {
   const [settings, setSettings] = useState<CalculationSettingsInput>(DEFAULT_CALCULATION_SETTINGS);
   const [activeTab, setActiveTab] = useState('mao');
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Load saved settings from database
+  const { data: savedSettings, isLoading } = useDefaultCalculationSettings();
+  const saveSettingsMutation = useSaveCalculationSettings();
+
+  // Update local state when saved settings are loaded
+  useEffect(() => {
+    if (savedSettings) {
+      setSettings(savedSettings);
+    }
+  }, [savedSettings]);
 
   // Sample deal for preview calculations
   const sampleDeal = {
@@ -51,15 +63,16 @@ export default function CalculationsSettingsPage() {
   };
 
   const handleSave = () => {
-    // TODO: Save to Supabase
-    toast.success('Calculation settings saved successfully');
-    setHasChanges(false);
+    saveSettingsMutation.mutate(settings, {
+      onSuccess: () => {
+        setHasChanges(false);
+      },
+    });
   };
 
   const handleReset = () => {
     setSettings(DEFAULT_CALCULATION_SETTINGS);
-    setHasChanges(false);
-    toast.info('Settings reset to defaults');
+    setHasChanges(true);
   };
 
   // Calculate preview values based on current settings
@@ -165,13 +178,17 @@ export default function CalculationsSettingsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleReset}>
+              <Button variant="outline" size="sm" onClick={handleReset} disabled={saveSettingsMutation.isPending}>
                 <IconRefresh className="h-4 w-4 mr-2" />
                 Reset to Defaults
               </Button>
-              <Button size="sm" onClick={handleSave} disabled={!hasChanges}>
-                <IconDeviceFloppy className="h-4 w-4 mr-2" />
-                Save Changes
+              <Button size="sm" onClick={handleSave} disabled={!hasChanges || saveSettingsMutation.isPending}>
+                {saveSettingsMutation.isPending ? (
+                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <IconDeviceFloppy className="h-4 w-4 mr-2" />
+                )}
+                {saveSettingsMutation.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>
@@ -179,6 +196,19 @@ export default function CalculationsSettingsPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        {isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-80 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Settings Panel */}
           <div className="lg:col-span-2">
@@ -309,6 +339,7 @@ export default function CalculationsSettingsPage() {
             <FormulaPreview settings={settings} activeTab={activeTab} />
           </div>
         </div>
+        )}
       </main>
     </div>
   );

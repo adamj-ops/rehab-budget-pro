@@ -1,7 +1,7 @@
 # Rehab Budget Pro - Project Status
 
 > Single source of truth for implementation status and roadmap.
-> Last updated: January 7, 2026
+> Last updated: January 8, 2026
 
 ## Quick Reference
 
@@ -14,9 +14,13 @@
 | Photo Upload | ✅ Complete |
 | Kanban Dashboard | ✅ Complete |
 | Drag & Drop Reordering | ✅ Complete |
-| PDF Exports | 🚧 Not Started |
-| Authentication | 🚧 Not Started |
-| Real-time Updates | 🚧 Not Started |
+| PDF Exports | ✅ Complete |
+| Authentication | ✅ Complete |
+| Real-time Updates | ✅ Complete |
+| Journal/Notes System | ✅ Complete |
+| Calculation Settings | ✅ Complete |
+| Budget Templates | ✅ Complete |
+| Excel Export | ✅ Complete |
 
 ---
 
@@ -61,56 +65,94 @@
 - **Kanban Pipeline** - Drag-drop projects between status columns
 - **Context-Aware Cards** - Different info per project status
 - **Search** - Filter across all columns
+- **View Toggle** - Switch between Kanban and Gantt/Timeline views
 
 ### Drag & Drop
 - **Budget Items** - Reorder within category
 - **Project Pipeline** - Move between status columns
 - **@dnd-kit** - Full accessibility support
 
+### Authentication
+- **Supabase Auth** - Email/password + Google OAuth
+- **Auth Pages** - `/auth/login`, `/auth/signup`, `/auth/callback`
+- **Route Protection** - Middleware guards authenticated routes
+- **RLS Enforcement** - All tables filtered by user_id
+- **Session Management** - Automatic state synchronization
+
+### PDF Exports
+- **6 Report Templates**:
+  - Executive Summary (for lenders)
+  - Detailed Budget (full three-column breakdown)
+  - Investment Analysis (deal metrics)
+  - Draw Schedule (with photos/receipts)
+  - Property Showcase (property photos/info)
+  - Vendor Summary (contacts and assignments)
+- **Export Dialog** - Template selection with descriptions
+- **Preview & Download** - Browser-based PDF generation
+
+### Real-time Updates
+- **Supabase Subscriptions** - Live data sync
+- **React Query Integration** - Auto cache invalidation
+- **Specialized Hooks**:
+  - `useRealtimeSubscription` - Core subscription hook
+  - `useProjectRealtime` - Project-specific updates
+  - `useProjectsListRealtime` - Dashboard updates
+  - `useVendorsRealtime` - Vendor directory sync
+- **Status Tracking** - Connection state monitoring
+
+### Journal/Notes System
+- **Rich Text Editor** - TipTap-based with full formatting
+- **Page Types** - Note, Meeting, Checklist, Idea, Research, Site Visit
+- **Auto-save** - 1-second debounce
+- **Project Tagging** - Associate notes with projects
+- **Pin/Archive** - Organize important notes
+- **Filtering** - By project, type, search
+
+### Calculation Settings
+- **7 Configuration Sections**:
+  - MAO (Maximum Allowable Offer) methods
+  - ROI calculation methods
+  - Contingency calculation methods
+  - Holding cost methods
+  - Selling cost settings
+  - Profit thresholds
+  - Variance/alert thresholds
+- **Live Preview** - Real-time calculation updates
+- **Formula Display** - Shows current calculation formula
+- **Database Persistence** - Settings saved per user
+
+### Budget Templates
+- **Template Library** - Browse and manage templates at `/templates`
+- **System Templates** - 4 pre-built templates (Light Cosmetic, Kitchen & Bath, Full Gut, Investor Flip)
+- **User Templates** - Save custom templates from any project
+- **Save as Template** - Select items to include, optionally include amounts
+- **Apply Template** - Apply to new or existing projects with conflict resolution (skip/merge/replace)
+- **Template Preview** - Full preview of template contents at `/templates/[id]`
+- **Favorites** - Star frequently used templates
+- **Filtering** - By scope level, property type, search
+- **Database Backed** - RLS-protected with user/system template separation
+
+### Excel Export
+- **4 Export Templates**:
+  - Budget Detail (full three-column breakdown with categories)
+  - Project Summary (financials, metrics, category totals)
+  - Vendor List (project vendors + full directory)
+  - Draw Schedule (draws by milestone and vendor)
+- **Multi-Sheet Workbooks** - Each export type includes relevant summary sheets
+- **Formatted Data** - Currency values, dates, and structured headers
+- **xlsx Library** - SheetJS for robust Excel file generation
+
 ---
 
-## 🚧 Next Up
-
-### High Priority
-
-#### PDF Exports
-- [ ] Underwriting Summary PDF (for lenders)
-- [ ] Full Project Report PDF (for investors)
-- [ ] Draw Request PDF (with photos/receipts)
-
-**Dependencies:** `@react-pdf/renderer` (installed)
-
-#### Authentication
-- [ ] Supabase Auth integration
-- [ ] Login/signup pages
-- [ ] Protected routes middleware
-- [ ] RLS policy enforcement
-
-**Files to create:**
-- `src/app/auth/login/page.tsx`
-- `src/app/auth/signup/page.tsx`
-- `src/middleware.ts`
+## 🚧 Future Enhancements
 
 ### Medium Priority
-
-#### Project Notes Integration
-- [ ] Rich text editor in Deal Summary tab
-- [ ] Auto-save on blur
-- [ ] Activity log/journal
-
-**Dependencies:** `@tiptap/*` (installed, components built)
-
-#### Real-time Updates
-- [ ] Supabase subscriptions
-- [ ] Live collaboration
-- [ ] Optimistic UI updates
+- [ ] Offline support (PWA)
 
 ### Low Priority
-
-- [ ] Budget Templates (save/reuse structures)
-- [ ] Excel Export
-- [ ] Mobile optimization
-- [ ] Offline support
+- [ ] Multi-user collaboration (real-time editing)
+- [ ] Mobile app (React Native)
+- [ ] AI-powered cost estimation
 
 ---
 
@@ -127,6 +169,11 @@
 | `use-photo-mutations.ts` | Upload, delete, signed URLs |
 | `use-projects.ts` | Project queries |
 | `use-dashboard.ts` | Portfolio aggregates |
+| `use-auth.ts` | Authentication state |
+| `use-realtime.ts` | Real-time subscriptions |
+| `use-journal.ts` | Journal CRUD |
+| `use-calculation-settings.ts` | Calculation settings persistence |
+| `use-budget-templates.ts` | Template CRUD, save/apply templates |
 
 ### Components
 | Component | Purpose |
@@ -141,6 +188,29 @@
 | `photo-upload-sheet.tsx` | Upload with drag & drop |
 | `kanban-pipeline.tsx` | Dashboard pipeline |
 | `portfolio-health.tsx` | Dashboard metrics |
+| `rich-text-editor.tsx` | TipTap journal editor |
+| `export-dialog.tsx` | PDF export selector |
+| `template-card.tsx` | Template library card |
+| `save-as-template-sheet.tsx` | Save project as template |
+| `apply-template-sheet.tsx` | Apply template to project |
+| `excel-export-dialog.tsx` | Excel export selector |
+
+### Pages
+| Route | Purpose |
+|-------|---------|
+| `/` | Home dashboard |
+| `/projects` | Projects list |
+| `/projects/[id]` | Project detail with tabs |
+| `/projects/new` | Create project |
+| `/pipeline` | Kanban view |
+| `/timeline` | Gantt view |
+| `/journal` | Notes list |
+| `/journal/[id]` | Note editor |
+| `/templates` | Template library |
+| `/templates/[id]` | Template preview |
+| `/settings/calculations` | Calculation settings |
+| `/auth/login` | Sign in |
+| `/auth/signup` | Sign up |
 
 ### Database
 | File | Purpose |
@@ -148,15 +218,6 @@
 | `supabase/schema.sql` | Main schema |
 | `supabase/migrations/` | Schema changes |
 | `supabase/seed.sql` | Cost reference data |
-
----
-
-## 🐛 Known Issues
-
-1. **Auth not implemented** - `user_id` is null in all inserts
-2. **No RLS enforcement** - Waiting on auth
-3. **No real-time** - Manual refresh required
-4. **Mobile budget table** - Needs horizontal scroll optimization
 
 ---
 
@@ -174,6 +235,8 @@
 | DnD | @dnd-kit |
 | PDF | @react-pdf/renderer |
 | Editor | TipTap |
+| Auth | Supabase Auth |
+| Real-time | Supabase Realtime |
 
 ---
 
@@ -199,7 +262,25 @@
 - Kanban pipeline
 - Portfolio metrics
 
-### Sprint 5 (Current) - Exports & Auth
-- PDF generation
-- Authentication
+### Sprint 5 ✅ - Exports & Auth
+- PDF generation (6 templates)
+- Authentication (Supabase Auth)
 - Protected routes
+
+### Sprint 6 ✅ - Journal & Settings
+- Journal/notes system
+- Calculation settings
+- Real-time updates
+
+### Sprint 7 ✅ - Budget Templates
+- Template library page
+- Save as template flow
+- Apply template flow
+- 4 system templates
+- Conflict resolution (skip/merge/replace)
+
+### Sprint 8 ✅ - Excel Export
+- Excel export dialog
+- 4 export templates (Budget, Summary, Vendors, Draws)
+- Multi-sheet workbooks
+- xlsx (SheetJS) integration
