@@ -818,3 +818,119 @@ export const HOLDING_COST_METHOD_LABELS: Record<HoldingCostMethod, string> = {
   itemized: 'Itemized',
   hybrid: 'Hybrid',
 };
+
+// ============================================================================
+// BUDGET TEMPLATE TYPES
+// ============================================================================
+
+export type TemplateType = 'system' | 'user';
+export type ScopeLevel = 'light' | 'medium' | 'heavy' | 'gut';
+
+export interface BudgetTemplate {
+  id: string;
+  user_id: string | null;
+
+  // Template Info
+  name: string;
+  description: string | null;
+
+  // Classification
+  template_type: TemplateType;
+  property_type: PropertyType | null;
+  scope_level: ScopeLevel | null;
+
+  // Stats
+  times_used: number;
+
+  // Flags
+  is_favorite: boolean;
+  is_active: boolean;
+
+  // Meta
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetTemplateItem {
+  id: string;
+  template_id: string;
+
+  // Item Details
+  category: BudgetCategory;
+  item: string;
+  description: string | null;
+
+  // Default Values
+  qty: number;
+  unit: UnitType;
+  rate: number;
+  default_amount: number;
+
+  // Classification
+  cost_type: CostType;
+  default_priority: 'high' | 'medium' | 'low';
+  suggested_trade: VendorTrade | null;
+
+  // Ordering
+  sort_order: number;
+
+  // Meta
+  created_at: string;
+}
+
+// Summary view with counts
+export interface BudgetTemplateSummary extends BudgetTemplate {
+  item_count: number;
+  category_count: number;
+  total_estimate: number;
+  categories: BudgetCategory[];
+}
+
+// Full template with items
+export interface BudgetTemplateWithItems extends BudgetTemplate {
+  items: BudgetTemplateItem[];
+}
+
+// Input types
+export type BudgetTemplateInput = Omit<BudgetTemplate, 'id' | 'user_id' | 'times_used' | 'created_at' | 'updated_at'>;
+export type BudgetTemplateItemInput = Omit<BudgetTemplateItem, 'id' | 'created_at'>;
+
+// Options for applying template
+export interface ApplyTemplateOptions {
+  templateId: string;
+  projectId: string;
+  includeAmounts: boolean;
+  conflictResolution: 'skip' | 'merge' | 'replace';
+}
+
+// Options for saving project as template
+export interface SaveAsTemplateOptions {
+  projectId: string;
+  name: string;
+  description?: string;
+  propertyType?: PropertyType;
+  scopeLevel?: ScopeLevel;
+  includeAmounts: boolean;
+  selectedItemIds: string[]; // Which budget items to include
+}
+
+// Result of applying template
+export interface ApplyTemplateResult {
+  added: number;
+  updated: number;
+  skipped: number;
+}
+
+export const SCOPE_LEVEL_LABELS: Record<ScopeLevel, string> = {
+  light: 'Light Rehab',
+  medium: 'Medium Rehab',
+  heavy: 'Heavy Rehab',
+  gut: 'Full Gut',
+};
+
+export const SCOPE_LEVEL_DESCRIPTIONS: Record<ScopeLevel, string> = {
+  light: 'Paint, flooring, fixtures, and minor repairs',
+  medium: 'Kitchen/bath updates with supporting work',
+  heavy: 'Major renovations without structural changes',
+  gut: 'Complete renovation including structural work',
+};

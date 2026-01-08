@@ -19,6 +19,7 @@
 | Real-time Updates | ✅ Complete |
 | Journal/Notes System | ✅ Complete |
 | Calculation Settings | ✅ Complete |
+| Budget Templates | ✅ Complete |
 
 ---
 
@@ -119,12 +120,22 @@
 - **Formula Display** - Shows current calculation formula
 - **Database Persistence** - Settings saved per user
 
+### Budget Templates
+- **Template Library** - Browse and manage templates at `/templates`
+- **System Templates** - 4 pre-built templates (Light Cosmetic, Kitchen & Bath, Full Gut, Investor Flip)
+- **User Templates** - Save custom templates from any project
+- **Save as Template** - Select items to include, optionally include amounts
+- **Apply Template** - Apply to new or existing projects with conflict resolution (skip/merge/replace)
+- **Template Preview** - Full preview of template contents at `/templates/[id]`
+- **Favorites** - Star frequently used templates
+- **Filtering** - By scope level, property type, search
+- **Database Backed** - RLS-protected with user/system template separation
+
 ---
 
 ## 🚧 Future Enhancements
 
 ### Medium Priority
-- [ ] Budget Templates (save/reuse structures)
 - [ ] Excel Export
 - [ ] Offline support (PWA)
 
@@ -152,6 +163,7 @@
 | `use-realtime.ts` | Real-time subscriptions |
 | `use-journal.ts` | Journal CRUD |
 | `use-calculation-settings.ts` | Calculation settings persistence |
+| `use-budget-templates.ts` | Template CRUD, save/apply templates |
 
 ### Components
 | Component | Purpose |
@@ -168,6 +180,9 @@
 | `portfolio-health.tsx` | Dashboard metrics |
 | `rich-text-editor.tsx` | TipTap journal editor |
 | `export-dialog.tsx` | PDF export selector |
+| `template-card.tsx` | Template library card |
+| `save-as-template-sheet.tsx` | Save project as template |
+| `apply-template-sheet.tsx` | Apply template to project |
 
 ### Pages
 | Route | Purpose |
@@ -180,6 +195,8 @@
 | `/timeline` | Gantt view |
 | `/journal` | Notes list |
 | `/journal/[id]` | Note editor |
+| `/templates` | Template library |
+| `/templates/[id]` | Template preview |
 | `/settings/calculations` | Calculation settings |
 | `/auth/login` | Sign in |
 | `/auth/signup` | Sign up |
@@ -243,3 +260,10 @@
 - Journal/notes system
 - Calculation settings
 - Real-time updates
+
+### Sprint 7 ✅ - Budget Templates
+- Template library page
+- Save as template flow
+- Apply template flow
+- 4 system templates
+- Conflict resolution (skip/merge/replace)

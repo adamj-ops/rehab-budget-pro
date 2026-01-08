@@ -18,3 +18,6 @@ export * from './use-journal';
 
 // Settings
 export * from './use-calculation-settings';
+
+// Templates
+export * from './use-budget-templates';
