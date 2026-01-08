@@ -15,3 +15,6 @@ export * from './use-auto-save-notes';
 
 // Journal
 export * from './use-journal';
+
+// Settings
+export * from './use-calculation-settings';
