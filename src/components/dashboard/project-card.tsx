@@ -63,10 +63,10 @@ function getStatusBadgeVariant(status: ProjectStatus) {
 }
 
 function getROIColor(roi: number) {
-  if (roi >= 20) return 'text-green-600';
-  if (roi >= 15) return 'text-green-500';
-  if (roi >= 10) return 'text-yellow-600';
-  return 'text-red-600';
+  if (roi >= 20) return 'text-green-500';
+  if (roi >= 15) return 'text-green-400';
+  if (roi >= 10) return 'text-amber-500';
+  return 'text-red-500';
 }
 
 export function ProjectCard({ project, isDragging, showDragHandle = true }: ProjectCardProps) {
@@ -184,7 +184,7 @@ export function ProjectCard({ project, isDragging, showDragHandle = true }: Proj
                   <span
                     className={cn(
                       'font-medium',
-                      project.rehab_actual > project.rehab_budget ? 'text-red-600' : 'text-green-600'
+                      project.rehab_actual > project.rehab_budget ? 'text-red-500' : 'text-green-500'
                     )}
                   >
                     {formatCurrency(project.rehab_actual)} / {formatCurrency(project.rehab_budget)}

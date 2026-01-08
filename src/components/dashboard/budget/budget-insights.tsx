@@ -94,7 +94,7 @@ export function BudgetInsights() {
     <section aria-labelledby="budget-title">
       <h2
         id="budget-title"
-        className="mb-4 text-lg font-semibold text-muted-foreground"
+        className="section-title mb-4"
       >
         Budget Insights
       </h2>
@@ -103,37 +103,37 @@ export function BudgetInsights() {
         {/* Budget Health Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Budget Health</CardTitle>
+            <CardTitle className="card-title">Budget Health</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Budget</p>
-                  <p className="text-xl font-bold tabular-nums">
+                  <p className="label-text">Total Budget</p>
+                  <p className="metric-value-sm">
                     {formatCurrency(Number(portfolio?.total_budget) || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Actual</p>
-                  <p className="text-xl font-bold tabular-nums">
+                  <p className="label-text">Total Actual</p>
+                  <p className="metric-value-sm">
                     {formatCurrency(Number(portfolio?.total_actual) || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Variance</p>
+                  <p className="label-text">Variance</p>
                   <p
                     className={cn(
-                      'flex items-center justify-center gap-1 text-xl font-bold tabular-nums',
+                      'flex items-center justify-center gap-1 metric-value-sm',
                       isUnderBudget
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-red-600 dark:text-red-400'
+                        ? 'text-green-500'
+                        : 'text-red-500'
                     )}
                   >
                     {isUnderBudget ? (
-                      <IconTrendingDown size={20} />
+                      <IconTrendingDown size={18} />
                     ) : (
-                      <IconTrendingUp size={20} />
+                      <IconTrendingUp size={18} />
                     )}
                     {formatCurrency(Math.abs(totalVariance))}
                   </p>
@@ -141,22 +141,22 @@ export function BudgetInsights() {
               </div>
 
               <div>
-                <div className="mb-2 flex justify-between text-sm">
+                <div className="mb-2 flex justify-between text-xs">
                   <span className="text-muted-foreground">Budget Usage</span>
                   <span className="font-medium">{budgetHealth.toFixed(1)}%</span>
                 </div>
                 <Progress
                   value={budgetHealth}
-                  className="h-3"
+                  className="h-2.5"
                   indicatorClassName={
                     budgetHealth > 100
                       ? 'bg-red-500'
                       : budgetHealth > 90
                       ? 'bg-amber-500'
-                      : 'bg-emerald-500'
+                      : 'bg-green-600'
                   }
                 />
-                <p className="mt-2 text-center text-sm text-muted-foreground">
+                <p className="mt-2 text-center meta-text">
                   {isUnderBudget ? 'On track' : 'Over budget'}
                 </p>
               </div>
@@ -167,7 +167,7 @@ export function BudgetInsights() {
         {/* Category Breakdown Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Top Categories</CardTitle>
+            <CardTitle className="card-title">Top Categories</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-52">
@@ -190,12 +190,12 @@ export function BudgetInsights() {
                       name === 'budget' ? 'Budget' : 'Actual',
                     ]}
                   />
-                  <Bar dataKey="budget" fill="#94a3b8" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="budget" fill="#6b7280" radius={[0, 4, 4, 0]} />
                   <Bar dataKey="actual" radius={[0, 4, 4, 0]}>
                     {categoryData.map((entry, index) => (
                       <Cell
                         key={index}
-                        fill={entry.variance > 0 ? '#ef4444' : '#22c55e'}
+                        fill={entry.variance > 0 ? '#ef4444' : '#008000'}
                       />
                     ))}
                   </Bar>
@@ -208,7 +208,7 @@ export function BudgetInsights() {
         {/* Category Table */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Category Details</CardTitle>
+            <CardTitle className="card-title">Category Details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -236,8 +236,8 @@ export function BudgetInsights() {
                         className={cn(
                           'py-2 text-right tabular-nums font-medium',
                           cat.variance > 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
+                            ? 'text-red-500'
+                            : 'text-green-500'
                         )}
                       >
                         {cat.variance > 0 ? '+' : ''}

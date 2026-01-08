@@ -41,33 +41,33 @@ interface MetricCardProps {
 function MetricCard({ label, value, subtext, trend, trendValue, icon, highlight }: MetricCardProps) {
   return (
     <Card className={cn('relative overflow-hidden', highlight && 'border-primary/50 bg-primary/5')}>
-      <CardContent className="p-6">
+      <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <p className="label-text">
               {label}
             </p>
-            <p className="text-3xl font-bold mt-2 tabular-nums">{value}</p>
+            <p className="metric-value mt-2">{value}</p>
             {subtext && (
-              <p className="text-sm text-muted-foreground mt-1">{subtext}</p>
+              <p className="meta-text mt-1">{subtext}</p>
             )}
             {trend && trendValue && (
               <div
                 className={cn(
-                  'flex items-center gap-1 mt-2 text-sm font-medium',
-                  trend === 'up' && 'text-green-600',
-                  trend === 'down' && 'text-red-600',
+                  'flex items-center gap-1 mt-2 text-xs font-medium',
+                  trend === 'up' && 'text-green-500',
+                  trend === 'down' && 'text-red-500',
                   trend === 'neutral' && 'text-muted-foreground'
                 )}
               >
-                {trend === 'up' && <IconTrendingUp className="h-4 w-4" />}
-                {trend === 'down' && <IconTrendingDown className="h-4 w-4" />}
-                {trend === 'neutral' && <IconMinus className="h-4 w-4" />}
+                {trend === 'up' && <IconTrendingUp className="h-3.5 w-3.5" />}
+                {trend === 'down' && <IconTrendingDown className="h-3.5 w-3.5" />}
+                {trend === 'neutral' && <IconMinus className="h-3.5 w-3.5" />}
                 {trendValue}
               </div>
             )}
           </div>
-          <div className="p-3 rounded-lg bg-muted">
+          <div className="p-2.5 rounded-lg bg-muted">
             {icon}
           </div>
         </div>
@@ -92,7 +92,7 @@ export function PortfolioHealth({
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Portfolio Health</h2>
+        <h2 className="section-title">Portfolio Health</h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

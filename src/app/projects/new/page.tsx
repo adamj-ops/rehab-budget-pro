@@ -131,7 +131,7 @@ export default function NewProjectPage() {
     <div className="flex-1 overflow-auto">
       {/* Page Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="flex h-14 items-center px-6">
+        <div className="page-shell flex h-14 items-center">
           <div>
             <h1 className="text-lg font-semibold">New Project</h1>
             <p className="text-xs text-muted-foreground">Create a new fix & flip project</p>
@@ -140,8 +140,10 @@ export default function NewProjectPage() {
       </header>
 
       {/* Form */}
-      <main className="p-6 max-w-4xl">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <main className="page-shell py-8">
+        <div className="page-stack max-w-4xl">
+          {!isLoading ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
           {/* Property Info */}
           <Card>
             <CardHeader>
@@ -390,15 +392,17 @@ export default function NewProjectPage() {
               )}
             </Button>
           </div>
-        ) : (
-          <ProjectForm
-            mode="create"
-            onSubmit={handleSubmit}
-            onCancel={() => router.push('/')}
-            isSubmitting={isSubmitting || isLoading}
-            submitLabel="Create Project"
-          />
-        )}
+            </form>
+          ) : (
+            <ProjectForm
+              mode="create"
+              onSubmit={handleSubmit}
+              onCancel={() => router.push('/')}
+              isSubmitting={isSubmitting || isLoading}
+              submitLabel="Create Project"
+            />
+          )}
+        </div>
       </main>
     </div>
   );

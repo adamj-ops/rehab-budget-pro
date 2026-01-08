@@ -55,6 +55,8 @@ export function VendorForm({
       ...vendorFormDefaults,
       ...defaultValues,
     },
+    mode: 'onBlur', // Validate on blur for real-time feedback
+    reValidateMode: 'onChange', // Re-validate on change after first error
   });
 
   const handleSubmit = async (values: VendorFormValues) => {

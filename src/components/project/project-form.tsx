@@ -15,7 +15,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/editor';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { PercentInput } from '@/components/ui/percent-input';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -55,9 +55,12 @@ import {
   projectFormDefaults,
   propertyTypeOptions,
   projectStatusOptions,
+  getProjectFormWarnings,
   type ProjectFormValues,
 } from '@/lib/validations/project';
 import { cn } from '@/lib/utils';
+import { ValidationSummary, type ValidationItem } from '@/components/ui/validation-summary';
+import { FieldHint } from '@/components/ui/field-hint';
 
 interface ProjectFormProps {
   defaultValues?: Partial<ProjectFormValues>;
@@ -107,6 +110,8 @@ export function ProjectForm({
       ...projectFormDefaults,
       ...defaultValues,
     },
+    mode: 'onBlur', // Validate on blur for real-time feedback
+    reValidateMode: 'onChange', // Re-validate on change after first error
   });
 
   // Watch values for live calculations
@@ -156,6 +161,38 @@ export function ProjectForm({
       }
     }
   }, [watchedAddress, mode, form]);
+
+  // Get validation warnings (non-blocking)
+  const formValues = form.watch();
+  const validationWarnings = React.useMemo(() => {
+    return getProjectFormWarnings(formValues as ProjectFormValues);
+  }, [formValues]);
+
+  // Convert form errors to ValidationItem format for summary
+  const formErrors: ValidationItem[] = React.useMemo(() => {
+    const errors = form.formState.errors;
+    const items: ValidationItem[] = [];
+    
+    for (const [key, error] of Object.entries(errors)) {
+      if (error?.message) {
+        items.push({
+          path: key,
+          message: error.message as string,
+          type: 'error',
+        });
+      }
+    }
+    return items;
+  }, [form.formState.errors]);
+
+  // Convert warnings to ValidationItem format
+  const warningItems: ValidationItem[] = React.useMemo(() => {
+    return validationWarnings.map((w) => ({
+      path: w.path,
+      message: w.message,
+      type: w.severity === 'warning' ? 'warning' as const : 'info' as const,
+    }));
+  }, [validationWarnings]);
 
   return (
     <Form {...form}>
@@ -762,11 +799,13 @@ export function ProjectForm({
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Textarea
+                            <RichTextEditor
+                              content={field.value ?? ''}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
                               placeholder="Add any notes about this project..."
-                              className="min-h-[100px] resize-y"
-                              {...field}
-                              value={field.value ?? ''}
+                              minHeight="100px"
+                              maxHeight="300px"
                             />
                           </FormControl>
                           <FormMessage />
@@ -777,6 +816,16 @@ export function ProjectForm({
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+
+            {/* Validation Summary */}
+            {(formErrors.length > 0 || warningItems.length > 0) && (
+              <ValidationSummary
+                errors={formErrors}
+                warnings={warningItems}
+                collapsible={formErrors.length + warningItems.length > 5}
+                className="mb-4"
+              />
+            )}
 
             {/* Form Actions */}
             <div className="flex items-center justify-end gap-3 pt-2 pb-4">

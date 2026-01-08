@@ -32,16 +32,141 @@ export const reliabilitySchema = z.enum(['excellent', 'good', 'fair', 'poor']);
 
 export const priceLevelSchema = z.enum(['$', '$$', '$$$']);
 
-// Vendor form schema
+// ============================================================================
+// Enhanced Phone Validation
+// ============================================================================
+
+/**
+ * Common email domain typos and their corrections.
+ */
+const EMAIL_TYPO_CORRECTIONS: Record<string, string> = {
+  'gmial.com': 'gmail.com',
+  'gmal.com': 'gmail.com',
+  'gmail.co': 'gmail.com',
+  'gamil.com': 'gmail.com',
+  'hotmal.com': 'hotmail.com',
+  'hotmial.com': 'hotmail.com',
+  'yahooo.com': 'yahoo.com',
+  'yaho.com': 'yahoo.com',
+  'outloo.com': 'outlook.com',
+  'outlok.com': 'outlook.com',
+  'icloud.co': 'icloud.com',
+};
+
+/**
+ * Check if an email domain might be a typo.
+ */
+export function checkEmailTypo(email: string): { hasPotentialTypo: boolean; suggestion?: string } {
+  if (!email || !email.includes('@')) {
+    return { hasPotentialTypo: false };
+  }
+  
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain) {
+    return { hasPotentialTypo: false };
+  }
+  
+  const correction = EMAIL_TYPO_CORRECTIONS[domain];
+  if (correction) {
+    return {
+      hasPotentialTypo: true,
+      suggestion: email.replace(/@.*$/, `@${correction}`),
+    };
+  }
+  
+  return { hasPotentialTypo: false };
+}
+
+/**
+ * Phone schema with flexible format support and normalization.
+ * Accepts: 555-123-4567, (555) 123-4567, 555.123.4567, 5551234567, +1 555-123-4567
+ */
+const phoneSchema = z.string()
+  .transform((val) => val.trim())
+  .pipe(
+    z.string()
+      .refine((val) => {
+        if (!val) return true; // Allow empty
+        // Remove all non-digits
+        const digitsOnly = val.replace(/\D/g, '');
+        // Must be 10 digits (US) or 11 digits (with country code)
+        return digitsOnly.length === 10 || (digitsOnly.length === 11 && digitsOnly.startsWith('1'));
+      }, {
+        message: 'Phone must be a valid US number (10 digits, e.g., 555-123-4567)',
+      })
+  )
+  .nullable()
+  .or(z.literal(''));
+
+/**
+ * Email schema with better error messages.
+ */
+const emailSchema = z.string()
+  .trim()
+  .toLowerCase()
+  .pipe(
+    z.string()
+      .email('Invalid email format - use name@domain.com')
+      .max(254, 'Email address is too long')
+      .refine((val) => {
+        if (!val) return true;
+        // Check for common invalid patterns
+        const domain = val.split('@')[1];
+        if (!domain || !domain.includes('.')) {
+          return false;
+        }
+        return true;
+      }, {
+        message: 'Email must include a valid domain (e.g., @gmail.com)',
+      })
+  )
+  .nullable()
+  .or(z.literal(''));
+
+/**
+ * Website URL schema with protocol prefix handling.
+ */
+const websiteSchema = z.string()
+  .trim()
+  .transform((val) => {
+    if (!val) return val;
+    // Auto-prefix https:// if no protocol specified
+    if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+      return `https://${val}`;
+    }
+    return val;
+  })
+  .pipe(
+    z.string()
+      .url('Invalid website URL')
+      .max(500, 'Website URL is too long')
+  )
+  .nullable()
+  .or(z.literal(''));
+
+// ============================================================================
+// Main Vendor Form Schema
+// ============================================================================
+
+// Vendor form schema with improved error messages
 export const vendorFormSchema = z.object({
   // Basic Info
-  name: z.string().min(1, 'Vendor name is required'),
+  name: z.string()
+    .trim()
+    .min(1, 'Vendor name is required')
+    .max(200, 'Vendor name cannot exceed 200 characters'),
   trade: vendorTradeSchema,
-  contact_name: z.string().nullable(),
-  phone: z.string().nullable(),
-  email: z.string().email('Invalid email address').nullable().or(z.literal('')),
-  website: z.string().url('Invalid URL').nullable().or(z.literal('')),
-  address: z.string().nullable(),
+  contact_name: z.string()
+    .trim()
+    .max(200, 'Contact name cannot exceed 200 characters')
+    .nullable(),
+  phone: phoneSchema,
+  email: emailSchema,
+  website: websiteSchema,
+  address: z.string()
+    .trim()
+    .max(500, 'Address cannot exceed 500 characters')
+    .nullable(),
 
   // Qualifications
   licensed: z.boolean(),
@@ -49,14 +174,123 @@ export const vendorFormSchema = z.object({
   w9_on_file: z.boolean(),
 
   // Ratings
-  rating: z.number().min(1).max(5).nullable(),
+  rating: z.number()
+    .int('Rating must be a whole number (1-5 stars)')
+    .min(1, 'Rating must be at least 1 star')
+    .max(5, 'Rating cannot exceed 5 stars')
+    .nullable(),
   reliability: reliabilitySchema.nullable(),
   price_level: priceLevelSchema.nullable(),
 
   // Status
   status: vendorStatusSchema,
-  notes: z.string().nullable(),
+  notes: z.string()
+    .max(5000, 'Notes cannot exceed 5,000 characters')
+    .nullable(),
 });
+
+// ============================================================================
+// Validation Warnings
+// ============================================================================
+
+/**
+ * Type for validation warnings (distinct from errors).
+ */
+export interface VendorValidationWarning {
+  path: string;
+  message: string;
+  severity: 'warning' | 'info';
+  suggestion?: string;
+}
+
+/**
+ * Check vendor form values for potential issues (warnings, not errors).
+ */
+export function getVendorFormWarnings(values: VendorFormValues): VendorValidationWarning[] {
+  const warnings: VendorValidationWarning[] = [];
+
+  // Check for email typos
+  if (values.email) {
+    const typoCheck = checkEmailTypo(values.email);
+    if (typoCheck.hasPotentialTypo) {
+      warnings.push({
+        path: 'email',
+        message: `Did you mean "${typoCheck.suggestion}"?`,
+        severity: 'warning',
+        suggestion: typoCheck.suggestion,
+      });
+    }
+  }
+
+  // Licensed contractor warning
+  const licensedTrades = ['electrician', 'plumber', 'hvac', 'general_contractor'];
+  if (licensedTrades.includes(values.trade) && !values.licensed) {
+    warnings.push({
+      path: 'licensed',
+      message: `${values.trade.replace('_', ' ')} typically requires a license - verify compliance`,
+      severity: 'warning',
+    });
+  }
+
+  // Insurance warning for major trades
+  const highRiskTrades = ['roofer', 'electrician', 'plumber', 'hvac', 'general_contractor', 'framing'];
+  if (highRiskTrades.includes(values.trade) && !values.insured) {
+    warnings.push({
+      path: 'insured',
+      message: 'This trade involves higher risk - consider requiring insurance',
+      severity: 'warning',
+    });
+  }
+
+  // Do not use status with good rating
+  if (values.status === 'do_not_use' && values.rating && values.rating >= 4) {
+    warnings.push({
+      path: 'status',
+      message: 'Vendor marked "Do Not Use" but has a 4+ star rating - add notes explaining why',
+      severity: 'info',
+    });
+  }
+
+  // Missing contact info
+  if (!values.phone && !values.email) {
+    warnings.push({
+      path: 'phone',
+      message: 'No contact information - consider adding phone or email',
+      severity: 'info',
+    });
+  }
+
+  // W9 reminder for active vendors
+  if (values.status === 'active' && !values.w9_on_file) {
+    warnings.push({
+      path: 'w9_on_file',
+      message: 'Remember to collect W-9 before making payments over $600/year',
+      severity: 'info',
+    });
+  }
+
+  return warnings;
+}
+
+/**
+ * Normalize phone number to (XXX) XXX-XXXX format.
+ */
+export function formatPhoneNumber(phone: string | null): string {
+  if (!phone) return '';
+  
+  const digits = phone.replace(/\D/g, '');
+  
+  // Remove country code if present
+  const nationalNumber = digits.startsWith('1') && digits.length === 11 
+    ? digits.slice(1) 
+    : digits;
+  
+  if (nationalNumber.length !== 10) {
+    return phone; // Return as-is if not valid
+  }
+  
+  return `(${nationalNumber.slice(0, 3)}) ${nationalNumber.slice(3, 6)}-${nationalNumber.slice(6)}`;
+}
 
 // Type inference
 export type VendorFormValues = z.infer<typeof vendorFormSchema>;

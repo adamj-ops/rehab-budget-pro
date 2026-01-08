@@ -82,7 +82,7 @@ export const PIPELINE_STAGES: { id: ProjectStatus; title: string; color: string 
   { id: 'analyzing', title: 'Analyzing', color: 'bg-blue-500' },
   { id: 'under_contract', title: 'Under Contract', color: 'bg-purple-500' },
   { id: 'in_rehab', title: 'In Rehab', color: 'bg-amber-500' },
-  { id: 'listed', title: 'Listed', color: 'bg-emerald-500' },
+  { id: 'listed', title: 'Listed', color: 'bg-green-600' },
 ];
 
 /**

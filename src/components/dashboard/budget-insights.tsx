@@ -75,26 +75,26 @@ function getCategoryLabel(category: BudgetCategory): string {
   return BUDGET_CATEGORIES.find((c) => c.value === category)?.label || category;
 }
 
-// Category colors for charts
+// Category colors for charts - Emerald-based palette
 const CATEGORY_COLORS: Record<string, string> = {
-  kitchen: '#f97316',
-  bathrooms: '#3b82f6',
-  flooring: '#22c55e',
-  hvac: '#8b5cf6',
-  electrical: '#eab308',
-  plumbing: '#06b6d4',
-  exterior: '#ec4899',
-  structural: '#64748b',
-  interior_paint: '#14b8a6',
-  demo: '#ef4444',
-  insulation_drywall: '#a855f7',
-  tile: '#0ea5e9',
-  doors_windows: '#f59e0b',
-  interior_trim: '#84cc16',
-  landscaping: '#10b981',
-  soft_costs: '#6366f1',
-  finishing: '#d946ef',
-  contingency: '#78716c',
+  kitchen: '#f97316',           // Orange
+  bathrooms: '#0ea5e9',         // Sky
+  flooring: '#008000',          // Forest green
+  hvac: '#8b5cf6',              // Violet
+  electrical: '#f59e0b',        // Amber
+  plumbing: '#06b6d4',          // Cyan
+  exterior: '#ec4899',          // Pink
+  structural: '#64748b',        // Slate
+  interior_paint: '#14b8a6',    // Teal
+  demo: '#ef4444',              // Red
+  insulation_drywall: '#a855f7', // Purple
+  tile: '#0284c7',              // Sky-600
+  doors_windows: '#d97706',     // Amber-600
+  interior_trim: '#84cc16',     // Lime
+  landscaping: '#059669',       // Emerald-600
+  soft_costs: '#6366f1',        // Indigo
+  finishing: '#d946ef',         // Fuchsia
+  contingency: '#78716c',       // Stone
 };
 
 function VarianceIndicator({ variance, budget }: { variance: number; budget: number }) {

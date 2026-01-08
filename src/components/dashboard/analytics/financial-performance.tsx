@@ -34,15 +34,15 @@ export function FinancialPerformance() {
 
   const isLoading = soldLoading || portfolioLoading;
 
-  // Calculate ROI distribution
+  // Calculate ROI distribution - Forest green palette
   const roiDistribution = useMemo(() => {
     if (!soldProjects) return [];
 
     const ranges = [
-      { range: '< 10%', min: -Infinity, max: 10, count: 0, color: '#ef4444' },
-      { range: '10-15%', min: 10, max: 15, count: 0, color: '#f59e0b' },
-      { range: '15-20%', min: 15, max: 20, count: 0, color: '#22c55e' },
-      { range: '> 20%', min: 20, max: Infinity, count: 0, color: '#10b981' },
+      { range: '< 10%', min: -Infinity, max: 10, count: 0, color: '#ef4444' },  // Red for poor
+      { range: '10-15%', min: 10, max: 15, count: 0, color: '#f59e0b' },        // Amber for okay
+      { range: '15-20%', min: 15, max: 20, count: 0, color: '#22c55e' },        // Green-500
+      { range: '> 20%', min: 20, max: Infinity, count: 0, color: '#008000' },   // Forest green
     ];
 
     soldProjects.forEach((p) => {
@@ -120,7 +120,7 @@ export function FinancialPerformance() {
     <section aria-labelledby="financial-title">
       <h2
         id="financial-title"
-        className="mb-4 text-lg font-semibold text-muted-foreground"
+        className="section-title mb-4"
       >
         Financial Performance
       </h2>
@@ -139,31 +139,31 @@ export function FinancialPerformance() {
           {/* Summary stats */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">This Year Summary</CardTitle>
+              <CardTitle className="card-title">This Year Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Gross Profit</p>
-                  <p className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+                  <p className="label-text">Gross Profit</p>
+                  <p className="metric-value-sm text-green-500">
                     {formatCurrency(Number(portfolio?.total_profit) || 0)}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Projects Sold</p>
-                  <p className="text-2xl font-bold tabular-nums">
+                  <p className="label-text">Projects Sold</p>
+                  <p className="metric-value-sm">
                     {portfolio?.sold_count || 0}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Avg ROI</p>
-                  <p className="text-2xl font-bold tabular-nums">
+                  <p className="label-text">Avg ROI</p>
+                  <p className="metric-value-sm">
                     {(Number(portfolio?.avg_roi) || 0).toFixed(1)}%
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Avg Hold Time</p>
-                  <p className="text-2xl font-bold tabular-nums">
+                  <p className="label-text">Avg Hold Time</p>
+                  <p className="metric-value-sm">
                     {avgHoldTime.toFixed(1)} mo
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export function FinancialPerformance() {
                   <span className="text-muted-foreground">
                     Projects hitting 15%+ target
                   </span>
-                  <span className="font-semibold">
+                  <span className="font-medium">
                     {projectsHittingTarget}%
                   </span>
                 </div>
@@ -185,7 +185,7 @@ export function FinancialPerformance() {
           {/* ROI Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">ROI Distribution</CardTitle>
+              <CardTitle className="card-title">ROI Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-48">
@@ -202,7 +202,7 @@ export function FinancialPerformance() {
                     <Tooltip
                       formatter={(value) => [`${value} projects`, 'Count']}
                     />
-                    <ReferenceLine x={15} stroke="#22c55e" strokeDasharray="3 3" />
+                    <ReferenceLine x={15} stroke="#008000" strokeDasharray="3 3" />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                       {roiDistribution.map((entry, index) => (
                         <Cell key={index} fill={entry.color} />
@@ -211,7 +211,7 @@ export function FinancialPerformance() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-2 text-center text-xs text-muted-foreground">
+              <p className="mt-2 text-center meta-text">
                 Target: 15%+ ROI (green line)
               </p>
             </CardContent>
@@ -221,7 +221,7 @@ export function FinancialPerformance() {
           {profitByProject.length > 0 && (
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-base">Top Performers</CardTitle>
+                <CardTitle className="card-title">Top Performers</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-48">
@@ -244,7 +244,7 @@ export function FinancialPerformance() {
                           'Profit',
                         ]}
                       />
-                      <Bar dataKey="profit" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="profit" fill="#008000" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

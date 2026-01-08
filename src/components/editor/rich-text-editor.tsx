@@ -39,6 +39,8 @@ export function RichTextEditor({
   autofocus = false,
 }: RichTextEditorProps) {
   const editor = useEditor({
+    // Prevent SSR hydration issues
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -141,6 +143,8 @@ export function useRichTextEditor(options?: {
   onChange?: (content: string) => void
 }) {
   const editor = useEditor({
+    // Prevent SSR hydration issues
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Placeholder.configure({

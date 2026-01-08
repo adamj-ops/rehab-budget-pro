@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { PortfolioHealth, KanbanPipeline, ProjectTimeline, AttentionNeeded, FinancialPerformance, BudgetInsights, type ProjectCardData, type TimelineProject, type AlertProject, type FinancialProject, type BudgetProject, type CategorySpend } from '@/components/dashboard';
+import { PortfolioHealth, AttentionNeeded, FinancialPerformance, BudgetInsights, type ProjectCardData, type TimelineProject, type AlertProject, type FinancialProject, type BudgetProject, type CategorySpend } from '@/components/dashboard';
 import { Card, CardContent } from '@/components/ui/card';
-import { IconHome, IconPlus, IconLayoutKanban, IconCalendarEvent } from '@tabler/icons-react';
+import { IconHome, IconPlus } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
+import { ErrorBoundary, CompactErrorFallback } from '@/components/error-boundary';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 
 interface DashboardClientProps {
   projects: (ProjectCardData & TimelineProject & AlertProject & FinancialProject & BudgetProject)[];
@@ -24,8 +23,6 @@ interface DashboardClientProps {
   categorySpends: CategorySpend[];
 }
 
-type ViewMode = 'kanban' | 'timeline';
-
 export function DashboardClient({
   projects,
   totalARV,
@@ -34,13 +31,6 @@ export function DashboardClient({
   projectCounts,
   categorySpends,
 }: DashboardClientProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
-
-  // Filter out sold/dead projects for the pipeline
-  const pipelineProjects = projects.filter(
-    (p) => p.status !== 'sold' && p.status !== 'dead'
-  );
-
   if (projects.length === 0) {
     return (
       <Card className="border-dashed">
@@ -64,58 +54,37 @@ export function DashboardClient({
   return (
     <>
       {/* Portfolio Health Metrics */}
-      <PortfolioHealth
-        totalARV={totalARV}
-        capitalDeployed={capitalDeployed}
-        averageROI={averageROI}
-        projectCounts={projectCounts}
-      />
+      <ErrorBoundary
+        fallback={<CompactErrorFallback message="Failed to load portfolio health metrics" />}
+      >
+        <PortfolioHealth
+          totalARV={totalARV}
+          capitalDeployed={capitalDeployed}
+          averageROI={averageROI}
+          projectCounts={projectCounts}
+        />
+      </ErrorBoundary>
 
       {/* Attention Needed / Risk Alerts */}
-      <AttentionNeeded projects={projects} />
-
-      {/* View Toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
-          <button
-            onClick={() => setViewMode('kanban')}
-            className={cn(
-              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              viewMode === 'kanban'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <IconLayoutKanban className="h-4 w-4" />
-            Pipeline
-          </button>
-          <button
-            onClick={() => setViewMode('timeline')}
-            className={cn(
-              'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              viewMode === 'timeline'
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <IconCalendarEvent className="h-4 w-4" />
-            Timeline
-          </button>
-        </div>
-      </div>
-
-      {/* View Content */}
-      {viewMode === 'kanban' ? (
-        <KanbanPipeline projects={pipelineProjects} />
-      ) : (
-        <ProjectTimeline projects={projects} />
-      )}
+      <ErrorBoundary
+        fallback={<CompactErrorFallback message="Failed to load alerts" />}
+      >
+        <AttentionNeeded projects={projects} />
+      </ErrorBoundary>
 
       {/* Financial Performance Analytics */}
-      <FinancialPerformance projects={projects} />
+      <ErrorBoundary
+        fallback={<CompactErrorFallback message="Failed to load financial performance" />}
+      >
+        <FinancialPerformance projects={projects} />
+      </ErrorBoundary>
 
       {/* Budget Insights */}
-      <BudgetInsights projects={projects} categorySpends={categorySpends} />
+      <ErrorBoundary
+        fallback={<CompactErrorFallback message="Failed to load budget insights" />}
+      >
+        <BudgetInsights projects={projects} categorySpends={categorySpends} />
+      </ErrorBoundary>
     </>
   );
 }

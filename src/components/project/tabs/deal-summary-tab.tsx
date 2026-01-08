@@ -1,8 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
+import { IconLoader2 } from '@tabler/icons-react';
 import type { Project } from '@/types';
-import { formatCurrency, formatPercent, formatDate, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { PROJECT_STATUS_LABELS } from '@/types';
+import { RichTextEditor } from '@/components/editor';
+import { useAutoSaveNotes } from '@/hooks';
 
 interface DealSummaryTabProps {
   project: Project;
@@ -12,6 +16,28 @@ interface DealSummaryTabProps {
   contingencyPercent: number;
 }
 
+/**
+ * Check if content appears to be HTML (contains HTML tags)
+ * Used for backward compatibility with plain text notes
+ */
+function isHtmlContent(content: string | null): boolean {
+  if (!content) return false;
+  // Check for common HTML tags
+  return /<[a-z][\s\S]*>/i.test(content);
+}
+
+/**
+ * Convert plain text to HTML paragraphs for display in rich text editor
+ */
+function plainTextToHtml(text: string): string {
+  if (!text) return '';
+  // Split by newlines and wrap in <p> tags
+  return text
+    .split(/\n\n+/)
+    .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+}
+
 export function DealSummaryTab({
   project,
   underwritingTotal,
@@ -19,6 +45,29 @@ export function DealSummaryTab({
   actualTotal,
   contingencyPercent,
 }: DealSummaryTabProps) {
+  // Auto-save notes hook
+  const {
+    notes,
+    setNotes,
+    isSaving,
+    hasUnsavedChanges,
+    saveNow,
+    resetNotes,
+  } = useAutoSaveNotes({
+    projectId: project.id,
+    debounceMs: 1000,
+  });
+
+  // Initialize notes from project data (with backward compatibility)
+  useEffect(() => {
+    const projectNotes = project.notes || '';
+    // Convert plain text to HTML if needed for backward compatibility
+    const initialContent = isHtmlContent(projectNotes) 
+      ? projectNotes 
+      : plainTextToHtml(projectNotes);
+    resetNotes(initialContent);
+  }, [project.notes, resetNotes]);
+
   // Base values
   const arv = project.arv || 0;
   const purchasePrice = project.purchase_price || 0;
@@ -181,14 +230,14 @@ export function DealSummaryTab({
           {/* Forecast Column */}
           <div className={cn(
             "rounded-lg p-4 border-2",
-            activeScenario === 'forecast' ? 'border-green-500 bg-green-50/50' : 'border-transparent bg-muted/30'
+            activeScenario === 'forecast' ? 'border-green-600 bg-green-600/10' : 'border-transparent bg-muted/30'
           )}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Forecast
               </h4>
               {activeScenario === 'forecast' && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                <span className="text-xs bg-green-700/20 text-green-500 px-2 py-0.5 rounded-full">Active</span>
               )}
             </div>
             <p className="text-xs text-muted-foreground mb-2">Post-walkthrough/bid</p>
@@ -196,7 +245,7 @@ export function DealSummaryTab({
             {forecastTotal > 0 && (
               <p className={cn(
                 'text-xs mt-1 tabular-nums',
-                forecastVsUnderwriting > 0 ? 'text-red-600' : 'text-green-600'
+                forecastVsUnderwriting > 0 ? 'text-red-500' : 'text-green-500'
               )}>
                 {forecastVsUnderwriting >= 0 ? '+' : ''}{formatCurrency(forecastVsUnderwriting)} vs UW
                 ({forecastVsUnderwritingPercent >= 0 ? '+' : ''}{forecastVsUnderwritingPercent.toFixed(1)}%)
@@ -233,13 +282,13 @@ export function DealSummaryTab({
               <>
                 <p className={cn(
                   'text-xs mt-1 tabular-nums',
-                  actualVsForecast > 0 ? 'text-red-600' : 'text-green-600'
+                  actualVsForecast > 0 ? 'text-red-500' : 'text-green-500'
                 )}>
                   {actualVsForecast >= 0 ? '+' : ''}{formatCurrency(actualVsForecast)} vs {forecastTotal > 0 ? 'Forecast' : 'UW'}
                 </p>
                 <p className={cn(
                   'text-xs tabular-nums',
-                  actualVsUnderwriting > 0 ? 'text-red-600' : 'text-green-600'
+                  actualVsUnderwriting > 0 ? 'text-red-500' : 'text-green-500'
                 )}>
                   {actualVsUnderwriting >= 0 ? '+' : ''}{formatCurrency(actualVsUnderwriting)} vs UW
                   ({actualVsUnderwritingPercent >= 0 ? '+' : ''}{actualVsUnderwritingPercent.toFixed(1)}%)
@@ -310,7 +359,7 @@ export function DealSummaryTab({
               <p className="text-sm text-muted-foreground">Underwriting</p>
               <p className={cn(
                 'text-lg font-medium tabular-nums',
-                underwritingScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                underwritingScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'
               )}>
                 {formatCurrency(underwritingScenario.grossProfit)}
               </p>
@@ -319,7 +368,7 @@ export function DealSummaryTab({
               <p className="text-sm text-muted-foreground">Forecast</p>
               <p className={cn(
                 'text-lg font-medium tabular-nums',
-                forecastScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                forecastScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'
               )}>
                 {formatCurrency(forecastScenario.grossProfit)}
               </p>
@@ -329,7 +378,7 @@ export function DealSummaryTab({
                 <p className="text-sm text-muted-foreground">Actual</p>
                 <p className={cn(
                   'text-lg font-medium tabular-nums',
-                  actualScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                  actualScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500'
                 )}>
                   {formatCurrency(actualScenario.grossProfit)}
                 </p>
@@ -346,7 +395,7 @@ export function DealSummaryTab({
               <p className="text-sm text-muted-foreground">Underwriting</p>
               <p className={cn(
                 'text-lg font-medium tabular-nums',
-                underwritingScenario.roi >= 15 ? 'text-green-600' : underwritingScenario.roi >= 10 ? 'text-yellow-600' : 'text-red-600'
+                underwritingScenario.roi >= 15 ? 'text-green-500' : underwritingScenario.roi >= 10 ? 'text-amber-500' : 'text-red-500'
               )}>
                 {underwritingScenario.roi.toFixed(1)}%
               </p>
@@ -355,7 +404,7 @@ export function DealSummaryTab({
               <p className="text-sm text-muted-foreground">Forecast</p>
               <p className={cn(
                 'text-lg font-medium tabular-nums',
-                forecastScenario.roi >= 15 ? 'text-green-600' : forecastScenario.roi >= 10 ? 'text-yellow-600' : 'text-red-600'
+                forecastScenario.roi >= 15 ? 'text-green-500' : forecastScenario.roi >= 10 ? 'text-amber-500' : 'text-red-500'
               )}>
                 {forecastScenario.roi.toFixed(1)}%
               </p>
@@ -365,7 +414,7 @@ export function DealSummaryTab({
                 <p className="text-sm text-muted-foreground">Actual</p>
                 <p className={cn(
                   'text-lg font-medium tabular-nums',
-                  actualScenario.roi >= 15 ? 'text-green-600' : actualScenario.roi >= 10 ? 'text-yellow-600' : 'text-red-600'
+                  actualScenario.roi >= 15 ? 'text-green-500' : actualScenario.roi >= 10 ? 'text-amber-500' : 'text-red-500'
                 )}>
                   {actualScenario.roi.toFixed(1)}%
                 </p>
@@ -396,7 +445,7 @@ export function DealSummaryTab({
             <p className="text-sm text-muted-foreground mb-1">Spread vs Purchase</p>
             <p className={cn(
               'text-2xl font-bold tabular-nums',
-              spread >= 0 ? 'text-green-600' : 'text-red-600'
+              spread >= 0 ? 'text-green-500' : 'text-red-500'
             )}>
               {spread >= 0 ? '+' : ''}{formatCurrency(spread)}
             </p>
@@ -413,10 +462,10 @@ export function DealSummaryTab({
           <p className={cn(
             'text-3xl font-bold tabular-nums',
             activeScenario === 'actual'
-              ? (actualScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600')
+              ? (actualScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500')
               : activeScenario === 'forecast'
-                ? (forecastScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600')
-                : (underwritingScenario.grossProfit >= 0 ? 'text-green-600' : 'text-red-600')
+                ? (forecastScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500')
+                : (underwritingScenario.grossProfit >= 0 ? 'text-green-500' : 'text-red-500')
           )}>
             {formatCurrency(
               activeScenario === 'actual'
@@ -466,12 +515,30 @@ export function DealSummaryTab({
       </div>
 
       {/* Notes */}
-      {project.notes && (
-        <div className="rounded-lg border bg-card p-6">
-          <h3 className="font-medium mb-4">Notes</h3>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project.notes}</p>
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-medium">Notes</h3>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {isSaving && (
+              <span className="flex items-center gap-1.5 text-primary">
+                <IconLoader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </span>
+            )}
+            {hasUnsavedChanges && !isSaving && (
+              <span className="text-amber-600">Unsaved changes</span>
+            )}
+          </div>
         </div>
-      )}
+        <RichTextEditor
+          content={notes}
+          onChange={setNotes}
+          onBlur={saveNow}
+          placeholder="Add notes about this project..."
+          minHeight="150px"
+          maxHeight="400px"
+        />
+      </div>
     </div>
   );
 }

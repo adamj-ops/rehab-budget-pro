@@ -261,7 +261,7 @@ export function ProjectTimeline() {
                   <span>Sale</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <div className="h-3 w-3 rounded bg-emerald-500" />
+                  <div className="h-3 w-3 rounded bg-green-600" />
                   <span>Completed</span>
                 </div>
               </div>
@@ -307,7 +307,7 @@ function TimelineBar({
       {/* Progress overlay for rehab */}
       {event.type === 'rehab' && !event.isCompleted && event.progress > 0 && (
         <div
-          className="absolute inset-y-0 left-0 rounded-l bg-emerald-500"
+          className="absolute inset-y-0 left-0 rounded-l bg-green-600"
           style={{ width: `${event.progress}%` }}
         />
       )}

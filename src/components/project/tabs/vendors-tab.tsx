@@ -18,8 +18,10 @@ import {
   IconTrash,
   IconLoader2,
   IconWorld,
-  IconMapPin,
   IconLink,
+  IconSearch,
+  IconFilter,
+  IconArrowsSort,
 } from '@tabler/icons-react';
 import {
   AlertDialog,
@@ -31,6 +33,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface VendorsTabProps {
   projectId: string
@@ -76,21 +87,27 @@ const defaultFormData: VendorFormData = {
 
 const VENDOR_TRADES = Object.entries(VENDOR_TRADE_LABELS) as [VendorTrade, string][];
 
+type SortOption = 'name_asc' | 'name_desc' | 'rating_desc' | 'recent' | 'most_used';
+
 export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps) {
   const queryClient = useQueryClient();
+  
+  // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState<VendorFormData>(defaultFormData);
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
   const [assigningVendor, setAssigningVendor] = useState<Vendor | null>(null);
+  
+  // Search, filter, sort state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tradeFilter, setTradeFilter] = useState<VendorTrade | 'all'>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('name_asc');
 
   // Get vendors used in this project
   const projectVendorIds = new Set(
     budgetItems.filter((item) => item.vendor_id).map((item) => item.vendor_id)
   );
-
-  const projectVendors = vendors.filter((v) => projectVendorIds.has(v.id));
-  const otherVendors = vendors.filter((v) => !projectVendorIds.has(v.id));
 
   // Calculate totals per vendor (using forecast if available, otherwise underwriting)
   const vendorTotals = new Map<
@@ -156,278 +173,6 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
   const otherVendors = sortVendors(
     filteredVendors.filter((v) => !projectVendorIds.has(v.id))
   )
-
-  const handleDelete = async () => {
-    if (!deletingVendor) return
-    try {
-      await deleteVendor.mutateAsync(deletingVendor.id)
-      setDeletingVendor(null)
-    } catch {
-      // Error handled by mutation
-    }
-  }
-
-  const startQuickEdit = (vendor: Vendor) => {
-    setQuickEditId(vendor.id)
-    setQuickEditData({
-      phone: vendor.phone || '',
-      email: vendor.email || '',
-    })
-  }
-
-  const cancelQuickEdit = () => {
-    setQuickEditId(null)
-    setQuickEditData({ phone: '', email: '' })
-  }
-
-  const saveQuickEdit = async (vendorId: string) => {
-    try {
-      await updateVendor.mutateAsync({
-        id: vendorId,
-        phone: quickEditData.phone.trim() || null,
-        email: quickEditData.email.trim() || null,
-      })
-      setQuickEditId(null)
-    } catch {
-      // Error handled by mutation
-    }
-  }
-
-  // Bulk selection handlers
-  const toggleVendorSelection = (vendorId: string) => {
-    setSelectedVendors((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(vendorId)) {
-        newSet.delete(vendorId)
-      } else {
-        newSet.add(vendorId)
-      }
-      return newSet
-    })
-  }
-
-  const selectAllVendors = () => {
-    setSelectedVendors(new Set(filteredVendors.map((v) => v.id)))
-  }
-
-  const clearSelection = () => {
-    setSelectedVendors(new Set())
-    setIsSelectionMode(false)
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedVendors.size === 0) return
-    if (!confirm(`Delete ${selectedVendors.size} vendor(s)? This cannot be undone.`)) return
-
-    try {
-      for (const vendorId of selectedVendors) {
-        await deleteVendor.mutateAsync(vendorId)
-      }
-      clearSelection()
-    } catch {
-      // Error handled by mutation
-    }
-  }
-
-  // CSV Export
-  const exportToCSV = (vendorsToExport: Vendor[]) => {
-    const headers = [
-      'name',
-      'trade',
-      'contact_name',
-      'phone',
-      'email',
-      'website',
-      'address',
-      'licensed',
-      'insured',
-      'w9_on_file',
-      'rating',
-      'reliability',
-      'price_level',
-      'status',
-      'notes',
-    ]
-
-    const csvRows = [
-      headers.join(','),
-      ...vendorsToExport.map((vendor) =>
-        headers
-          .map((header) => {
-            const value = vendor[header as keyof Vendor]
-            if (value === null || value === undefined) return ''
-            if (typeof value === 'boolean') return value ? 'true' : 'false'
-            // Escape quotes and wrap in quotes if contains comma or quote
-            const strValue = String(value)
-            if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
-              return `"${strValue.replace(/"/g, '""')}"`
-            }
-            return strValue
-          })
-          .join(',')
-      ),
-    ]
-
-    const csvContent = csvRows.join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `vendors-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-    URL.revokeObjectURL(link.href)
-  }
-
-  const handleExportSelected = () => {
-    const vendorsToExport = vendors.filter((v) => selectedVendors.has(v.id))
-    exportToCSV(vendorsToExport)
-  }
-
-  const handleExportAll = () => {
-    exportToCSV(vendors)
-  }
-
-  // CSV Import
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = async (event) => {
-      const text = event.target?.result as string
-      const lines = text.split('\n').filter((line) => line.trim())
-
-      if (lines.length < 2) {
-        alert('CSV file is empty or has no data rows')
-        return
-      }
-
-      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
-      const nameIndex = headers.indexOf('name')
-      const tradeIndex = headers.indexOf('trade')
-
-      if (nameIndex === -1 || tradeIndex === -1) {
-        alert('CSV must have "name" and "trade" columns')
-        return
-      }
-
-      const validTrades = new Set(ALL_TRADES)
-      let imported = 0
-      let errors = 0
-
-      for (let i = 1; i < lines.length; i++) {
-        // Parse CSV row (handling quoted values)
-        const row = parseCSVRow(lines[i])
-        if (row.length < Math.max(nameIndex, tradeIndex) + 1) continue
-
-        const name = row[nameIndex]?.trim()
-        const trade = row[tradeIndex]?.trim().toLowerCase() as VendorTrade
-
-        if (!name || !validTrades.has(trade)) {
-          errors++
-          continue
-        }
-
-        try {
-          const vendorData: Record<string, unknown> = {
-            name,
-            trade,
-            status: 'active',
-          }
-
-          // Map other fields
-          const fieldMappings: Record<string, string> = {
-            contact_name: 'contact_name',
-            phone: 'phone',
-            email: 'email',
-            website: 'website',
-            address: 'address',
-            notes: 'notes',
-          }
-
-          headers.forEach((header, idx) => {
-            if (fieldMappings[header] && row[idx]) {
-              vendorData[fieldMappings[header]] = row[idx].trim()
-            }
-          })
-
-          // Boolean fields
-          const boolIndex = headers.indexOf('licensed')
-          if (boolIndex !== -1) vendorData.licensed = row[boolIndex]?.toLowerCase() === 'true'
-          const insuredIndex = headers.indexOf('insured')
-          if (insuredIndex !== -1) vendorData.insured = row[insuredIndex]?.toLowerCase() === 'true'
-          const w9Index = headers.indexOf('w9_on_file')
-          if (w9Index !== -1) vendorData.w9_on_file = row[w9Index]?.toLowerCase() === 'true'
-
-          // Rating
-          const ratingIndex = headers.indexOf('rating')
-          if (ratingIndex !== -1 && row[ratingIndex]) {
-            const rating = parseInt(row[ratingIndex])
-            if (rating >= 1 && rating <= 5) vendorData.rating = rating
-          }
-
-          // Reliability
-          const reliabilityIndex = headers.indexOf('reliability')
-          if (reliabilityIndex !== -1 && row[reliabilityIndex]) {
-            const reliability = row[reliabilityIndex].toLowerCase()
-            if (['excellent', 'good', 'fair', 'poor'].includes(reliability)) {
-              vendorData.reliability = reliability
-            }
-          }
-
-          // Price level
-          const priceIndex = headers.indexOf('price_level')
-          if (priceIndex !== -1 && row[priceIndex]) {
-            const price = row[priceIndex]
-            if (['$', '$$', '$$$'].includes(price)) vendorData.price_level = price
-          }
-
-          await createVendor.mutateAsync(vendorData as Parameters<typeof createVendor.mutateAsync>[0])
-          imported++
-        } catch {
-          errors++
-        }
-      }
-
-      alert(`Imported ${imported} vendor(s)${errors > 0 ? `. ${errors} row(s) had errors.` : '.'}`)
-    }
-
-    reader.readAsText(file)
-    // Reset the input so the same file can be selected again
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  // Helper function to parse CSV row (handles quoted values)
-  const parseCSVRow = (row: string): string[] => {
-    const result: string[] = []
-    let current = ''
-    let inQuotes = false
-
-    for (let i = 0; i < row.length; i++) {
-      const char = row[i]
-
-      if (char === '"') {
-        if (inQuotes && row[i + 1] === '"') {
-          current += '"'
-          i++
-        } else {
-          inQuotes = !inQuotes
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current)
-        current = ''
-      } else {
-        current += char
-      }
-    }
-    result.push(current)
-    return result
-  }
 
   // Get unassigned budget items for vendor assignment
   const unassignedItems = budgetItems.filter((item) => !item.vendor_id);
@@ -621,6 +366,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
               </div>
             )}
             <button
+              type="button"
               onClick={() => handleOpenEdit(vendor)}
               className="p-1 hover:bg-muted rounded"
               title="Edit vendor"
@@ -628,6 +374,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
               <IconPencil className="h-4 w-4 text-muted-foreground" />
             </button>
             <button
+              type="button"
               onClick={() => setVendorToDelete(vendor)}
               className="p-1 hover:bg-red-50 rounded"
               title="Delete vendor"
@@ -747,6 +494,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
 
           {!isProjectVendor && unassignedItems.length > 0 && (
             <button
+              type="button"
               onClick={() => setAssigningVendor(vendor)}
               className="text-xs text-primary hover:underline flex items-center gap-1"
             >
@@ -761,34 +509,60 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
 
   return (
     <div className="space-y-6">
-      {/* Hidden file input for CSV import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileChange}
-        className="hidden"
-      />
-
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="section-title-group">
           <h3 className="section-header">Project Vendors</h3>
           <p className="section-subheader">
             {projectVendors.length} vendors assigned to this project
           </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
+        <Button onClick={handleOpenCreate}>
           <IconPlus className="h-4 w-4" />
           Add Vendor
         </Button>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search vendors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={tradeFilter} onValueChange={(value) => setTradeFilter(value as VendorTrade | 'all')}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <IconFilter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="All trades" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Trades</SelectItem>
+            {VENDOR_TRADES.map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <IconArrowsSort className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name_asc">Name A-Z</SelectItem>
+            <SelectItem value="name_desc">Name Z-A</SelectItem>
+            <SelectItem value="rating_desc">Highest Rated</SelectItem>
+            <SelectItem value="recent">Most Recent</SelectItem>
+            <SelectItem value="most_used">Most Used</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Project Vendors */}
-      {projectVendors.length > 0 && (
+      {projectVendors.length > 0 ? (
         <div>
           <h4 className="font-medium mb-4 text-sm text-muted-foreground uppercase tracking-wide">
             Project Vendors ({projectVendors.length})
@@ -1095,6 +869,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {unassignedItems.map((item) => (
                   <button
+                    type="button"
                     key={item.id}
                     onClick={() => handleAssignToItem(item.id)}
                     disabled={assignMutation.isPending}
@@ -1115,6 +890,7 @@ export function VendorsTab({ projectId, vendors, budgetItems }: VendorsTabProps)
 
             <div className="flex justify-end mt-4 pt-4 border-t">
               <button
+                type="button"
                 onClick={() => setAssigningVendor(null)}
                 className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors"
               >

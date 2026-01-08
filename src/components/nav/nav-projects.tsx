@@ -99,7 +99,10 @@ export function NavProjects() {
   }, [filteredProjects]);
 
   return (
-    <Sidebar collapsible="none" className="border-r bg-sidebar/50">
+    <Sidebar 
+      collapsible="none" 
+      className="border-r bg-sidebar/50 fixed left-[var(--sidebar-width)] top-0 z-20 shadow-lg"
+    >
       <SidebarHeader className="gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold">Projects</span>

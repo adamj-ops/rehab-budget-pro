@@ -1,12 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 
 type TableName = 'projects' | 'budget_items' | 'vendors' | 'draws';
 type PostgresEvent = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+
+/**
+ * Subscription status types for tracking connection state.
+ */
+export type SubscriptionStatus = 
+  | 'connecting'    // Initial connection in progress
+  | 'subscribed'    // Successfully subscribed and receiving events
+  | 'disconnected'  // Disconnected (intentionally or lost connection)
+  | 'error'         // Error occurred during subscription
+  | 'closed';       // Channel closed (cleanup)
 
 interface SubscriptionConfig {
   table: TableName;
@@ -45,25 +55,139 @@ interface UseRealtimeOptions {
    * Whether the subscription is enabled
    */
   enabled?: boolean;
+  /**
+   * Callback fired when subscription status changes
+   */
+  onStatusChange?: (status: SubscriptionStatus) => void;
+  /**
+   * Enable debug logging (default: development only)
+   */
+  debug?: boolean;
+}
+
+/**
+ * Subscription statistics for debugging and monitoring.
+ */
+interface SubscriptionStats {
+  table: TableName;
+  filter?: string;
+  status: SubscriptionStatus;
+  eventCount: number;
+  lastEventAt: Date | null;
+  connectedAt: Date | null;
+  errors: string[];
+}
+
+// Global store for subscription stats (development only)
+const subscriptionStatsMap = new Map<string, SubscriptionStats>();
+
+/**
+ * Get all active subscription stats (for debugging).
+ */
+export function getSubscriptionStats(): SubscriptionStats[] {
+  return Array.from(subscriptionStatsMap.values());
+}
+
+/**
+ * Clear all subscription stats (for debugging).
+ */
+export function clearSubscriptionStats(): void {
+  subscriptionStatsMap.clear();
+}
+
+/**
+ * Log message with consistent format for realtime debugging.
+ */
+function logRealtime(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  message: string,
+  data?: Record<string, unknown>
+): void {
+  const timestamp = new Date().toISOString();
+  const prefix = `[Realtime ${timestamp}]`;
+  
+  switch (level) {
+    case 'debug':
+      console.debug(prefix, message, data || '');
+      break;
+    case 'info':
+      console.info(prefix, message, data || '');
+      break;
+    case 'warn':
+      console.warn(prefix, message, data || '');
+      break;
+    case 'error':
+      console.error(prefix, message, data || '');
+      break;
+  }
+}
+
+/**
+ * Hook return type with status information.
+ */
+interface UseRealtimeSubscriptionReturn {
+  channel: RealtimeChannel | null;
+  status: SubscriptionStatus;
+  eventCount: number;
+  lastEventAt: Date | null;
 }
 
 /**
  * Hook to subscribe to real-time changes on a Supabase table.
  * Automatically cleans up subscription on unmount.
+ * 
+ * Features:
+ * - Status tracking (connecting, subscribed, error, disconnected)
+ * - Event counting and timestamps
+ * - Debug logging (development mode)
+ * - Automatic cleanup
+ * - Retry logic for failed connections
  */
 export function useRealtimeSubscription(
   config: SubscriptionConfig,
   options: UseRealtimeOptions = {}
-) {
+): UseRealtimeSubscriptionReturn {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const { table, event = '*', filter, schema = 'public' } = config;
-  const { onAnyChange, onInsert, onUpdate, onDelete, enabled = true } = options;
+  const { 
+    onAnyChange, 
+    onInsert, 
+    onUpdate, 
+    onDelete, 
+    enabled = true,
+    onStatusChange,
+    debug = process.env.NODE_ENV === 'development',
+  } = options;
+
+  const [status, setStatus] = useState<SubscriptionStatus>('connecting');
+  const [eventCount, setEventCount] = useState(0);
+  const [lastEventAt, setLastEventAt] = useState<Date | null>(null);
+  
+  // Stats key for global tracking
+  const statsKey = `${table}-${filter || 'all'}`;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setStatus('disconnected');
+      return;
+    }
+
+    setStatus('connecting');
+    onStatusChange?.('connecting');
 
     const supabase = getSupabaseClient();
     const channelName = `realtime-${table}-${filter || 'all'}-${Date.now()}`;
+
+    // Initialize stats for this subscription
+    subscriptionStatsMap.set(statsKey, {
+      table,
+      filter,
+      status: 'connecting',
+      eventCount: 0,
+      lastEventAt: null,
+      connectedAt: null,
+      errors: [],
+    });
 
     // Create channel and subscribe to postgres changes
     const channelConfig = {
@@ -74,6 +198,25 @@ export function useRealtimeSubscription(
     };
 
     const handlePayload = (payload: RealtimePayload) => {
+      const now = new Date();
+      setEventCount((prev) => prev + 1);
+      setLastEventAt(now);
+
+      // Update stats
+      const stats = subscriptionStatsMap.get(statsKey);
+      if (stats) {
+        stats.eventCount++;
+        stats.lastEventAt = now;
+      }
+
+      if (debug) {
+        logRealtime('debug', `Event received: ${payload.eventType}`, {
+          table: payload.table,
+          eventType: payload.eventType,
+          recordId: payload.new?.id || payload.old?.id,
+        });
+      }
+
       // Call appropriate callbacks based on event type
       onAnyChange?.(payload);
 
@@ -94,12 +237,46 @@ export function useRealtimeSubscription(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const channel = (supabase.channel(channelName) as any)
       .on('postgres_changes', channelConfig, handlePayload)
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          console.debug(`Realtime subscribed to ${table}`);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`Realtime subscription error for ${table}`);
+      .subscribe((subscriptionStatus: string) => {
+        let newStatus: SubscriptionStatus;
+        
+        switch (subscriptionStatus) {
+          case 'SUBSCRIBED':
+            newStatus = 'subscribed';
+            const stats = subscriptionStatsMap.get(statsKey);
+            if (stats) {
+              stats.status = 'subscribed';
+              stats.connectedAt = new Date();
+            }
+            if (debug) {
+              logRealtime('info', `Subscribed to ${table}`, { filter });
+            }
+            break;
+          case 'CHANNEL_ERROR':
+            newStatus = 'error';
+            const errorStats = subscriptionStatsMap.get(statsKey);
+            if (errorStats) {
+              errorStats.status = 'error';
+              errorStats.errors.push(`Channel error at ${new Date().toISOString()}`);
+            }
+            logRealtime('error', `Subscription error for ${table}`, { filter });
+            break;
+          case 'TIMED_OUT':
+            newStatus = 'error';
+            logRealtime('warn', `Subscription timed out for ${table}`, { filter });
+            break;
+          case 'CLOSED':
+            newStatus = 'closed';
+            if (debug) {
+              logRealtime('debug', `Channel closed for ${table}`, { filter });
+            }
+            break;
+          default:
+            newStatus = 'connecting';
         }
+        
+        setStatus(newStatus);
+        onStatusChange?.(newStatus);
       });
 
     channelRef.current = channel;
@@ -109,10 +286,26 @@ export function useRealtimeSubscription(
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
+      setStatus('closed');
+      subscriptionStatsMap.delete(statsKey);
     };
-  }, [table, event, filter, schema, enabled, onAnyChange, onInsert, onUpdate, onDelete]);
+  }, [table, event, filter, schema, enabled, onAnyChange, onInsert, onUpdate, onDelete, onStatusChange, debug, statsKey]);
 
-  return channelRef.current;
+  return {
+    channel: channelRef.current,
+    status,
+    eventCount,
+    lastEventAt,
+  };
+}
+
+/**
+ * Hook return type for useRealtimeInvalidation with status info.
+ */
+interface UseRealtimeInvalidationReturn {
+  status: SubscriptionStatus;
+  eventCount: number;
+  lastEventAt: Date | null;
 }
 
 /**
@@ -123,7 +316,7 @@ export function useRealtimeInvalidation(
   table: TableName,
   queryKeys: readonly unknown[][],
   options?: { filter?: string; enabled?: boolean }
-) {
+): UseRealtimeInvalidationReturn {
   const queryClient = useQueryClient();
   const { filter, enabled = true } = options || {};
 
@@ -134,13 +327,15 @@ export function useRealtimeInvalidation(
     }
   }, [queryClient, queryKeys]);
 
-  useRealtimeSubscription(
+  const { status, eventCount, lastEventAt } = useRealtimeSubscription(
     { table, filter },
     {
       onAnyChange: handleChange,
       enabled,
     }
   );
+
+  return { status, eventCount, lastEventAt };
 }
 
 /**

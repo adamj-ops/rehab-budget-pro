@@ -12,6 +12,7 @@ import {
   IconPlus,
   IconTrash,
   IconX,
+  IconLoader2,
 } from '@tabler/icons-react';
 import { PhotoGallery } from '@/components/project/photo-gallery';
 import { toast } from 'sonner';
@@ -50,16 +51,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { BudgetItemFormSheet } from '@/components/project/budget-item-form-sheet';
 import { PhotoUploadSheet } from '@/components/project/photo-upload-sheet';
+import { ScrollableTable, useIsMobile } from '@/components/ui/scrollable-table';
 import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
 import { useProjectPhotos } from '@/hooks/use-photo-mutations';
 import { useSortOrderMutations } from '@/hooks/use-sort-order';
+import { MobileBudgetEditSheet } from '@/components/project/mobile-budget-edit-sheet';
 
 interface BudgetDetailTabProps {
   projectId: string;
   budgetItems: BudgetItem[];
   vendors: Vendor[];
   contingencyPercent: number;
-  vendors?: Vendor[];
 }
 
 interface NewItemForm {
@@ -90,6 +92,7 @@ interface SortableBudgetItemRowProps {
   onDelete: (item: BudgetItem) => void;
   onViewPhotos: (item: BudgetItem) => void;
   updatePending: boolean;
+  isMobile?: boolean;
 }
 
 function SortableBudgetItemRow({
@@ -103,7 +106,9 @@ function SortableBudgetItemRow({
   onDelete,
   onViewPhotos,
   updatePending,
+  isMobile = false,
 }: SortableBudgetItemRowProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const {
     attributes,
     listeners,
@@ -123,16 +128,33 @@ function SortableBudgetItemRow({
   const itemForecastVar = (item.forecast_amount || 0) - (item.underwriting_amount || 0);
   const itemActualVar = (item.actual_amount || 0) - ((item.forecast_amount || item.underwriting_amount) || 0);
 
+  // Toggle expansion on mobile row tap (not on editing or buttons)
+  const handleRowClick = (e: React.MouseEvent) => {
+    if (isMobile && !isEditing) {
+      // Don't toggle if clicking on a button or input
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('input') || target.closest('select')) {
+        return;
+      }
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   return (
+    <>
     <tr
       ref={setNodeRef}
       style={style}
       className={cn(
         'border-t hover:bg-muted/50',
-        isDragging && 'bg-muted shadow-lg'
+        isDragging && 'bg-muted shadow-lg',
+        isMobile && !isEditing && 'cursor-pointer',
+        isExpanded && isMobile && 'bg-muted/30'
       )}
+      onClick={handleRowClick}
     >
-      <td className="p-3 sticky left-0 bg-background">
+      {/* Drag handle - hidden on mobile */}
+      <td className="p-2 sm:p-3 sticky left-0 bg-background hidden sm:table-cell">
         <button
           type="button"
           className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted text-muted-foreground"
@@ -142,72 +164,78 @@ function SortableBudgetItemRow({
           <IconGripVertical className="h-4 w-4" />
         </button>
       </td>
-      <td className="p-3 sticky left-12 bg-background">
+      {/* Item name - always visible */}
+      <td className="p-2 sm:p-3 sticky left-0 sm:left-12 bg-background">
         <div>
-          <p className="font-medium">{item.item}</p>
+          <p className="font-medium text-sm">{item.item}</p>
           {item.description && (
-            <p className="text-xs text-muted-foreground">{item.description}</p>
+            <p className="text-xs text-muted-foreground line-clamp-1 sm:line-clamp-none">{item.description}</p>
           )}
         </div>
       </td>
-      <td className="p-3 text-right">
+      {/* Underwriting amount */}
+      <td className="p-2 sm:p-3 text-right">
         {isEditing ? (
           <input
             type="number"
             step="0.01"
             value={editValues.underwriting_amount ?? ''}
             onChange={(e) => onInputChange('underwriting_amount', parseFloat(e.target.value) || 0)}
-            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+            className="w-16 sm:w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums text-sm"
           />
         ) : (
-          <span className="font-medium tabular-nums">{formatCurrency(item.underwriting_amount)}</span>
+          <span className="font-medium tabular-nums text-xs sm:text-sm">{formatCurrency(item.underwriting_amount)}</span>
         )}
       </td>
-      <td className="p-3 text-right">
+      {/* Forecast amount */}
+      <td className="p-2 sm:p-3 text-right">
         {isEditing ? (
           <input
             type="number"
             step="0.01"
             value={editValues.forecast_amount ?? ''}
             onChange={(e) => onInputChange('forecast_amount', parseFloat(e.target.value) || 0)}
-            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+            className="w-16 sm:w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums text-sm"
           />
         ) : (
-          <span className="font-medium tabular-nums">{formatCurrency(item.forecast_amount)}</span>
+          <span className="font-medium tabular-nums text-xs sm:text-sm">{formatCurrency(item.forecast_amount)}</span>
         )}
       </td>
-      <td className="p-3 text-right">
+      {/* Actual amount */}
+      <td className="p-2 sm:p-3 text-right">
         {isEditing ? (
           <input
             type="number"
             step="0.01"
             value={editValues.actual_amount ?? ''}
             onChange={(e) => onInputChange('actual_amount', parseFloat(e.target.value) || 0)}
-            className="w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
+            className="w-16 sm:w-24 text-right p-1 rounded border focus:outline-none focus:ring-2 focus:ring-primary tabular-nums text-sm"
             placeholder="0"
           />
         ) : (
-          <span className="font-medium tabular-nums">{formatCurrency(item.actual_amount || 0)}</span>
+          <span className="font-medium tabular-nums text-xs sm:text-sm">{formatCurrency(item.actual_amount || 0)}</span>
         )}
       </td>
+      {/* Variance columns - hidden on mobile */}
       <td className={cn(
-        'p-3 text-right text-sm tabular-nums',
+        'p-3 text-right text-sm tabular-nums hidden md:table-cell',
         itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
       )}>
         {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
       </td>
       <td className={cn(
-        'p-3 text-right text-sm tabular-nums',
+        'p-3 text-right text-sm tabular-nums hidden md:table-cell',
         itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
       )}>
         {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
       </td>
-      <td className="p-3 text-center">
+      {/* Status */}
+      <td className="p-2 sm:p-3 text-center">
         {isEditing ? (
           <select
             value={editValues.status || item.status}
             onChange={(e) => onInputChange('status', e.target.value)}
-            className="text-xs p-1 rounded border"
+            className="text-xs p-1 rounded border max-w-[80px] sm:max-w-none"
           >
             <option value="not_started">Not Started</option>
             <option value="in_progress">In Progress</option>
@@ -217,7 +245,7 @@ function SortableBudgetItemRow({
           </select>
         ) : (
           <span className={cn(
-            'inline-block px-2 py-1 rounded-full text-xs font-medium',
+            'inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium whitespace-nowrap',
             item.status === 'complete' && 'bg-green-100 text-green-700',
             item.status === 'in_progress' && 'bg-blue-100 text-blue-700',
             item.status === 'not_started' && 'bg-zinc-100 text-zinc-700',
@@ -228,13 +256,14 @@ function SortableBudgetItemRow({
           </span>
         )}
       </td>
-      <td className="p-3 text-center">
+      {/* Actions */}
+      <td className="p-2 sm:p-3 text-center">
         {isEditing ? (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-0.5 sm:gap-1">
             <button
               type="button"
               onClick={() => onSave(item.id)}
-              className="p-1 rounded hover:bg-green-100 text-green-600 transition-colors"
+              className="p-1.5 sm:p-1 rounded hover:bg-green-100 text-green-600 transition-colors min-w-[32px] sm:min-w-0"
               disabled={updatePending}
             >
               <IconCheck className="h-4 w-4" />
@@ -242,18 +271,18 @@ function SortableBudgetItemRow({
             <button
               type="button"
               onClick={onCancel}
-              className="p-1 rounded hover:bg-red-100 text-red-600 transition-colors"
+              className="p-1.5 sm:p-1 rounded hover:bg-red-100 text-red-600 transition-colors min-w-[32px] sm:min-w-0"
               disabled={updatePending}
             >
               <IconX className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-0.5 sm:gap-1">
             <button
               type="button"
               onClick={() => onViewPhotos(item)}
-              className="p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors"
+              className="p-1.5 sm:p-1 rounded hover:bg-blue-100 text-muted-foreground hover:text-blue-600 transition-colors min-w-[32px] sm:min-w-0"
               title="View photos"
             >
               <IconPhoto className="h-4 w-4" />
@@ -261,7 +290,7 @@ function SortableBudgetItemRow({
             <button
               type="button"
               onClick={() => onEdit(item)}
-              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+              className="p-1.5 sm:p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors min-w-[32px] sm:min-w-0"
               title="Edit item"
             >
               <IconEdit className="h-4 w-4" />
@@ -269,7 +298,7 @@ function SortableBudgetItemRow({
             <button
               type="button"
               onClick={() => onDelete(item)}
-              className="p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors"
+              className="p-1.5 sm:p-1 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600 transition-colors min-w-[32px] sm:min-w-0"
               title="Delete item"
             >
               <IconTrash className="h-4 w-4" />
@@ -278,6 +307,41 @@ function SortableBudgetItemRow({
         )}
       </td>
     </tr>
+    {/* Mobile Expansion Row - shows variance details when expanded */}
+    {isMobile && isExpanded && !isEditing && (
+      <tr className="border-t bg-muted/20 md:hidden">
+        <td colSpan={6} className="p-3">
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Forecast vs Underwriting</p>
+              <p className={cn(
+                'font-medium tabular-nums',
+                itemForecastVar > 0 ? 'text-red-600' : itemForecastVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+              )}>
+                {itemForecastVar >= 0 ? '+' : ''}{formatCurrency(itemForecastVar)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Actual vs {item.forecast_amount > 0 ? 'Forecast' : 'UW'}</p>
+              <p className={cn(
+                'font-medium tabular-nums',
+                itemActualVar > 0 ? 'text-red-600' : itemActualVar < 0 ? 'text-green-600' : 'text-muted-foreground'
+              )}>
+                {itemActualVar >= 0 ? '+' : ''}{formatCurrency(itemActualVar)}
+              </p>
+            </div>
+            {item.description && (
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm">{item.description}</p>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">Tap row again to collapse</p>
+        </td>
+      </tr>
+    )}
+    </>
   );
 }
 
@@ -286,12 +350,12 @@ export function BudgetDetailTab({
   budgetItems,
   vendors,
   contingencyPercent,
-  vendors = [],
 }: BudgetDetailTabProps) {
   const queryClient = useQueryClient();
   const { createItem, deleteItem, bulkUpdateStatus, bulkDelete } = useBudgetItemMutations(projectId);
   const { data: projectPhotos = [] } = useProjectPhotos(projectId);
   const { reorderItems } = useSortOrderMutations(projectId);
+  const isMobile = useIsMobile();
 
   // DnD Sensors
   const sensors = useSensors(
@@ -341,17 +405,8 @@ export function BudgetDetailTab({
   // Photo gallery state
   const [viewingPhotosForItem, setViewingPhotosForItem] = useState<BudgetItem | null>(null);
 
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Mobile edit sheet state
+  const [mobileEditItem, setMobileEditItem] = useState<BudgetItem | null>(null);
 
   // Group items by category and sort by sort_order
   const itemsByCategory = useMemo(() => {
@@ -496,14 +551,25 @@ export function BudgetDetailTab({
   });
 
   const handleEdit = (item: BudgetItem) => {
-    setEditingItemId(item.id);
-    setEditValues({
-      underwriting_amount: item.underwriting_amount,
-      forecast_amount: item.forecast_amount,
-      actual_amount: item.actual_amount,
-      status: item.status,
-      vendor_id: item.vendor_id,
-    });
+    // Use mobile sheet on mobile, inline editing on desktop
+    if (isMobile) {
+      setMobileEditItem(item);
+    } else {
+      setEditingItemId(item.id);
+      setEditValues({
+        underwriting_amount: item.underwriting_amount,
+        forecast_amount: item.forecast_amount,
+        actual_amount: item.actual_amount,
+        status: item.status,
+        vendor_id: item.vendor_id,
+      });
+    }
+  };
+
+  // Handle save from mobile edit sheet
+  const handleMobileSave = async (itemId: string, updates: Partial<BudgetItem>) => {
+    await updateMutation.mutateAsync({ id: itemId, data: updates });
+    setMobileEditItem(null);
   };
 
   const handleSave = (itemId: string) => {
@@ -557,65 +623,46 @@ export function BudgetDetailTab({
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent, categoryItems: BudgetItem[]) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = categoryItems.findIndex((item) => item.id === active.id);
-      const newIndex = categoryItems.findIndex((item) => item.id === over.id);
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove(categoryItems, oldIndex, newIndex);
-
-        // Create update array with new sort orders
-        const updates = newOrder.map((item, index) => ({
-          id: item.id,
-          sort_order: index,
-        }));
-
-        reorderMutation.mutate(updates);
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Summary Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-lg bg-muted">
-        <div>
-          <p className="text-sm text-muted-foreground">Underwriting</p>
-          <p className="text-xl font-semibold tabular-nums">{formatCurrency(underwritingTotal)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Pre-deal estimate</p>
+      {/* Summary Bar - Responsive grid with 2 columns on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 p-4 sm:p-6 rounded-lg bg-muted">
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground">Underwriting</p>
+          <p className="text-lg sm:text-xl font-semibold tabular-nums truncate">{formatCurrency(underwritingTotal)}</p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Pre-deal estimate</p>
         </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Forecast</p>
-          <p className="text-xl font-semibold text-blue-600 tabular-nums">{formatCurrency(forecastTotal)}</p>
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground">Forecast</p>
+          <p className="text-lg sm:text-xl font-semibold text-blue-600 tabular-nums truncate">{formatCurrency(forecastTotal)}</p>
           <p className={cn(
             'text-xs mt-1 tabular-nums',
             forecastVariance >= 0 ? 'text-green-600' : 'text-red-600'
           )}>
-            {forecastVariance >= 0 ? '+' : ''}{formatCurrency(forecastVariance)} vs UW
+            {forecastVariance >= 0 ? '+' : ''}{formatCurrency(forecastVariance)}
+            <span className="hidden sm:inline"> vs UW</span>
           </p>
         </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Actual</p>
-          <p className="text-xl font-semibold text-purple-600 tabular-nums">{formatCurrency(actualTotal)}</p>
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground">Actual</p>
+          <p className="text-lg sm:text-xl font-semibold text-purple-600 tabular-nums truncate">{formatCurrency(actualTotal)}</p>
           <p className={cn(
             'text-xs mt-1 tabular-nums',
             actualVariance >= 0 ? 'text-red-600' : 'text-green-600'
           )}>
-            {actualVariance >= 0 ? '+' : ''}{formatCurrency(actualVariance)} vs Forecast
+            {actualVariance >= 0 ? '+' : ''}{formatCurrency(actualVariance)}
+            <span className="hidden sm:inline"> vs Forecast</span>
           </p>
         </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Total Variance</p>
+        <div className="min-w-0">
+          <p className="text-xs sm:text-sm text-muted-foreground">Variance</p>
           <p className={cn(
-            'text-xl font-semibold tabular-nums',
+            'text-lg sm:text-xl font-semibold tabular-nums truncate',
             totalVariance >= 0 ? 'text-red-600' : 'text-green-600'
           )}>
             {totalVariance >= 0 ? '+' : ''}{formatCurrency(totalVariance)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Actual vs Underwriting</p>
+          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Actual vs UW</p>
         </div>
       </div>
 
@@ -687,29 +734,36 @@ export function BudgetDetailTab({
       </div>
 
       {/* Budget Table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      <ScrollableTable showScrollHint={true} scrollHintText="Swipe to see all columns">
+        <table className="w-full text-sm">
             <thead>
               <tr className="table-header">
-                <th className="text-left p-3 w-12 sticky left-0 bg-muted"></th>
-                <th className="text-left p-3 min-w-[200px] sticky left-12 bg-muted">Item</th>
-                <th className="text-right p-3 w-28 bg-blue-50">
-                  <div className="font-semibold">Underwriting</div>
-                  <div className="text-xs font-normal text-muted-foreground">Pre-deal</div>
+                {/* Drag handle - hide on very small screens */}
+                <th className="text-left p-2 sm:p-3 w-8 sm:w-12 sticky left-0 bg-muted hidden sm:table-cell"></th>
+                {/* Item column - always visible */}
+                <th className="text-left p-2 sm:p-3 min-w-[140px] sm:min-w-[200px] sticky left-0 sm:left-12 bg-muted">Item</th>
+                {/* Underwriting */}
+                <th className="text-right p-2 sm:p-3 w-20 sm:w-28 bg-blue-50">
+                  <div className="font-semibold text-xs sm:text-sm">UW</div>
+                  <div className="text-xs font-normal text-muted-foreground hidden sm:block">Pre-deal</div>
                 </th>
-                <th className="text-right w-28 col-forecast">
-                  <div className="font-semibold">Forecast</div>
-                  <div className="text-xs font-normal text-muted-foreground">Post-bid</div>
+                {/* Forecast */}
+                <th className="text-right p-2 sm:p-3 w-20 sm:w-28 col-forecast">
+                  <div className="font-semibold text-xs sm:text-sm">Forecast</div>
+                  <div className="text-xs font-normal text-muted-foreground hidden sm:block">Post-bid</div>
                 </th>
-                <th className="text-right w-28 col-actual">
-                  <div className="font-semibold">Actual</div>
-                  <div className="text-xs font-normal text-muted-foreground">Real spend</div>
+                {/* Actual */}
+                <th className="text-right p-2 sm:p-3 w-20 sm:w-28 col-actual">
+                  <div className="font-semibold text-xs sm:text-sm">Actual</div>
+                  <div className="text-xs font-normal text-muted-foreground hidden sm:block">Real spend</div>
                 </th>
-                <th className="text-right p-3 w-28">Forecast Var</th>
-                <th className="text-right p-3 w-28">Actual Var</th>
-                <th className="text-center p-3 w-28">Status</th>
-                <th className="text-center p-3 w-28">Actions</th>
+                {/* Variance columns - hide on mobile */}
+                <th className="text-right p-3 w-28 hidden md:table-cell">Forecast Var</th>
+                <th className="text-right p-3 w-28 hidden md:table-cell">Actual Var</th>
+                {/* Status */}
+                <th className="text-center p-2 sm:p-3 w-20 sm:w-28">Status</th>
+                {/* Actions */}
+                <th className="text-center p-2 sm:p-3 w-16 sm:w-28">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -831,6 +885,7 @@ export function BudgetDetailTab({
                               onDelete={handleDeleteClick}
                               onViewPhotos={setViewingPhotosForItem}
                               updatePending={updateMutation.isPending}
+                              isMobile={isMobile}
                             />
                           ))}
                         </SortableContext>
@@ -983,8 +1038,7 @@ export function BudgetDetailTab({
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
+      </ScrollableTable>
 
       {/* Legend */}
       <div className="flex items-center gap-6 text-xs text-muted-foreground flex-wrap">
@@ -1022,6 +1076,7 @@ export function BudgetDetailTab({
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {deleteMutation.isPending && <IconLoader2 className="h-4 w-4 animate-spin mr-2" />}
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1036,6 +1091,16 @@ export function BudgetDetailTab({
           onClose={() => setViewingPhotosForItem(null)}
         />
       )}
+
+      {/* Mobile Edit Sheet */}
+      <MobileBudgetEditSheet
+        open={!!mobileEditItem}
+        onOpenChange={(open) => !open && setMobileEditItem(null)}
+        item={mobileEditItem}
+        vendors={vendors}
+        onSave={handleMobileSave}
+        isPending={updateMutation.isPending}
+      />
     </div>
   );
 }

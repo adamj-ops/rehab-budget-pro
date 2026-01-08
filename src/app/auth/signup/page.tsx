@@ -24,16 +24,16 @@ export default function SignUpPage() {
   }, [router, supabase.auth]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="light min-h-screen bg-white flex items-center justify-center p-4" data-theme="light">
       <div className="w-full max-w-md auth-form-animate">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center">
-            <IconChartBar className="h-7 w-7 text-accent-foreground" />
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <div className="h-12 w-12 rounded-xl bg-[#008000] flex items-center justify-center">
+            <IconChartBar className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Rehab Budget Pro</h1>
-            <p className="text-sm text-muted-foreground">Fix & Flip Budget Tracking</p>
+            <h1 className="text-2xl font-bold text-gray-900">Rehab Budget Pro</h1>
+            <p className="text-sm text-gray-500">Fix & Flip Budget Tracking</p>
           </div>
         </div>
 
@@ -50,21 +50,23 @@ export default function SignUpPage() {
                 variables: {
                   default: {
                     colors: {
-                      brand: 'hsl(130, 31%, 56%)',
-                      brandAccent: 'hsl(130, 31%, 46%)',
-                      inputBackground: 'transparent',
-                      inputBorder: 'hsl(30, 4%, 82%)',
-                      inputBorderFocus: 'hsl(130, 31%, 56%)',
-                      inputBorderHover: 'hsl(30, 3%, 70%)',
+                      brand: '#008000',
+                      brandAccent: '#006600',
+                      inputBackground: 'white',
+                      inputBorder: '#e5e7eb',
+                      inputBorderFocus: '#008000',
+                      inputBorderHover: '#d1d5db',
+                      inputText: '#111827',
+                      inputPlaceholder: '#9ca3af',
                     },
                     borderWidths: {
                       buttonBorderWidth: '1px',
                       inputBorderWidth: '1px',
                     },
                     radii: {
-                      borderRadiusButton: '0.375rem',
-                      buttonBorderRadius: '0.375rem',
-                      inputBorderRadius: '0.375rem',
+                      borderRadiusButton: '0.5rem',
+                      buttonBorderRadius: '0.5rem',
+                      inputBorderRadius: '0.5rem',
                     },
                   },
                 },
@@ -94,7 +96,7 @@ export default function SignUpPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        <p className="text-center text-sm text-gray-500 mt-6">
           By signing up, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>

@@ -49,9 +49,9 @@ export function ProjectCard({ project, isDragging, className }: ProjectCardProps
   // ROI color coding
   const roiColor =
     roi >= 20
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-green-500'
       : roi >= 15
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-green-500'
       : roi >= 10
       ? 'text-amber-600 dark:text-amber-400'
       : 'text-red-600 dark:text-red-400';
@@ -249,7 +249,7 @@ function RehabContent({
           className="h-2"
           indicatorClassName={
             progress === 100
-              ? 'bg-emerald-500'
+              ? 'bg-green-600'
               : isOverdue
               ? 'bg-amber-500'
               : undefined
@@ -260,7 +260,7 @@ function RehabContent({
       {/* Status badges */}
       <div className="flex flex-wrap gap-1">
         {progress === 100 && (
-          <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+          <Badge variant="secondary" className="text-xs bg-green-700/20 text-green-500">
             Ready to list
           </Badge>
         )}
@@ -339,7 +339,7 @@ function SoldContent({
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">Profit</span>
-        <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+        <span className="font-medium tabular-nums text-green-500">
           {formatCurrency(project.gross_profit || 0)}
         </span>
       </div>

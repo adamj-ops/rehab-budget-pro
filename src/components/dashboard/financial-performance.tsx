@@ -107,13 +107,13 @@ function calculateHoldTime(closeDate: string | null | undefined, saleDate: strin
   return Math.round(days / 30 * 10) / 10; // months with 1 decimal
 }
 
-// ROI Distribution buckets
+// ROI Distribution buckets - Forest green palette
 const ROI_BUCKETS = [
-  { min: -Infinity, max: 0, label: '< 0%', color: '#ef4444' },
-  { min: 0, max: 10, label: '0-10%', color: '#f97316' },
-  { min: 10, max: 15, label: '10-15%', color: '#eab308' },
-  { min: 15, max: 20, label: '15-20%', color: '#22c55e' },
-  { min: 20, max: Infinity, label: '> 20%', color: '#10b981' },
+  { min: -Infinity, max: 0, label: '< 0%', color: '#ef4444' },   // Red for losses
+  { min: 0, max: 10, label: '0-10%', color: '#f59e0b' },         // Amber
+  { min: 10, max: 15, label: '10-15%', color: '#fbbf24' },       // Yellow
+  { min: 15, max: 20, label: '15-20%', color: '#22c55e' },       // Green-500
+  { min: 20, max: Infinity, label: '> 20%', color: '#008000' },  // Forest green
 ];
 
 function MetricCard({
@@ -417,7 +417,7 @@ export function FinancialPerformance({ projects }: FinancialPerformanceProps) {
                       {profitByProject.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={entry.profit >= 0 ? '#22c55e' : '#ef4444'}
+                          fill={entry.profit >= 0 ? '#008000' : '#ef4444'}
                           className="cursor-pointer hover:opacity-80"
                         />
                       ))}

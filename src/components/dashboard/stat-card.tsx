@@ -44,7 +44,7 @@ export function StatCard({
     const isPositive = trend.value > 0;
     const isGood = trend.isPositiveGood !== false ? isPositive : !isPositive;
     if (trend.value === 0) return 'text-muted-foreground';
-    return isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+    return isGood ? 'text-green-500' : 'text-red-500';
   };
 
   const TrendIcon = trend
@@ -57,10 +57,7 @@ export function StatCard({
 
   // Format the value based on type
   const renderValue = () => {
-    const valueClass = cn(
-      'font-bold tabular-nums tracking-tight',
-      size === 'large' ? 'text-4xl' : 'text-3xl'
-    );
+    const valueClass = size === 'large' ? 'metric-value-lg' : 'metric-value';
 
     switch (format) {
       case 'currency':
@@ -80,7 +77,7 @@ export function StatCard({
 
   return (
     <Card className={cn('relative overflow-hidden', className)}>
-      <CardContent className={cn('p-6', size === 'large' && 'p-8')}>
+      <CardContent className={cn('p-5', size === 'large' && 'p-6')}>
         {/* Icon in top right corner */}
         {icon && (
           <div className="absolute top-4 right-4 text-muted-foreground/50">
@@ -89,12 +86,7 @@ export function StatCard({
         )}
 
         {/* Title */}
-        <p
-          className={cn(
-            'text-sm font-medium uppercase tracking-wider text-muted-foreground',
-            size === 'large' && 'text-base'
-          )}
-        >
+        <p className={cn('label-text', size === 'large' && 'text-sm')}>
           {title}
         </p>
 
@@ -102,13 +94,13 @@ export function StatCard({
         <div className="mt-2">{renderValue()}</div>
 
         {/* Subtitle and/or Trend */}
-        <div className="mt-2 flex items-center gap-2 text-sm">
+        <div className="mt-2 flex items-center gap-2 text-xs">
           {subtitle && (
             <span className="text-muted-foreground">{subtitle}</span>
           )}
           {trend && (
             <span className={cn('flex items-center gap-1', getTrendColor())}>
-              {TrendIcon && <TrendIcon size={16} />}
+              {TrendIcon && <TrendIcon size={14} />}
               <span className="font-medium">
                 {trend.value > 0 ? '+' : ''}
                 {trend.value.toFixed(1)}%

@@ -16,6 +16,7 @@ import {
   IconX,
   IconCurrencyDollar,
   IconExternalLink,
+  IconLoader2,
 } from '@tabler/icons-react';
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 interface DrawsTabProps {
   projectId: string;
@@ -412,20 +414,21 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
             </div>
           </div>
           <div className="flex items-center gap-2 pt-2">
-            <button
+            <LoadingButton
               onClick={handleSubmitNew}
-              disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              isLoading={createMutation.isPending}
+              loadingText="Creating..."
             >
               <IconCheck className="h-4 w-4" />
-              {createMutation.isPending ? 'Creating...' : 'Create Draw'}
-            </button>
+              Create Draw
+            </LoadingButton>
             <button
               onClick={() => {
                 setIsAddingDraw(false);
                 setFormData(defaultFormData);
               }}
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+              disabled={createMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
             >
               <IconX className="h-4 w-4" />
               Cancel
@@ -611,13 +614,13 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
           <p className="empty-state-description">
             Create draws to track payments to your vendors.
           </p>
-          <button
+          <LoadingButton
             onClick={() => setIsAddingDraw(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2"
           >
             <IconPlus className="h-4 w-4" />
             Create First Draw
-          </Button>
+          </LoadingButton>
         </div>
       )}
 
@@ -638,6 +641,7 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {deleteMutation.isPending && <IconLoader2 className="h-4 w-4 animate-spin mr-2" />}
               {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -689,6 +693,7 @@ export function DrawsTab({ projectId, draws, vendors, totalBudget }: DrawsTabPro
               disabled={updateMutation.isPending}
               className="bg-green-600 text-white hover:bg-green-700"
             >
+              {updateMutation.isPending && <IconLoader2 className="h-4 w-4 animate-spin mr-2" />}
               {updateMutation.isPending ? 'Processing...' : 'Confirm Payment'}
             </AlertDialogAction>
           </AlertDialogFooter>

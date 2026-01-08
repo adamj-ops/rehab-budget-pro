@@ -109,6 +109,14 @@ export type ContactType =
   | 'payment'
   | 'other';
 
+export type JournalPageType =
+  | 'note'
+  | 'meeting'
+  | 'checklist'
+  | 'idea'
+  | 'research'
+  | 'site_visit';
+
 // ============================================================================
 // DATABASE TABLES
 // ============================================================================
@@ -326,6 +334,37 @@ export interface VendorContact {
   updated_at: string;
 }
 
+export interface JournalPage {
+  id: string;
+  user_id: string;
+  project_id: string | null; // Optional project tag
+  
+  // Page content
+  title: string;
+  content: string | null; // Rich text HTML
+  icon: string; // Emoji icon
+  
+  // Classification
+  page_type: JournalPageType;
+  
+  // Flags
+  is_pinned: boolean;
+  is_archived: boolean;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}
+
+// Extended type with project details for display
+export interface JournalPageWithProject extends JournalPage {
+  project?: {
+    id: string;
+    project_name: string;
+    address_full: string | null;
+  } | null;
+}
+
 // ============================================================================
 // VIEW TYPES (Computed/Aggregated)
 // ============================================================================
@@ -393,6 +432,7 @@ export type DrawInput = Omit<Draw, 'id' | 'created_at' | 'updated_at'>;
 export type LineItemPhotoInput = Omit<LineItemPhoto, 'id' | 'created_at'>;
 export type VendorTagInput = Omit<VendorTag, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 export type VendorContactInput = Omit<VendorContact, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type JournalPageInput = Omit<JournalPage, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
 // ============================================================================
 // UTILITY TYPES
@@ -510,3 +550,21 @@ export const TAG_COLORS = [
   { value: '#ec4899', label: 'Pink' },
   { value: '#6b7280', label: 'Gray' },
 ] as const;
+
+export const JOURNAL_PAGE_TYPE_CONFIG: Record<JournalPageType, { label: string; icon: string; color: string }> = {
+  note: { label: 'Note', icon: '📝', color: 'text-blue-500' },
+  meeting: { label: 'Meeting', icon: '🤝', color: 'text-purple-500' },
+  checklist: { label: 'Checklist', icon: '📋', color: 'text-green-500' },
+  idea: { label: 'Idea', icon: '💡', color: 'text-yellow-500' },
+  research: { label: 'Research', icon: '🔍', color: 'text-cyan-500' },
+  site_visit: { label: 'Site Visit', icon: '📸', color: 'text-orange-500' },
+};
+
+export const JOURNAL_PAGE_TYPES: JournalPageType[] = [
+  'note',
+  'meeting',
+  'checklist',
+  'idea',
+  'research',
+  'site_visit',
+];

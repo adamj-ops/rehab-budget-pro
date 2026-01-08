@@ -176,7 +176,7 @@ export function calculateBarPosition(
  */
 export function getEventColor(type: TimelineEvent['type'], isCompleted: boolean): string {
   if (isCompleted) {
-    return 'bg-emerald-500';
+    return 'bg-green-600';
   }
 
   switch (type) {

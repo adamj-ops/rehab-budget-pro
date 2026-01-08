@@ -1,7 +1,10 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ProjectTabs } from '@/components/project/project-tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { IconPencil } from '@tabler/icons-react';
 import { PROJECT_STATUS_LABELS, type ProjectStatus } from '@/types';
 
 interface ProjectPageProps {
@@ -74,8 +77,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     <div className="flex-1 overflow-auto">
       {/* Page Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
-        <div className="flex h-14 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
+        <div className="page-shell flex h-14 items-center justify-between">
+          <div className="page-header-title">
             <div>
               <h1 className="text-lg font-semibold">{project.name}</h1>
               <p className="text-xs text-muted-foreground">
@@ -99,14 +102,16 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       </header>
 
       {/* Main Content */}
-      <main className="p-6">
-        <ProjectTabs
-          project={project}
-          budgetItems={budgetItems || []}
-          vendors={vendors || []}
-          draws={draws || []}
-          costReference={costReference || []}
-        />
+      <main className="page-shell py-8">
+        <div className="page-stack">
+          <ProjectTabs
+            project={project}
+            budgetItems={budgetItems || []}
+            vendors={vendors || []}
+            draws={draws || []}
+            costReference={costReference || []}
+          />
+        </div>
       </main>
     </div>
   );

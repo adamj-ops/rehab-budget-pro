@@ -49,7 +49,7 @@ export function AttentionNeeded() {
     <section aria-labelledby="alerts-title">
       <h2
         id="alerts-title"
-        className="mb-4 text-lg font-semibold text-muted-foreground"
+        className="section-title mb-4"
       >
         Attention Needed
       </h2>
@@ -62,16 +62,16 @@ export function AttentionNeeded() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950">
+            <Card className="border-green-700/30 bg-green-700/10">
               <CardContent className="flex items-center gap-3 py-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900">
-                  <IconCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-700/20">
+                  <IconCheck className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                  <p className="font-medium text-green-500">
                     All clear!
                   </p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                  <p className="text-sm text-green-600/80">
                     No projects need immediate attention.
                   </p>
                 </div>
