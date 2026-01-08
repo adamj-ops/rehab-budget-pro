@@ -20,6 +20,7 @@
 | Journal/Notes System | ✅ Complete |
 | Calculation Settings | ✅ Complete |
 | Budget Templates | ✅ Complete |
+| Excel Export | ✅ Complete |
 
 ---
 
@@ -131,12 +132,21 @@
 - **Filtering** - By scope level, property type, search
 - **Database Backed** - RLS-protected with user/system template separation
 
+### Excel Export
+- **4 Export Templates**:
+  - Budget Detail (full three-column breakdown with categories)
+  - Project Summary (financials, metrics, category totals)
+  - Vendor List (project vendors + full directory)
+  - Draw Schedule (draws by milestone and vendor)
+- **Multi-Sheet Workbooks** - Each export type includes relevant summary sheets
+- **Formatted Data** - Currency values, dates, and structured headers
+- **xlsx Library** - SheetJS for robust Excel file generation
+
 ---
 
 ## 🚧 Future Enhancements
 
 ### Medium Priority
-- [ ] Excel Export
 - [ ] Offline support (PWA)
 
 ### Low Priority
@@ -183,6 +193,7 @@
 | `template-card.tsx` | Template library card |
 | `save-as-template-sheet.tsx` | Save project as template |
 | `apply-template-sheet.tsx` | Apply template to project |
+| `excel-export-dialog.tsx` | Excel export selector |
 
 ### Pages
 | Route | Purpose |
@@ -267,3 +278,9 @@
 - Apply template flow
 - 4 system templates
 - Conflict resolution (skip/merge/replace)
+
+### Sprint 8 ✅ - Excel Export
+- Excel export dialog
+- 4 export templates (Budget, Summary, Vendors, Draws)
+- Multi-sheet workbooks
+- xlsx (SheetJS) integration
