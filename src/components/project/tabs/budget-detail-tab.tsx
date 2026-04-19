@@ -13,6 +13,9 @@ import {
   IconTrash,
   IconX,
   IconLoader2,
+  IconListCheck,
+  IconTemplate,
+  IconDownload,
 } from '@tabler/icons-react';
 import { PhotoGallery } from '@/components/project/photo-gallery';
 import { toast } from 'sonner';
@@ -56,6 +59,7 @@ import { useBudgetItemMutations } from '@/hooks/use-budget-item-mutations';
 import { useProjectPhotos } from '@/hooks/use-photo-mutations';
 import { useSortOrderMutations } from '@/hooks/use-sort-order';
 import { MobileBudgetEditSheet } from '@/components/project/mobile-budget-edit-sheet';
+import { SaveAsTemplateSheet, ApplyTemplateSheet } from '@/components/templates';
 
 interface BudgetDetailTabProps {
   projectId: string;
@@ -408,6 +412,10 @@ export function BudgetDetailTab({
   // Mobile edit sheet state
   const [mobileEditItem, setMobileEditItem] = useState<BudgetItem | null>(null);
 
+  // Template sheet states
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [applyTemplateOpen, setApplyTemplateOpen] = useState(false);
+
   // Group items by category and sort by sort_order
   const itemsByCategory = useMemo(() => {
     const grouped = groupBy(budgetItems, 'category');
@@ -667,15 +675,37 @@ export function BudgetDetailTab({
       </div>
 
       {/* Selection Mode Toggle & Bulk Actions */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant={isSelectionMode ? 'default' : 'outline'}
-          size="sm"
-          onClick={toggleSelectionMode}
-        >
-          <IconListCheck className="h-4 w-4 mr-2" />
-          {isSelectionMode ? 'Exit Selection' : 'Select Items'}
-        </Button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isSelectionMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleSelectionMode}
+          >
+            <IconListCheck className="h-4 w-4 mr-2" />
+            {isSelectionMode ? 'Exit Selection' : 'Select Items'}
+          </Button>
+
+          {/* Template Actions */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setApplyTemplateOpen(true)}
+          >
+            <IconDownload className="h-4 w-4 mr-2" />
+            Apply Template
+          </Button>
+          {budgetItems.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSaveAsTemplateOpen(true)}
+            >
+              <IconTemplate className="h-4 w-4 mr-2" />
+              Save as Template
+            </Button>
+          )}
+        </div>
 
         {isSelectionMode && selectedItems.size > 0 && (
           <div className="flex items-center gap-2">
@@ -1100,6 +1130,22 @@ export function BudgetDetailTab({
         vendors={vendors}
         onSave={handleMobileSave}
         isPending={updateMutation.isPending}
+      />
+
+      {/* Save as Template Sheet */}
+      <SaveAsTemplateSheet
+        open={saveAsTemplateOpen}
+        onOpenChange={setSaveAsTemplateOpen}
+        projectId={projectId}
+        budgetItems={budgetItems}
+      />
+
+      {/* Apply Template Sheet */}
+      <ApplyTemplateSheet
+        open={applyTemplateOpen}
+        onOpenChange={setApplyTemplateOpen}
+        projectId={projectId}
+        existingItemCount={budgetItems.length}
       />
     </div>
   );

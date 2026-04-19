@@ -14,6 +14,7 @@ import {
   IconLayoutKanban,
   IconCalendarEvent,
   IconNotebook,
+  IconTemplate,
 } from "@tabler/icons-react";
 import {
   SidebarGroup,
@@ -42,6 +43,11 @@ const mainNavItems = [
     title: "Timeline",
     href: "/timeline",
     icon: IconCalendarEvent,
+  },
+  {
+    title: "Templates",
+    href: "/templates",
+    icon: IconTemplate,
   },
   {
     title: "Journal",

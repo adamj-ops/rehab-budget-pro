@@ -568,3 +568,369 @@ export const JOURNAL_PAGE_TYPES: JournalPageType[] = [
   'research',
   'site_visit',
 ];
+
+// ============================================================================
+// CALCULATION SETTINGS TYPES
+// ============================================================================
+
+export type MaoMethod =
+  | 'seventy_rule'
+  | 'custom_percentage'
+  | 'arv_minus_all'
+  | 'gross_margin'
+  | 'net_profit_target';
+
+export type RoiMethod =
+  | 'simple'
+  | 'cash_on_cash'
+  | 'annualized'
+  | 'irr_simplified';
+
+export type ContingencyMethod =
+  | 'flat_percent'
+  | 'category_weighted'
+  | 'tiered'
+  | 'scope_based';
+
+export type HoldingCostMethod =
+  | 'flat_monthly'
+  | 'percentage_of_loan'
+  | 'itemized'
+  | 'hybrid';
+
+export interface HoldingCostItems {
+  taxes: number;
+  insurance: number;
+  utilities: number;
+  loan_interest: number;
+  hoa: number;
+  lawn_care: number;
+  other: number;
+}
+
+export interface ContingencyTier {
+  max_budget: number | null;
+  percent: number;
+}
+
+export interface CalculationSettings {
+  id: string;
+  user_id: string;
+
+  // Profile Info
+  name: string;
+  description: string | null;
+  is_default: boolean;
+
+  // MAO Settings
+  mao_method: MaoMethod;
+  mao_arv_multiplier: number;
+  mao_target_profit: number;
+  mao_target_profit_percent: number;
+  mao_include_holding_costs: boolean;
+  mao_include_selling_costs: boolean;
+  mao_include_closing_costs: boolean;
+
+  // ROI Settings
+  roi_method: RoiMethod;
+  roi_annualize: boolean;
+  roi_include_opportunity_cost: boolean;
+  roi_opportunity_rate: number;
+  roi_threshold_excellent: number;
+  roi_threshold_good: number;
+  roi_threshold_fair: number;
+  roi_threshold_poor: number;
+
+  // Contingency Settings
+  contingency_method: ContingencyMethod;
+  contingency_default_percent: number;
+  contingency_category_rates: Record<BudgetCategory, number>;
+  contingency_tiers: ContingencyTier[];
+
+  // Holding Cost Settings
+  holding_cost_method: HoldingCostMethod;
+  holding_cost_default_monthly: number;
+  holding_cost_loan_rate_annual: number;
+  holding_cost_include_taxes: boolean;
+  holding_cost_include_insurance: boolean;
+  holding_cost_include_utilities: boolean;
+  holding_cost_include_hoa: boolean;
+  holding_cost_items: HoldingCostItems;
+
+  // Selling Cost Settings
+  selling_cost_default_percent: number;
+  selling_cost_agent_commission: number;
+  selling_cost_buyer_concessions: number;
+  selling_cost_closing_percent: number;
+  selling_cost_fixed_amount: number;
+
+  // Profit Threshold Settings
+  profit_min_acceptable: number;
+  profit_target: number;
+  profit_excellent: number;
+  profit_min_percent: number;
+  profit_target_percent: number;
+  profit_excellent_percent: number;
+
+  // Variance Alert Settings
+  variance_alert_enabled: boolean;
+  variance_warning_percent: number;
+  variance_critical_percent: number;
+  variance_alert_on_forecast: boolean;
+  variance_alert_on_actual: boolean;
+
+  // Meta
+  created_at: string;
+  updated_at: string;
+}
+
+export type CalculationSettingsInput = Omit<CalculationSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+
+// Default values matching database defaults
+export const DEFAULT_CALCULATION_SETTINGS: CalculationSettingsInput = {
+  name: 'Default',
+  description: null,
+  is_default: true,
+
+  // MAO Settings
+  mao_method: 'seventy_rule',
+  mao_arv_multiplier: 0.70,
+  mao_target_profit: 30000,
+  mao_target_profit_percent: 15,
+  mao_include_holding_costs: true,
+  mao_include_selling_costs: true,
+  mao_include_closing_costs: true,
+
+  // ROI Settings
+  roi_method: 'simple',
+  roi_annualize: false,
+  roi_include_opportunity_cost: false,
+  roi_opportunity_rate: 5,
+  roi_threshold_excellent: 25,
+  roi_threshold_good: 15,
+  roi_threshold_fair: 10,
+  roi_threshold_poor: 5,
+
+  // Contingency Settings
+  contingency_method: 'flat_percent',
+  contingency_default_percent: 10,
+  contingency_category_rates: {
+    soft_costs: 5,
+    demo: 10,
+    structural: 15,
+    plumbing: 12,
+    hvac: 12,
+    electrical: 12,
+    insulation_drywall: 10,
+    interior_paint: 8,
+    flooring: 8,
+    tile: 10,
+    kitchen: 10,
+    bathrooms: 12,
+    doors_windows: 8,
+    interior_trim: 8,
+    exterior: 12,
+    landscaping: 8,
+    finishing: 5,
+    contingency: 0,
+  },
+  contingency_tiers: [
+    { max_budget: 25000, percent: 15 },
+    { max_budget: 50000, percent: 12 },
+    { max_budget: 100000, percent: 10 },
+    { max_budget: null, percent: 8 },
+  ],
+
+  // Holding Cost Settings
+  holding_cost_method: 'flat_monthly',
+  holding_cost_default_monthly: 1500,
+  holding_cost_loan_rate_annual: 12,
+  holding_cost_include_taxes: true,
+  holding_cost_include_insurance: true,
+  holding_cost_include_utilities: true,
+  holding_cost_include_hoa: false,
+  holding_cost_items: {
+    taxes: 250,
+    insurance: 150,
+    utilities: 200,
+    loan_interest: 800,
+    hoa: 0,
+    lawn_care: 100,
+    other: 0,
+  },
+
+  // Selling Cost Settings
+  selling_cost_default_percent: 8,
+  selling_cost_agent_commission: 5,
+  selling_cost_buyer_concessions: 2,
+  selling_cost_closing_percent: 1,
+  selling_cost_fixed_amount: 0,
+
+  // Profit Threshold Settings
+  profit_min_acceptable: 20000,
+  profit_target: 35000,
+  profit_excellent: 50000,
+  profit_min_percent: 10,
+  profit_target_percent: 15,
+  profit_excellent_percent: 20,
+
+  // Variance Alert Settings
+  variance_alert_enabled: true,
+  variance_warning_percent: 5,
+  variance_critical_percent: 10,
+  variance_alert_on_forecast: true,
+  variance_alert_on_actual: true,
+};
+
+export const MAO_METHOD_LABELS: Record<MaoMethod, string> = {
+  seventy_rule: '70% Rule',
+  custom_percentage: 'Custom Percentage',
+  arv_minus_all: 'ARV Minus All Costs',
+  gross_margin: 'Gross Margin Target',
+  net_profit_target: 'Net Profit Target',
+};
+
+export const MAO_METHOD_DESCRIPTIONS: Record<MaoMethod, string> = {
+  seventy_rule: 'Classic formula: ARV × 70% - Rehab Costs',
+  custom_percentage: 'Use your own ARV multiplier percentage',
+  arv_minus_all: 'ARV - All Costs - Target Profit',
+  gross_margin: 'Work backward from target gross margin %',
+  net_profit_target: 'Work backward from desired net profit',
+};
+
+export const ROI_METHOD_LABELS: Record<RoiMethod, string> = {
+  simple: 'Simple ROI',
+  cash_on_cash: 'Cash-on-Cash',
+  annualized: 'Annualized',
+  irr_simplified: 'IRR (Simplified)',
+};
+
+export const CONTINGENCY_METHOD_LABELS: Record<ContingencyMethod, string> = {
+  flat_percent: 'Flat Percentage',
+  category_weighted: 'Category Weighted',
+  tiered: 'Tiered by Budget Size',
+  scope_based: 'Scope Based',
+};
+
+export const HOLDING_COST_METHOD_LABELS: Record<HoldingCostMethod, string> = {
+  flat_monthly: 'Flat Monthly',
+  percentage_of_loan: 'Percentage of Loan',
+  itemized: 'Itemized',
+  hybrid: 'Hybrid',
+};
+
+// ============================================================================
+// BUDGET TEMPLATE TYPES
+// ============================================================================
+
+export type TemplateType = 'system' | 'user';
+export type ScopeLevel = 'light' | 'medium' | 'heavy' | 'gut';
+
+export interface BudgetTemplate {
+  id: string;
+  user_id: string | null;
+
+  // Template Info
+  name: string;
+  description: string | null;
+
+  // Classification
+  template_type: TemplateType;
+  property_type: PropertyType | null;
+  scope_level: ScopeLevel | null;
+
+  // Stats
+  times_used: number;
+
+  // Flags
+  is_favorite: boolean;
+  is_active: boolean;
+
+  // Meta
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BudgetTemplateItem {
+  id: string;
+  template_id: string;
+
+  // Item Details
+  category: BudgetCategory;
+  item: string;
+  description: string | null;
+
+  // Default Values
+  qty: number;
+  unit: UnitType;
+  rate: number;
+  default_amount: number;
+
+  // Classification
+  cost_type: CostType;
+  default_priority: 'high' | 'medium' | 'low';
+  suggested_trade: VendorTrade | null;
+
+  // Ordering
+  sort_order: number;
+
+  // Meta
+  created_at: string;
+}
+
+// Summary view with counts
+export interface BudgetTemplateSummary extends BudgetTemplate {
+  item_count: number;
+  category_count: number;
+  total_estimate: number;
+  categories: BudgetCategory[];
+}
+
+// Full template with items
+export interface BudgetTemplateWithItems extends BudgetTemplate {
+  items: BudgetTemplateItem[];
+}
+
+// Input types
+export type BudgetTemplateInput = Omit<BudgetTemplate, 'id' | 'user_id' | 'times_used' | 'created_at' | 'updated_at'>;
+export type BudgetTemplateItemInput = Omit<BudgetTemplateItem, 'id' | 'created_at'>;
+
+// Options for applying template
+export interface ApplyTemplateOptions {
+  templateId: string;
+  projectId: string;
+  includeAmounts: boolean;
+  conflictResolution: 'skip' | 'merge' | 'replace';
+}
+
+// Options for saving project as template
+export interface SaveAsTemplateOptions {
+  projectId: string;
+  name: string;
+  description?: string;
+  propertyType?: PropertyType;
+  scopeLevel?: ScopeLevel;
+  includeAmounts: boolean;
+  selectedItemIds: string[]; // Which budget items to include
+}
+
+// Result of applying template
+export interface ApplyTemplateResult {
+  added: number;
+  updated: number;
+  skipped: number;
+}
+
+export const SCOPE_LEVEL_LABELS: Record<ScopeLevel, string> = {
+  light: 'Light Rehab',
+  medium: 'Medium Rehab',
+  heavy: 'Heavy Rehab',
+  gut: 'Full Gut',
+};
+
+export const SCOPE_LEVEL_DESCRIPTIONS: Record<ScopeLevel, string> = {
+  light: 'Paint, flooring, fixtures, and minor repairs',
+  medium: 'Kitchen/bath updates with supporting work',
+  heavy: 'Major renovations without structural changes',
+  gut: 'Complete renovation including structural work',
+};

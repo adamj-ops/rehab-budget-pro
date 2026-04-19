@@ -8,6 +8,7 @@ import { VendorsTab } from './tabs/vendors-tab';
 import { DrawsTab } from './tabs/draws-tab';
 import { CostReferenceTab } from './tabs/cost-reference-tab';
 import { ExportDialog } from '@/components/pdf/export-dialog';
+import { ExcelExportDialog } from '@/components/excel';
 import { ErrorBoundary, CompactErrorFallback } from '@/components/error-boundary';
 import {
   IconReportMoney,
@@ -16,6 +17,7 @@ import {
   IconCash,
   IconBook,
   IconFileTypePdf,
+  IconFileSpreadsheet,
 } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -109,8 +111,8 @@ export function ProjectTabs({
           })}
           </nav>
 
-          {/* Export Button */}
-          <div className="mb-px">
+          {/* Export Buttons */}
+          <div className="mb-px flex items-center gap-2">
             <ExportDialog
               project={projectSummary}
               budgetItems={budgetItems}
@@ -119,7 +121,19 @@ export function ProjectTabs({
               trigger={
                 <Button variant="outline" size="sm">
                   <IconFileTypePdf className="h-4 w-4 mr-2" />
-                  Export PDF
+                  PDF
+                </Button>
+              }
+            />
+            <ExcelExportDialog
+              project={projectSummary}
+              budgetItems={budgetItems}
+              draws={draws}
+              vendors={vendors}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <IconFileSpreadsheet className="h-4 w-4 mr-2" />
+                  Excel
                 </Button>
               }
             />
